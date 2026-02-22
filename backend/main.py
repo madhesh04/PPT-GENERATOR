@@ -11,8 +11,8 @@ from dotenv import load_dotenv
 # IMPORTANT: load env vars FIRST before importing local modules
 load_dotenv()
 
-from generator import create_presentation
-from llm_client import generate_slide_content
+from backend.generator import create_presentation
+from backend.llm_client import generate_slide_content
 
 app = FastAPI()
 
