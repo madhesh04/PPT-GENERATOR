@@ -10,6 +10,7 @@ interface GenerateResponse {
   title: string;
   slides: SlideData[];
   filename: string;
+  token: string;
 }
 
 const ACCENT_PALETTES = [
@@ -118,7 +119,7 @@ export default function App() {
     if (!result) return;
     setDownloading(true);
     try {
-      const response = await fetch(`http://localhost:8000/download/${result.filename}`);
+      const response = await fetch(`http://localhost:8000/download/${result.token}`);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
