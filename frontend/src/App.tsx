@@ -97,7 +97,7 @@ export default function App() {
     setResult(null);
     try {
       const topicList = topics.split(',').map(t => t.trim()).filter(Boolean);
-      const response = await fetch('http://localhost:8000/generate', {
+      const response = await fetch('https://ppt-generator-tqfl.onrender.com/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, topics: topicList, num_slides: numSlides, context, tone }),
@@ -119,7 +119,7 @@ export default function App() {
     if (!result) return;
     setDownloading(true);
     try {
-      const response = await fetch(`http://localhost:8000/download/${result.token}`);
+      const response = await fetch(`https://ppt-generator-tqfl.onrender.com/download/${result.token}`);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
