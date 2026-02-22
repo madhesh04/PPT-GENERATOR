@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F5533D"/>
+      <stop offset="100%" stop-color="#FF6B35"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect width="32" height="32" rx="8" fill="url(#grad)"/>
+  <!-- "N" letter -->
+  <text x="16" y="23" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800"
+        text-anchor="middle" fill="white" letter-spacing="-0.5">N</text>
+</svg>

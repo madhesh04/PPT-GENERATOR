@@ -1,0 +1,260 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@theme {
+  --color-primary:   #F5533D;
+  --color-primary2:  #FF6B35;
+  --color-navy:      #0F172A;
+  --color-slate:     #475569;
+  --color-surface:   #F8FAFC;
+  --color-border:    #E2E8F0;
+}
+
+/* ── Base ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  min-width: 0;          /* prevents flex/grid children from overflowing */
+}
+
+html {
+  overflow-x: hidden;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #F8FAFC;
+  color: #0F172A;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* ensure all images/media scale */
+img, svg, video { max-width: 100%; }
+
+/* ── iamneo Brand Gradient ── */
+.neo-gradient {
+  background: linear-gradient(135deg, #F5533D 0%, #FF6B35 50%, #F5A623 100%);
+}
+
+.neo-gradient-text {
+  background: linear-gradient(135deg, #F5533D 0%, #FF6B35 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.neo-btn {
+  background: linear-gradient(135deg, #F5533D 0%, #FF6B35 100%);
+  color: white;
+  font-weight: 600;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px 0 rgba(245, 83, 61, 0.35);
+}
+
+.neo-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px 0 rgba(245, 83, 61, 0.45);
+  filter: brightness(1.05);
+}
+
+.neo-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.neo-btn:disabled {
+  background: #CBD5E1;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* ── Card ── */
+.neo-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+}
+
+/* ── Input ── */
+.neo-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: #F8FAFC;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: #0F172A;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+
+.neo-input::placeholder { color: #94A3B8; }
+
+.neo-input:focus {
+  border-color: #F5533D;
+  box-shadow: 0 0 0 3px rgba(245, 83, 61, 0.12);
+}
+
+/* ── Textarea — no scrollbar ── */
+.neo-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  background: #F8FAFC;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: #0F172A;
+  outline: none;
+  resize: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: 'Inter', sans-serif;
+  overflow-y: auto;
+  scrollbar-width: none;       /* Firefox */
+  -ms-overflow-style: none;    /* IE/Edge */
+}
+
+.neo-textarea::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+.neo-textarea::placeholder { color: #94A3B8; }
+.neo-textarea:focus {
+  border-color: #F5533D;
+  box-shadow: 0 0 0 3px rgba(245, 83, 61, 0.12);
+}
+
+/* ── Label ── */
+.neo-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+/* ── Tone Pill ── */
+.tone-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border-radius: 12px;
+  border: 1.5px solid #E2E8F0;
+  background: #F8FAFC;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  text-align: center;
+}
+
+.tone-pill:hover { border-color: #F5533D; background: #FFF5F3; }
+
+.tone-pill.active {
+  border-color: #F5533D;
+  background: linear-gradient(135deg, rgba(245,83,61,0.08), rgba(255,107,53,0.08));
+  box-shadow: 0 0 0 3px rgba(245, 83, 61, 0.12);
+}
+
+/* ── Slide Card ── */
+.slide-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.slide-card:hover {
+  box-shadow: 0 6px 24px rgba(0,0,0,0.09);
+  transform: translateY(-2px);
+}
+
+/* ── Range Slider ── */
+input[type="range"] { accent-color: #F5533D; }
+
+/* ── Responsive Grids ── */
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.grid-6col {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+
+.grid-2col-preview {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+/* ── Header inner ── */
+.header-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ── Page container ── */
+.page-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 36px 24px;
+}
+
+/* ── Form card inner padding ── */
+.form-card-inner { padding: 32px; }
+
+/* ── Preview header ── */
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* ── Mobile ── */
+@media (max-width: 640px) {
+  .grid-2col           { grid-template-columns: 1fr; }
+  .grid-6col           { grid-template-columns: repeat(3, 1fr); }
+  .grid-2col-preview   { grid-template-columns: 1fr; }
+  .form-card-inner     { padding: 20px 16px; }
+  .page-container      { padding: 20px 16px; width: 100%; }
+  .header-inner        { padding: 0 16px; height: 56px; }
+
+  /* prevent any fixed-width element from breaking layout */
+  .neo-card            { width: 100%; overflow: hidden; }
+  .neo-input,
+  .neo-textarea        { min-width: 0; width: 100%; }
+
+  /* hide subtitle in header */
+  .header-subtitle     { display: none; }
+
+  /* stack preview header vertically */
+  .preview-header      { flex-direction: column; align-items: flex-start; }
+  .preview-header .neo-btn { width: 100%; justify-content: center; }
+
+  /* tone pills — tighter on mobile */
+  .tone-pill           { padding: 8px 4px; gap: 2px; }
+  .tone-pill span:last-child { display: none; } /* hide desc on tiny screens */
+
+  /* slide cards full width */
+  .slide-card          { width: 100%; }
+
+  /* range slider full width */
+  input[type="range"]  { width: 100%; max-width: 100%; }
+}
+
+/* ── Animate spin ── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.animate-spin { animation: spin 1s linear infinite; }
