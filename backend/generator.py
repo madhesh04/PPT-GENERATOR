@@ -90,39 +90,55 @@ def _add_rect(slide, left, top, width, height, color: RGBColor):
 
 # ── Slide decorators ───────────────────────────────────────────────────────────
 
+def _decorate_closing_slide(slide, title: str):
+    """Renders a 'Thank You' closing slide."""
+    _add_text_box(slide, "Thank You",
+                  Inches(1.5), Inches(3.6), Inches(12), Inches(2.5),
+                  font_size=72, bold=True, color=COLOR_WHITE)
+    _add_text_box(slide, title,
+                  Inches(1.5), Inches(5.8), Inches(14), Inches(1.0),
+                  font_size=24, color=COLOR_ORANGE, italic=True)
+
+
+def _decorate_agenda_slide(slide, slide_titles: list):
+    """Renders a clean 'Agenda' overview slide on the template layout."""
+    _add_text_box(slide, "Agenda",
+                  Inches(1.0), Inches(0.4), Inches(15.0), Inches(1.0),
+                  font_size=36, bold=True, color=COLOR_NAVY)
+
+    # Print a single, simple column list of agenda items in the upper left
+    for row, item in enumerate(slide_titles):
+        y = 2.0 + (row * 0.7)
+        _add_text_box(slide, f"{row+1:02d}. {item}",
+                      Inches(1.5), Inches(y), Inches(15.0), Inches(0.65),
+                      font_size=26, color=COLOR_SLATE)
+
+
 def _decorate_title_slide(slide, title: str):
-    _add_rect(slide, Inches(1.5), Inches(3.2), Inches(1.2), Pt(4), COLOR_ORANGE)
+    # Only map the title text over the existing template.
+    # Do not draw new background rect shapes.
     _add_text_box(slide, title,
                   Inches(1.5), Inches(3.4), Inches(11), Inches(2.8),
                   font_size=60, bold=True, color=COLOR_NAVY)
-    _add_text_box(slide, "AI-Powered Presentation  ·  iamneo",
-                  Inches(1.5), Inches(6.4), Inches(10), Inches(0.7),
-                  font_size=20, color=COLOR_ORANGE, italic=True)
 
 
 def _decorate_content_slide(slide, slide_title: str, content: list, slide_num: int):
-    accent = COLOR_ORANGE if slide_num % 2 == 0 else COLOR_ORANGE2
-
-    _add_rect(slide, Inches(0), Inches(0), SLIDE_W, Pt(6), accent)
-
-    _add_rect(slide, Inches(18.8), Inches(0.1), Inches(0.9), Inches(0.65), accent)
-    _add_text_box(slide, str(slide_num).zfill(2),
-                  Inches(18.8), Inches(0.1), Inches(0.9), Inches(0.65),
-                  font_size=18, bold=True, color=COLOR_WHITE, align=PP_ALIGN.CENTER)
-
+    # Slide Title (dark text over the plain white background)
     _add_text_box(slide, slide_title,
-                  Inches(1.0), Inches(0.3), Inches(17.5), Inches(1.2),
-                  font_size=38, bold=True, color=COLOR_NAVY)
+                  Inches(1.0), Inches(0.4), Inches(18.0), Inches(1.0),
+                  font_size=36, bold=True, color=COLOR_NAVY)
 
-    _add_rect(slide, Inches(1.0), Inches(1.55), Inches(17.5), Pt(2), accent)
-
+    # Bullet Points (Standard vertical list, exactly 5 points)
     for i, point in enumerate(content[:5]):
-        y = Inches(1.75) + i * Inches(1.45)
-        _add_rect(slide, Inches(1.0), y, Inches(17.5), Inches(1.3), COLOR_SURFACE)
-        _add_rect(slide, Inches(1.15), y + Inches(0.5), Inches(0.18), Inches(0.18), accent)
+        y = 1.8 + (i * 1.5)
+        # Bullet marker
+        _add_text_box(slide, "•",
+                      Inches(1.0), Inches(y - 0.05), Inches(0.5), Inches(1.0),
+                      font_size=28, color=COLOR_NAVY)
+        # Bullet text
         _add_text_box(slide, point,
-                      Inches(1.5), y + Pt(4), Inches(16.8), Inches(1.2),
-                      font_size=22, color=COLOR_SLATE)
+                      Inches(1.5), Inches(y), Inches(17.0), Inches(1.4),
+                      font_size=24, color=COLOR_SLATE)
 
 
 # ── Main entry point ───────────────────────────────────────────────────────────
@@ -157,8 +173,7 @@ def create_presentation(title: str, slide_data: list) -> tuple[io.BytesIO, str]:
                 slide_num=i + 1,
             )
     else:
-        print("[WARN] template.pptx not found — using built-in fallback.")
-        prs = _build_fallback(title, slide_data)
+        raise FileNotFoundError(f"Template file missing: {TEMPLATE_PATH}. A template is required for generation.")
 
     buf = io.BytesIO()
     prs.save(buf)
@@ -167,50 +182,3 @@ def create_presentation(title: str, slide_data: list) -> tuple[io.BytesIO, str]:
     filename = f"{safe.replace(' ', '_')}.pptx"
     return buf, filename
 
-
-# ── Fallback (dark navy theme, no template) ────────────────────────────────────
-
-_FW = Inches(13.33)
-_FH = Inches(7.5)
-_C_BG   = RGBColor(0x0F, 0x17, 0x2A)
-_C_BLUE = RGBColor(0x35, 0x8E, 0xF1)
-_C_PURP = RGBColor(0x7C, 0x3A, 0xED)
-_C_LG   = RGBColor(0xD0, 0xD8, 0xE8)
-_C_DB   = RGBColor(0x1A, 0x27, 0x45)
-
-
-def _build_fallback(title: str, slide_data: list) -> Presentation:
-    prs = Presentation()
-    prs.slide_width  = _FW
-    prs.slide_height = _FH
-
-    s = prs.slides.add_slide(prs.slide_layouts[6])
-    bg = s.background.fill; bg.solid(); bg.fore_color.rgb = _C_BG
-    _add_rect(s, Inches(0), Inches(0), _FW, Inches(0.07), _C_BLUE)
-    _add_rect(s, Inches(0), Inches(7.43), _FW, Inches(0.07), _C_PURP)
-    _add_rect(s, Inches(0), Inches(0), Inches(0.07), _FH, _C_PURP)
-    _add_text_box(s, title, Inches(0.8), Inches(2.5), Inches(8), Inches(1.8),
-                  52, True, COLOR_WHITE, PP_ALIGN.LEFT)
-    _add_text_box(s, "AI-Powered Presentation",
-                  Inches(0.8), Inches(4.5), Inches(7), Inches(0.6),
-                  18, False, RGBColor(0x92, 0xBC, 0xF5), PP_ALIGN.LEFT, italic=True)
-
-    for idx, sc in enumerate(slide_data):
-        s      = prs.slides.add_slide(prs.slide_layouts[6])
-        bg     = s.background.fill; bg.solid(); bg.fore_color.rgb = _C_BG
-        accent = _C_BLUE if idx % 2 == 0 else _C_PURP
-        _add_rect(s, Inches(0), Inches(0), _FW, Inches(0.08), accent)
-        _add_rect(s, Inches(0), Inches(0), Inches(0.4), _FH, accent)
-        _add_text_box(s, sc.get("title", ""), Inches(0.7), Inches(0.25),
-                      Inches(12.3), Inches(0.9), 34, True, COLOR_WHITE, PP_ALIGN.LEFT)
-        _add_rect(s, Inches(0.7), Inches(1.15), Inches(11.5), Pt(2), accent)
-        _add_rect(s, Inches(12.3), Inches(0.25), Inches(0.8), Inches(0.6), accent)
-        _add_text_box(s, str(idx+1).zfill(2), Inches(12.3), Inches(0.25),
-                      Inches(0.8), Inches(0.6), 16, True, COLOR_WHITE, PP_ALIGN.CENTER)
-        for i, pt in enumerate(sc.get("content", [])[:6]):
-            y = Inches(1.4) + i * Inches(0.7)
-            _add_rect(s, Inches(0.7), y, Inches(11.5), Inches(0.58), _C_DB)
-            _add_rect(s, Inches(0.85), y+Inches(0.2), Inches(0.12), Inches(0.18), accent)
-            _add_text_box(s, pt, Inches(1.15), y+Pt(2), Inches(11), Inches(0.55),
-                          18, False, _C_LG, PP_ALIGN.LEFT)
-    return prs

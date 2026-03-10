@@ -1,0 +1,18 @@
+
+Slide 0
+  Shape 0 (Freeform 2): l=293738, t=345470, w=4467797, h=1324108
+    > Text: 
+  Shape 1 (Freeform 3): l=9144000, t=0, w=3390742, h=4880941
+    > Text: 
+  Shape 2 (Freeform 4): l=1216023, t=9234991, w=2983394, h=705492
+    > Text: 
+  Shape 3 (Freeform 5): l=293738, t=9258300, w=682183, h=682183
+    > Text: 
+
+Slide 1
+  Shape 0 (Freeform 2): l=169102, t=9361794, w=2662184, h=788795
+    > Text: 
+  Shape 1 (Freeform 3): l=3493371, t=9551357, w=11301259, h=409671
+    > Text: 
+  Shape 2 (Freeform 4): l=14947029, t=9258300, w=3312145, h=788960
+    > Text: 
