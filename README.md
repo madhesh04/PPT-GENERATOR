@@ -1,6 +1,8 @@
 # NEO PPT — AI Presentation Generator
 
-An AI-powered PowerPoint generator built for **iamneo**. Enter a title, topics, tone, and context — the app calls Groq's LLaMA 3.3 70B model to generate professional slide content and outputs a ready-to-download `.pptx` file using your company's branded template.
+An AI-powered PowerPoint generator built specifically for **iamneo**. 
+
+Enter a title, topics, tone, and context — the app calls Groq's `llama-3.3-70b-versatile` model to generate highly factual, specific slide content (including presenter notes). The backend then writes this text *directly* into the precision-mapped native placeholders and UI cards matching the iamneo brand template.
 
 ---
 
@@ -10,9 +12,9 @@ An AI-powered PowerPoint generator built for **iamneo**. Enter a title, topics, 
 |-----------|--------------------------------------|
 | Frontend  | React + TypeScript (Vite)            |
 | Backend   | FastAPI (Python)                     |
-| AI Model  | Groq API — `llama-3.3-70b-versatile` |
-| PPTX Engine | `python-pptx`                      |
-| Rate Limiting | `slowapi`                        |
+| AI Model  | Groq API (`llama-3.3-70b-versatile`) |
+| PPT Engine| `python-pptx` (Strict Native Engine) |
+| Security  | `slowapi` (Rate Limiting)            |
 
 ---
 
@@ -21,101 +23,84 @@ An AI-powered PowerPoint generator built for **iamneo**. Enter a title, topics, 
 ```
 PPT GENERATOR/
 ├── backend/
-│   ├── main.py            # FastAPI app & API routes
-│   ├── llm_client.py      # Groq API integration
-│   ├── generator.py       # PowerPoint generation logic
-│   ├── template.pptx      # ← Your branded template (required)
+│   ├── main.py            # FastAPI app, API routes, Rate Limiter
+│   ├── llm_client.py      # Groq AI prompt engineering & JSON generation
+│   ├── generator.py       # Strict native PPTX text mapping engine
+│   ├── template.pptx      # ← Your predefined branded template design
 │   ├── requirements.txt
-│   ├── .env               # GROQ_API_KEY goes here
-│   └── .env.example       # Template for env vars
+│   ├── .env               # GROQ_API_KEY
+│   └── .env.example       
 └── frontend/
     ├── src/
-    │   ├── App.tsx         # Main React component
-    │   └── index.css       # iamneo-themed styles
-    └── index.html
+    │   ├── App.tsx         # Main React UI, Preview, Downloader
+    │   └── index.css       # iamneo-themed styling
+    ├── .env                # Local Dev API Base (http://localhost:8000)
+    └── .env.production     # Prod API Base (https://your-backend.com)
 ```
 
 ---
 
-## Setup & Running
+## Setup & Local Development
 
-### 1. Clone & install dependencies
+### 1. Install dependencies
 
 ```bash
-# Backend
+# Backend (Python)
 pip install -r backend/requirements.txt
 
-# Frontend
+# Frontend (Node)
 cd frontend
 npm install
 ```
 
-### 2. Configure API key
+### 2. Configure Environment Variables
 
-Copy `backend/.env.example` to `backend/.env` and fill in:
+**Backend (`backend/.env`):**
 ```env
-GROQ_API_KEY=your_groq_api_key_here
+# Required
+GROQ_API_KEY=your_api_key_here
 
-# Optional — defaults shown
+# Optional configuration
 GROQ_MODEL=llama-3.3-70b-versatile
-PPT_FONT=Calibri
 ```
-Get a free key at [console.groq.com](https://console.groq.com).
 
-### 3. Add your branded template
-
-Place your PowerPoint template at:
+**Frontend (`frontend/.env.production`):**
+For production deployment on platforms like Vercel or Render, modify `.env.production` to point to your live hosted FastAPI backend:
+```env
+VITE_API_BASE=https://your-hosted-render-backend.com
 ```
-backend/template.pptx
-```
-The template should have **2 slides** — a title slide and a content slide. The generator clones these and injects AI content on top. If the template is missing, a built-in dark theme is used as fallback.
 
-### 4. Start the servers
+### 3. Start the servers
 
 ```bash
-# Terminal 1 — Backend  ← run from the PROJECT ROOT, not from inside backend/
-py -m uvicorn backend.main:app --reload --port 8000     # Windows (py launcher)
-# python -m uvicorn backend.main:app --reload --port 8000  # macOS / Linux
+# Terminal 1 — Backend (from project root)
+python -m uvicorn backend.main:app --reload --port 8000
 
 # Terminal 2 — Frontend
 cd frontend
-npm run dev           # runs on http://localhost:5173
+npm run dev
 ```
 
 ---
 
-## Features
+## Generative Features
 
-- 🏷️ **Tag-based topic input** — Add topics as chips; press Enter or comma to add, × to remove
-- 🎯 **Tone selector** — Professional, Executive, Technical, Academic, Sales, Simple
-- 📝 **Context field** — Guide the AI with audience/goal details (500 char limit)
-- 🎚️ **Slide count slider** — 2 to 15 slides with quick-select presets
-- 📋 **Auto agenda slide** — Automatically generated after the title slide
-- 🎉 **Auto closing slide** — "Thank You" closing slide appended automatically
-- 🎨 **3 layout variants** — Slides alternate between bullet-list, two-column, and highlight styles
-- 🗒️ **Speaker notes** — Generated for every slide, visible in PPT notes pane & preview
-- ✏️ **Inline editing** — Click any bullet in the preview to edit it before downloading
-- ⏳ **Step-by-step progress** — Animated 3-step indicator while generating
-- 📱 **Mobile responsive** — Works on all screen sizes
-- 📥 **One-click download** — Generates a `.pptx` in seconds
-- 🔒 **Rate limited** — 10 requests/minute per IP to protect the Groq API key
+The AI pipeline is heavily optimized for academic, corporate, and sales presentations:
+- 🧠 **Anti-Fluff Restraints:** The AI is strictly prompted to avoid meta-templates ("Here is an overview of...") and instead generate dense, factual information and real-world examples.
+- 📐 **Rigid Structure:** Guarantees exactly **5 bullet points** per slide (20-45 words each), ensuring uniform sizing across the template layout.
+- � **Auto-Speaker Notes:** Automatically writes an additional paragraph of notes for the presenter on every slide, including a delivery cue and extra facts not mentioned on screen.
+- 🧮 **Adaptive Pacing:** Intelligently maps the user's input topics across the requested number of slides, pacing out complex topics into multi-slide breakdowns.
 
----
+## UI / UX Features
 
-## API Endpoints
+- 🏷️ **Tag-based Topic Input:** Add topics cleanly as chips (press Enter).
+- ✏️ **Live Inline Editing:** Click any generated bullet point in the browser preview to rewrite it yourself before clicking Download.
+- 📝 **Live Notes Preview:** Expand the bottom area of any slide preview card to read the AI-generated speaker notes.
+- ⏳ **Intelligent Loader:** 3-step animated progress view while the LLM generates and the PPT builds.
+- � **Expirable Download Links:** Downloads use a 5-minute Time-To-Live (TTL) secure token system to prevent server storage bloat.
 
-| Method | Endpoint            | Description                            |
-|--------|---------------------|----------------------------------------|
-| GET    | `/health`           | Health check — returns model name      |
-| POST   | `/generate`         | Generate slide content + PPTX          |
-| GET    | `/download/{token}` | Download the generated PPTX (5 min TTL)|
+## Template Engine
 
----
+The backend generator (`generator.py`) relies **100% on the source `template.pptx` file**. 
 
-## Environment Variables
-
-| Variable      | Required | Default                     | Description                              |
-|---------------|----------|-----------------------------|------------------------------------------|
-| `GROQ_API_KEY`| ✅ Yes   | —                           | API key from [console.groq.com](https://console.groq.com) |
-| `GROQ_MODEL`  | No       | `llama-3.3-70b-versatile`   | Groq model to use                        |
-| `PPT_FONT`    | No       | `Calibri`                   | Font used in generated PPTX              |
+It does not inject its own colored rectangles or attempt to override your design. Instead, it measures the exact grid coordinates on your template's background on Slide 2, and cleanly overlays pure, native text onto those predetermined graphical areas to maintain absolute brand purity.
