@@ -71,7 +71,7 @@ body {
 
 /* ── Design System ── */
 .glass-heavy {
-  background: rgba(17, 19, 26, 0.85);
+  background: rgba(17, 19, 26, 0.95);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
