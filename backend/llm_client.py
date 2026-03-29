@@ -133,7 +133,21 @@ SPEAKER NOTES
 Add a "notes" field per slide: 2–4 sentences the presenter speaks aloud.
 Notes should: expand on what's on the slide, add one more example or data point not in the bullets, and guide the presenter's delivery (e.g. "Pause here and ask the audience...").
 
-OUTPUT FORMAT: Return ONLY a valid raw JSON array. No markdown, no code fences, no explanation — just the JSON array starting with [ and ending with ]."""
+OUTPUT FORMAT: Return ONLY a valid raw JSON array. No markdown, no code fences, no explanation — just the JSON array starting with [ and ending with ].
+
+Each object MUST have exactly these fields:
+- "title": specific descriptive slide title
+- "content": exactly 5 bullets (20-45 words each)
+- "notes": 2-4 sentences for the presenter
+- "image_query": a 3-6 word search phrase for a stock photo that visually
+  represents this slide's concept. Be concrete and visual.
+  
+  GOOD examples: "data scientist analyzing dashboard", "cloud server room blue",
+  "team meeting whiteboard collaboration", "supply chain logistics warehouse",
+  "doctor reviewing patient records", "student studying laptop library"
+  
+  BAD examples: "concept", "idea", "abstract", "technology" (too vague)
+  NEVER use just one word. Always 3-6 specific descriptive words."""
 
     user_prompt = f"""Create the COMPLETE, FACTUAL FINAL CONTENT for a slide deck titled "{title}".
 {context_block}
@@ -153,6 +167,7 @@ Return a JSON array of exactly {num_slides} objects. Each object MUST have:
 - "title": A specific, descriptive slide title
 - "content": A list of exactly 5 bullets (each 20–45 words, packed with actual facts and examples)
 - "notes": 2–4 sentences for the presenter — add one more example or fact not covered in the bullets, and include a delivery cue
+- "image_query": a 3-6 word search phrase for a stock photo that visually represents this slide's concept
 
 JSON only. Start immediately with ["""
 
@@ -169,9 +184,11 @@ def _parse_and_validate(raw: str) -> list:
     for item in data:
         if isinstance(item, dict) and "title" in item and "content" in item:
             validated.append({
-                "title":   str(item["title"]),
-                "content": [str(c) for c in item["content"] if c],
-                "notes":   str(item.get("notes", "")),
+                "title":       str(item["title"]),
+                "content":     [str(c) for c in item["content"] if c],
+                "notes":       str(item.get("notes", "")),
+                "image_query": str(item.get("image_query", item["title"])),
+                # ↑ Falls back to the slide title if the LLM forgets to include it
             })
     return validated
 

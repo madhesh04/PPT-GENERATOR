@@ -9,13 +9,26 @@ from pptx.enum.text import PP_ALIGN
 # ── Template path ──────────────────────────────────────────────────────────────
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "template.pptx")
 
-# ── Brand colours ──────────────────────────────────────────────────────────────
-COLOR_ORANGE  = RGBColor(0xF5, 0x53, 0x3D)
-COLOR_ORANGE2 = RGBColor(0xFF, 0x6B, 0x35)
-COLOR_NAVY    = RGBColor(0x0F, 0x17, 0x2A)
-COLOR_SLATE   = RGBColor(0x47, 0x55, 0x69)
-COLOR_WHITE   = RGBColor(0xFF, 0xFF, 0xFF)
-COLOR_SURFACE = RGBColor(0xF8, 0xFA, 0xFC)
+# ── Themes ─────────────────────────────────────────────────────────────────────
+class Theme:
+    def __init__(self, name, main_h, accent_h, text_h, slate_h, white_h, surface_h):
+        self.name = name
+        self.main = RGBColor.from_string(main_h.replace("#", ""))
+        self.accent = RGBColor.from_string(accent_h.replace("#", ""))
+        self.text = RGBColor.from_string(text_h.replace("#", ""))
+        self.slate = RGBColor.from_string(slate_h.replace("#", ""))
+        self.white = RGBColor.from_string(white_h.replace("#", ""))
+        self.surface = RGBColor.from_string(surface_h.replace("#", ""))
+
+THEMES = {
+    "neon": Theme("Neon", "#F5533D", "#FF6B35", "#0F172A", "#475569", "#FFFFFF", "#F8FAFC"),
+    "ocean": Theme("Ocean", "#3B82F6", "#06B6D4", "#0F172A", "#475569", "#FFFFFF", "#F8FAFC"),
+    "emerald": Theme("Emerald", "#10B981", "#34D399", "#064E3B", "#374151", "#FFFFFF", "#F9FAFB"),
+    "royal": Theme("Royal", "#6366F1", "#A855F7", "#1E1B4B", "#475569", "#FFFFFF", "#F8FAFC"),
+    "dark": Theme("Dark", "#F5533D", "#FF6B35", "#F8FAFC", "#94A3B8", "#0F172A", "#1E293B"),
+}
+
+DEFAULT_THEME = THEMES["neon"]
 
 SLIDE_W = Inches(20.00)
 SLIDE_H = Inches(11.25)
@@ -63,7 +76,7 @@ def _duplicate_slide_within(prs: Presentation, source_idx: int):
 
 def _add_text_box(slide, text, left, top, width, height,
                   font_size=24, bold=False,
-                  color: RGBColor = COLOR_NAVY,
+                  color: RGBColor = None,
                   align=PP_ALIGN.LEFT,
                   italic=False):
     txBox = slide.shapes.add_textbox(left, top, width, height)
@@ -76,7 +89,8 @@ def _add_text_box(slide, text, left, top, width, height,
     run.font.size = Pt(font_size)
     run.font.bold = bold
     run.font.italic = italic
-    run.font.color.rgb = color
+    if color:
+        run.font.color.rgb = color
     return txBox
 
 
@@ -90,88 +104,133 @@ def _add_rect(slide, left, top, width, height, color: RGBColor):
 
 # ── Slide decorators ───────────────────────────────────────────────────────────
 
-def _decorate_closing_slide(slide, title: str):
+def _decorate_closing_slide(slide, title: str, theme: Theme):
     """Renders a 'Thank You' closing slide."""
     _add_text_box(slide, "Thank You",
                   Inches(1.5), Inches(3.6), Inches(12), Inches(2.5),
-                  font_size=72, bold=True, color=COLOR_WHITE)
+                  font_size=72, bold=True, color=theme.white)
     _add_text_box(slide, title,
                   Inches(1.5), Inches(5.8), Inches(14), Inches(1.0),
-                  font_size=24, color=COLOR_ORANGE, italic=True)
+                  font_size=24, color=theme.main, italic=True)
 
 
-def _decorate_agenda_slide(slide, slide_titles: list):
+def _decorate_agenda_slide(slide, slide_titles: list, theme: Theme):
     """Renders a clean 'Agenda' overview slide on the template layout."""
     _add_text_box(slide, "Agenda",
                   Inches(1.0), Inches(0.4), Inches(15.0), Inches(1.0),
-                  font_size=36, bold=True, color=COLOR_NAVY)
+                  font_size=36, bold=True, color=theme.text)
 
     # Print a single, simple column list of agenda items in the upper left
     for row, item in enumerate(slide_titles):
         y = 2.0 + (row * 0.7)
         _add_text_box(slide, f"{row+1:02d}. {item}",
                       Inches(1.5), Inches(y), Inches(15.0), Inches(0.65),
-                      font_size=26, color=COLOR_SLATE)
+                      font_size=26, color=theme.slate)
 
 
-def _decorate_title_slide(slide, title: str):
+def _decorate_title_slide(slide, title: str, theme: Theme):
     # Only map the title text over the existing template.
-    # Do not draw new background rect shapes.
     _add_text_box(slide, title,
-                  Inches(1.5), Inches(3.4), Inches(11), Inches(2.8),
-                  font_size=60, bold=True, color=COLOR_NAVY)
+                  Inches(11.0), Inches(5.8), Inches(8.0), Inches(3.0),
+                  font_size=60, bold=True, color=theme.text)
 
 
-def _decorate_content_slide(slide, slide_title: str, content: list, slide_num: int):
-    # Slide Title (dark text over the plain white background)
+def _decorate_content_slide(slide, slide_title: str, content: list,
+                             slide_num: int, theme: Theme, image_bytes: bytes | None = None):
+    has_image = image_bytes is not None
+
+    # Slide Title (full width regardless of image)
     _add_text_box(slide, slide_title,
                   Inches(1.0), Inches(0.4), Inches(18.0), Inches(1.0),
-                  font_size=36, bold=True, color=COLOR_NAVY)
+                  font_size=36, bold=True, color=theme.text)
 
-    # Bullet Points (Standard vertical list, exactly 5 points)
+    # Bullet width: left 55% if image present, full width if no image
+    bullet_text_width = Inches(9.0) if has_image else Inches(17.0)
+    bullet_font_size  = 22 if has_image else 24
+
+    # Bullet Points
     for i, point in enumerate(content[:5]):
         y = 1.8 + (i * 1.5)
         # Bullet marker
         _add_text_box(slide, "•",
                       Inches(1.0), Inches(y - 0.05), Inches(0.5), Inches(1.0),
-                      font_size=28, color=COLOR_NAVY)
-        # Bullet text
+                      font_size=28, color=theme.main)
+        # Bullet text (narrower when image is present)
         _add_text_box(slide, point,
-                      Inches(1.5), Inches(y), Inches(17.0), Inches(1.4),
-                      font_size=24, color=COLOR_SLATE)
+                      Inches(1.5), Inches(y), bullet_text_width, Inches(1.4),
+                      font_size=bullet_font_size, color=theme.slate)
+
+    # Image — right half of the slide
+    if has_image:
+        try:
+            img_stream = io.BytesIO(image_bytes)
+            slide.shapes.add_picture(
+                img_stream,
+                left=Inches(11.0),
+                top=Inches(1.6),
+                width=Inches(8.0),
+                height=Inches(8.2)
+            )
+        except Exception as e:
+            # If image injection fails, slide still renders correctly (just no image)
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to add image to slide %d: %s", slide_num, e
+            )
 
 
 # ── Main entry point ───────────────────────────────────────────────────────────
 
-def create_presentation(title: str, slide_data: list) -> tuple[io.BytesIO, str]:
+def create_presentation(title: str, slide_data: list,
+                         image_bytes_list: list | None = None,
+                         theme_name: str = "neon"
+                        ) -> tuple[io.BytesIO, str]:
     """
     Generate a PPTX in memory. Returns (BytesIO, filename).
-
-    Template strategy (no slide deletion needed):
-      template starts with slides[0]=title, slides[1]=content_template
-      → duplicate slides[1]  (n-1) times  →  slides[1..n] are all content slots
-      → decorate slides[0] as title
-      → decorate slides[1..n] as content
     """
+    theme = THEMES.get(theme_name.lower(), DEFAULT_THEME)
+
     if os.path.exists(TEMPLATE_PATH):
         prs = Presentation(TEMPLATE_PATH)
-        n   = len(slide_data)
+        n = len(slide_data)
 
-        # Duplicate content template (n-1) extra times so we have exactly n slots
+        # We need: Title (1) + Agenda (1) + Content (n) + Closing (1) = n+3 slides
+        # Standard template has 2 slides: [Title, Content]
+        
+        # 1. Create Agenda slot (duplicate slide 1 — content layout)
+        _duplicate_slide_within(prs, 1) # slide 2 now
+        
+        # 2. Create Content slots (n-1) extra after original slide 1
         for _ in range(max(0, n - 1)):
             _duplicate_slide_within(prs, 1)
+            
+        # 3. Create Closing slot (duplicate slide 0 — title layout for high impact)
+        # We ensure it's the absolute last slide.
+        _duplicate_slide_within(prs, 0)
+        closing_slide_idx = len(prs.slides) - 1
 
-        # Decorate title slide
-        _decorate_title_slide(prs.slides[0], title)
-
-        # Decorate content slides
+        # Decorate
+        # Slide 0: Title
+        _decorate_title_slide(prs.slides[0], title, theme)
+        
+        # Slide 1: Agenda
+        titles = [s.get("title", f"Slide {i+1}") for i, s in enumerate(slide_data)]
+        _decorate_agenda_slide(prs.slides[1], titles, theme)
+        
+        # Slides 2 to n+1: Content
         for i, sc in enumerate(slide_data):
+            img = image_bytes_list[i] if image_bytes_list and i < len(image_bytes_list) else None
             _decorate_content_slide(
-                prs.slides[i + 1],
+                prs.slides[i + 2],
                 slide_title=sc.get("title", f"Slide {i+1}"),
                 content=sc.get("content", []),
                 slide_num=i + 1,
+                theme=theme,
+                image_bytes=img,
             )
+            
+        # Last Slide: Closing
+        _decorate_closing_slide(prs.slides[closing_slide_idx], title, theme)
     else:
         raise FileNotFoundError(f"Template file missing: {TEMPLATE_PATH}. A template is required for generation.")
 
