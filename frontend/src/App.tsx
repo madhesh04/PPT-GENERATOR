@@ -466,8 +466,8 @@ export default function App() {
         )}
       </main>
 
-      {/* FIXED FOOTER */}
-      <footer className="fixed bottom-0 w-full h-[40px] glass-heavy flex items-center justify-between px-8 z-50 border-t border-white/5 animate-footer-scan">
+      {/* PAGE FOOTER */}
+      <footer className="relative w-full h-[40px] glass-heavy flex items-center justify-between px-8 border-t border-white/5 animate-footer-scan">
           <div className="flex items-center gap-6 text-[#c24535] font-label text-[11px] tracking-[0.3em] uppercase font-black">
             <div className="flex items-center gap-2"><span className="animate-pulse">●</span> GROQ_LLAMA3_OK</div>
             <div className="flex items-center gap-2 opacity-80 outline-none">● MODEL: LLAMA 3.3 70B</div>
