@@ -10,7 +10,10 @@
 - **Multi-Agent Pipeline**: A sophisticated sequential flow: `System Check` → `LLM Agent` → `Image Engine`.
 - **Factual Density**: Strictly avoids "fluff" and meta-templates; generates specific, high-value corporate and academic insights.
 - **Precision Mapping**: Maps content directly onto native PowerPoint placeholders, maintaining 100% template integrity.
-- **Visual Intelligence**: Integrated with **Unsplash** and **Pexels** for automated, context-aware stock photo injection.
+- **Dynamic Agenda Layout**: Automatically transitions to a balanced two-column design for long lists (7+ items) to maintain readability and avoid footer overlap.
+- **Visual Intelligence**: Integrated with **Unsplash** and **Freepik** for automated, context-aware stock photo injection.
+
+
 
 ### 🎨 Visual & UX Excellence
 - **Neon Noir Design**: A premium glassmorphism UI with high-performance **Three.js** particle field animations (`DottedSurface`).
@@ -41,7 +44,8 @@ PPT-GENERATOR/
 │   ├── main.py            # FastAPI Production Server & CORS
 │   ├── generator.py       # Precision PPTX Layout Engine
 │   ├── llm_client.py      # Prompt Engineering & JSON Parser
-│   ├── image_client.py    # Multi-source Image Search (Unsplash/Pexels)
+│   ├── image_client.py    # Multi-source Image Search (Unsplash/Freepik)
+
 │   ├── template.pptx      # ← The master brand template
 │   └── requirements.txt   # Cross-platform dependencies (Render-ready)
 ├── frontend/
@@ -74,7 +78,8 @@ cd frontend && npm install
 
 ### 3. Environment Config
 Copy the example files and set your keys:
-- `backend/.env` (Set `GROQ_API_KEY`, `UNSPLASH_ACCESS_KEY`, `PEXELS_API_KEY`)
+- `backend/.env` (Set `GROQ_API_KEY`, `UNSPLASH_ACCESS_KEY`, `FREEPIK_API_KEY`)
+
 - `frontend/.env` (Set `VITE_API_BASE=http://localhost:8000`)
 
 ### 4. Launch Development

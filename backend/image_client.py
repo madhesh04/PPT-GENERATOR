@@ -5,8 +5,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 UNSPLASH_KEY = os.getenv("UNSPLASH_ACCESS_KEY")
-PEXELS_KEY   = os.getenv("PEXELS_API_KEY")
 POLLINATIONS_KEY = os.getenv("POLLINATIONS_API_KEY")
+FREEPIK_KEY      = os.getenv("FREEPIK_API_KEY")
+
+
 
 
 # ── Source 1: Pollinations.ai ─────────────────────────────────────────────────
@@ -14,26 +16,28 @@ POLLINATIONS_KEY = os.getenv("POLLINATIONS_API_KEY")
 
 async def _fetch_pollinations(query: str) -> bytes | None:
     try:
+        # Avoid "presentation slide" and "text" to ensure high-quality background imagery
         safe_prompt = query.replace(" ", "%20")
         url = (
-            f"https://image.pollinations.ai/prompt/"
-            f"professional%20presentation%20slide%20{safe_prompt}"
-            f"%20minimalist%20clean%20corporate"
-            f"?width=1344&height=768&nologo=true&enhance=true"
+            f"https://gen.pollinations.ai/image/"
+            f"{safe_prompt}%20professional%20high-resolution%20photography%20"
+            f"minimalist%20corporate%20clean%20cinematic%20lighting"
+            f"?width=1344&height=768&nologo=true&enhance=true&model=flux"
         )
-        # When using an API key, Pollinations often requires a model parameter and query-based key
+        
+        headers = {}
         if POLLINATIONS_KEY:
-            safe_key = POLLINATIONS_KEY.strip()
-            url += f"&model=flux&key={safe_key}"
+            headers["Authorization"] = f"Bearer {POLLINATIONS_KEY.strip()}"
 
-        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-            r = await client.get(url)
+        async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+            r = await client.get(url, headers=headers)
             if r.status_code == 200 and len(r.content) > 5000:
                 return r.content
             return None
     except Exception as e:
         logger.warning("Pollinations failed: %s", e)
         return None
+
 
 
 # ── Source 2: Unsplash ────────────────────────────────────────────────────────
@@ -63,34 +67,37 @@ async def _fetch_unsplash(query: str) -> bytes | None:
         return None
 
 
-# ── Source 3: Pexels ──────────────────────────────────────────────────────────
-# Free tier: 200 requests/hour
+# ── Source 3: Freepik ─────────────────────────────────────────────────────────
+# Requires a paid/free-trial API key
 
-async def _fetch_pexels(query: str) -> bytes | None:
-    if not PEXELS_KEY:
+async def _fetch_freepik(query: str) -> bytes | None:
+    if not FREEPIK_KEY:
         return None
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             r = await client.get(
-                "https://api.pexels.com/v1/search",
+                "https://api.freepik.com/v1/resources",
                 params={
                     "query": query,
                     "per_page": 1,
-                    "orientation": "landscape"
+                    "type": "photo"
                 },
-                headers={"Authorization": PEXELS_KEY}
+                headers={"x-freepik-api-key": FREEPIK_KEY}
             )
             if r.status_code != 200:
                 return None
-            photos = r.json().get("photos", [])
-            if not photos:
+            
+            data = r.json().get("data", [])
+            if not data:
                 return None
-            img_url = photos[0]["src"]["large"]
+                
+            img_url = data[0]["preview"]["url"]
             img = await client.get(img_url, timeout=15)
             return img.content if img.status_code == 200 else None
     except Exception as e:
-        logger.warning("Pexels failed: %s", e)
+        logger.warning("Freepik failed: %s", e)
         return None
+
 
 
 # ── Main entry point ──────────────────────────────────────────────────────────
@@ -98,26 +105,33 @@ async def _fetch_pexels(query: str) -> bytes | None:
 async def fetch_slide_image(query: str) -> bytes | None:
     """
     Fetch an image for a slide using the query string.
-    Tries Pollinations → Unsplash → Pexels in order.
+    Tries Freepik → Unsplash → Pollinations in order.
     Returns image bytes or None if all sources fail.
     """
+
     if not query or not query.strip():
         return None
 
-    result = await _fetch_pollinations(query)
+    # 1. Try Freepik (Real Photos)
+    result = await _fetch_freepik(query)
     if result:
-        logger.info("Image fetched from Pollinations: %s", query)
+        logger.info("Image fetched from Freepik: %s", query)
         return result
 
+    # 2. Try Unsplash (Real Photos)
     result = await _fetch_unsplash(query)
     if result:
         logger.info("Image fetched from Unsplash: %s", query)
         return result
 
-    result = await _fetch_pexels(query)
+    # 3. Try Pollinations (AI Fallback - Photography Model)
+    result = await _fetch_pollinations(query)
     if result:
-        logger.info("Image fetched from Pexels: %s", query)
+        logger.info("Image fetched from Pollinations: %s", query)
         return result
 
     logger.warning("All image sources failed for query: %s", query)
     return None
+
+
+

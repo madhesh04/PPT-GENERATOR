@@ -120,12 +120,36 @@ def _decorate_agenda_slide(slide, slide_titles: list, theme: Theme):
                   Inches(1.0), Inches(0.4), Inches(15.0), Inches(1.0),
                   font_size=36, bold=True, color=theme.text)
 
-    # Print a single, simple column list of agenda items in the upper left
-    for row, item in enumerate(slide_titles):
-        y = 2.0 + (row * 0.7)
-        _add_text_box(slide, f"{row+1:02d}. {item}",
-                      Inches(1.5), Inches(y), Inches(15.0), Inches(0.65),
-                      font_size=26, color=theme.slate)
+    num_items = len(slide_titles)
+    
+    # Decide layout: single column if 7 or fewer, otherwise two columns
+    if num_items <= 7:
+        # Single column
+        for row, item in enumerate(slide_titles):
+            y = 2.0 + (row * 0.9) # Slightly more spacing for fewer items
+            _add_text_box(slide, f"{row+1:02d}. {item}",
+                          Inches(1.5), Inches(y), Inches(15.0), Inches(0.65),
+                          font_size=26, color=theme.slate)
+    else:
+        # Two columns (split as evenly as possible)
+        midpoint = (num_items + 1) // 2
+        col1 = slide_titles[:midpoint]
+        col2 = slide_titles[midpoint:]
+
+        # Column 1 (Left)
+        for row, item in enumerate(col1):
+            y = 2.0 + (row * 0.9)
+            _add_text_box(slide, f"{row+1:02d}. {item}",
+                          Inches(1.5), Inches(y), Inches(8.5), Inches(0.65),
+                          font_size=26, color=theme.slate)
+
+        # Column 2 (Right)
+        for row, item in enumerate(col2):
+            y = 2.0 + (row * 0.9)
+            _add_text_box(slide, f"{row+midpoint+1:02d}. {item}",
+                          Inches(10.5), Inches(y), Inches(8.5), Inches(0.65),
+                          font_size=26, color=theme.slate)
+
 
 
 def _decorate_title_slide(slide, title: str, theme: Theme):
