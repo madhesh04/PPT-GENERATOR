@@ -7,7 +7,7 @@ import asyncio
 import uvicorn
 import base64
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field, field_validator
@@ -16,6 +16,10 @@ from dotenv import load_dotenv
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+import jwt
+import bcrypt
+from motor.motor_asyncio import AsyncIOMotorClient
+from datetime import datetime, timedelta
 
 # Document extraction
 from pypdf import PdfReader
@@ -29,6 +33,38 @@ load_dotenv(dotenv_path=env_path)
 from backend.generator import create_presentation
 from backend.llm_client import generate_slide_content, GROQ_MODEL
 from backend.image_client import fetch_slide_image
+
+# ── Auth & Database Config ───────────────────────────────────────────────────
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+JWT_SECRET = os.getenv("JWT_SECRET", "super-secret-key-change-me")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 24 hours
+
+client = AsyncIOMotorClient(MONGODB_URI)
+db = client.get_database("skynet_db")
+users_collection = db.get_collection("users")
+
+def verify_password(plain_password: str, hashed_password: str):
+    return bcrypt.checkpw(
+        password=plain_password.encode('utf-8'),
+        hashed_password=hashed_password.encode('utf-8')
+    )
+
+def get_password_hash(password: str):
+    pwd_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed_password = bcrypt.hashpw(password=pwd_bytes, salt=salt)
+    return hashed_password.decode('utf-8')
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=ALGORITHM)
+    return encoded_jwt
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -60,6 +96,14 @@ async def _cleanup_expired_tokens():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Create unique index on email for the users collection (non-blocking)
+    async def _ensure_indexes():
+        try:
+            await users_collection.create_index("email", unique=True)
+            logger.info("MongoDB connected — skynet_db.users index ensured.")
+        except Exception as e:
+            logger.warning("MongoDB index creation deferred: %s", e)
+    asyncio.create_task(_ensure_indexes())
     task = asyncio.create_task(_cleanup_expired_tokens())
     yield
     task.cancel()
@@ -71,8 +115,8 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # For production, set FRONTEND_URL in your environment variables.
-frontend_url = os.getenv("FRONTEND_URL", "*")
-origins = [frontend_url] if frontend_url != "*" else ["*"]
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+origins = [frontend_url] if frontend_url != "http://localhost:5173" else ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -127,6 +171,37 @@ class RegenerateSlideRequest(BaseModel):
 class RegenerateImageRequest(BaseModel):
     query: str
 
+class UserRegister(BaseModel):
+    email: str
+    password: str
+    full_name: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+async def get_current_user(request: Request):
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Unauthorized: No token provided")
+    
+    token = auth_header.split(" ")[1]
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
+        user_email = payload.get("sub")
+        if user_email is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        user = await users_collection.find_one({"email": user_email})
+        if user is None:
+            raise HTTPException(status_code=401, detail="User not found")
+        
+        return user
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
 # ── Extraction Helper ──────────────────────────────────────────────────────────
 def extract_text_from_file(file_bytes: bytes, filename: str) -> str:
     text = ""
@@ -154,10 +229,47 @@ def extract_text_from_file(file_bytes: bytes, filename: str) -> str:
 async def health():
     return {"status": "ok", "model": GROQ_MODEL}
 
+@app.post("/auth/register")
+async def register(user_data: UserRegister):
+    existing_user = await users_collection.find_one({"email": user_data.email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+    
+    hashed_password = get_password_hash(user_data.password)
+    new_user = {
+        "email": user_data.email,
+        "password": hashed_password,
+        "full_name": user_data.full_name,
+        "created_at": datetime.utcnow()
+    }
+    await users_collection.insert_one(new_user)
+    
+    return {"message": "Registration successful"}
+
+@app.post("/auth/login")
+async def login(credentials: UserLogin):
+    user = await users_collection.find_one({"email": credentials.email})
+    if not user or not verify_password(credentials.password, user["password"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user["email"]}, expires_delta=access_token_expires
+    )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "email": user["email"],
+            "full_name": user["full_name"]
+        }
+    }
+
 
 @app.post("/generate")
 @limiter.limit("10/minute")
-async def generate_ppt(request: Request, body: PresentationRequest):
+async def generate_ppt(request: Request, body: PresentationRequest, current_user: Annotated[dict, Depends(get_current_user)]):
     """Generate slide content + images, build PPTX, render slide previews."""
     logger.info("Generate request: title=%r, slides=%d, tone=%s, theme=%s",
                 body.title, body.num_slides, body.tone, body.theme)
@@ -216,7 +328,7 @@ async def generate_ppt(request: Request, body: PresentationRequest):
 
 
 @app.post("/regenerate-slide")
-async def regenerate_slide(body: RegenerateSlideRequest):
+async def regenerate_slide(body: RegenerateSlideRequest, current_user: Annotated[dict, Depends(get_current_user)]):
     """Generate a single new slide object."""
     try:
         # We use num_slides=1 but tell the LLM to avoid existing_titles
@@ -243,7 +355,7 @@ async def regenerate_slide(body: RegenerateSlideRequest):
 
 
 @app.post("/regenerate-image")
-async def regenerate_image(body: RegenerateImageRequest):
+async def regenerate_image(body: RegenerateImageRequest, current_user: Annotated[dict, Depends(get_current_user)]):
     """Fetch a new image for a specific query."""
     img_bytes = await fetch_slide_image(body.query)
     if not img_bytes:
@@ -254,7 +366,10 @@ async def regenerate_image(body: RegenerateImageRequest):
 
 
 @app.post("/upload-context")
-async def upload_context(file: UploadFile = File(...)):
+async def upload_context(file: UploadFile = File(...), current_user: Annotated[dict, Depends(get_current_user)] = None):
+    # Optional auth for upload-context if we want, but let's make it required for consistency
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     """Extract text from PDF/DOCX to use as grounding context."""
     content = await file.read()
     text = extract_text_from_file(content, file.filename)
@@ -262,7 +377,7 @@ async def upload_context(file: UploadFile = File(...)):
 
 
 @app.post("/export")
-async def export_ppt(body: ExportRequest):
+async def export_ppt(body: ExportRequest, current_user: Annotated[dict, Depends(get_current_user)]):
     """Generate PPTX from the current (potentially edited) slides in the frontend."""
     try:
         image_bytes_list = []

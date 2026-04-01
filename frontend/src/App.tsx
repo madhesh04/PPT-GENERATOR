@@ -2,6 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { ThemeProvider } from 'next-themes';
 import { DottedSurface } from './components/ui/dotted-surface';
 import './index.css';
+import { useAuth } from './AuthContext';
+import Login from './components/Login';
+import Signup from './components/Signup';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface SlideData {
@@ -188,6 +191,42 @@ export default function App() {
   const [error, setError]       = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [isContextModalOpen, setIsContextModalOpen] = useState(false);
+  const { token, user, logout, isAuthenticated } = useAuth();
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+
+  // Custom Cursor Logic
+  const cursorOuterRef = useRef<HTMLDivElement>(null);
+  const cursorInnerRef = useRef<HTMLDivElement>(null);
+  const mousePos = useRef({ x: 0, y: 0 });
+  const outerPos = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      mousePos.current = { x: e.clientX, y: e.clientY };
+      if (cursorInnerRef.current) {
+        cursorInnerRef.current.style.left = `${e.clientX}px`;
+        cursorInnerRef.current.style.top = `${e.clientY}px`;
+      }
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+
+    let requestRef: number;
+    const animateCursor = () => {
+      outerPos.current.x += (mousePos.current.x - outerPos.current.x) * 0.14;
+      outerPos.current.y += (mousePos.current.y - outerPos.current.y) * 0.14;
+      if (cursorOuterRef.current) {
+        cursorOuterRef.current.style.left = `${outerPos.current.x}px`;
+        cursorOuterRef.current.style.top = `${outerPos.current.y}px`;
+      }
+      requestRef = requestAnimationFrame(animateCursor);
+    };
+    animateCursor();
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      cancelAnimationFrame(requestRef);
+    };
+  }, []);
 
   // Loading Step Animation Logic
   const [activeStep, setActiveStep] = useState(0);
@@ -216,9 +255,14 @@ export default function App() {
     setLoading(true); setError(null); setResult(null); setSlides([]);
     try {
       const resp = await fetch(`${API_BASE}/generate`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ title: title || 'Untitled', topics, num_slides: numSlides, context, tone, theme }),
       });
+      if (resp.status === 401) { logout(); return; }
       if (!resp.ok) throw new Error((await resp.json()).detail || 'Generation failed');
       const data: GenerateResponse = await resp.json();
       setResult(data);
@@ -232,9 +276,14 @@ export default function App() {
     setExporting(true);
     try {
       const resp = await fetch(`${API_BASE}/export`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ title: result.title, slides, theme }),
       });
+      if (resp.status === 401) { logout(); return; }
       if (!resp.ok) throw new Error('Export failed');
       const data = await resp.json();
       handleDownload(data.token, data.filename);
@@ -245,7 +294,10 @@ export default function App() {
   const handleDownload = async (token = result?.token, filename = result?.filename) => {
     if (!token) return;
     try {
-      const dl = await fetch(`${API_BASE}/download/${token}`);
+      const dl = await fetch(`${API_BASE}/download/${token}`, {
+        headers: { 'Authorization': `Bearer ${useAuth().token}` }
+      });
+      if (dl.status === 401) { logout(); return; }
       const blob = await dl.blob();
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename || 'presentation.pptx';
       document.body.appendChild(a); a.click(); a.remove();
@@ -254,27 +306,49 @@ export default function App() {
 
   return (
     <ThemeProvider attribute="class" defaultTheme="dark">
-      <header className="fixed top-0 w-full z-50 glass-heavy flex justify-between items-center px-8 py-4 border-b border-white/5 shadow-2xl">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.location.reload()}>
-          <span className="material-symbols-outlined text-[#F5533D] text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>deployed_code</span>
-          <h1 className="text-2xl font-[800] tracking-tighter text-[#F5533D] uppercase font-headline">NEO PPT</h1>
-        </div>
-        <div className="hidden md:flex gap-8 items-center">
-          <nav className="flex gap-6">
-            <button onClick={() => setResult(null)} className={`font-bold font-label text-sm tracking-widest uppercase ${!result ? 'text-primary-container border-b-2 border-primary-container' : 'text-on-surface-variant hover:text-white transition-colors'}`}>Create</button>
-            <button className={`font-bold font-label text-sm tracking-widest uppercase ${result ? 'text-primary-container border-b-2 border-primary-container' : 'text-on-surface-variant hover:text-white transition-colors'}`}>Results</button>
-          </nav>
-          {result && (
-            <button onClick={handleExport} disabled={exporting} className="bg-primary-container text-white px-6 py-2.5 rounded-xl font-label font-extrabold text-[10px] uppercase tracking-widest hover:bg-[#FC5842] transition-expo flex items-center gap-2 shadow-xl border border-white/10">
-              <span className={`material-symbols-outlined text-sm ${exporting ? 'animate-spin' : ''}`} style={{fontVariationSettings: "'FILL' 1"}}>sync</span> Download .pptx
-            </button>
-          )}
-        </div>
-      </header>
+      {/* Custom Cursor */}
+      <div ref={cursorOuterRef} className="skynet-cursor-outer" />
+      <div ref={cursorInnerRef} className="skynet-cursor-inner" />
 
-      <DottedSurface className="opacity-80" />
+      {!isAuthenticated ? (
+        authMode === 'login' ? (
+          <Login onSwitchToSignup={() => setAuthMode('signup')} />
+        ) : (
+          <Signup onSwitchToLogin={() => setAuthMode('login')} />
+        )
+      ) : (
+        <>
+          <header className="fixed top-0 w-full z-50 glass-heavy flex justify-between items-center px-8 py-4 border-b border-white/5 shadow-2xl">
+            <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.location.reload()}>
+              <span className="material-symbols-outlined text-[#F5533D] text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>deployed_code</span>
+              <h1 className="text-2xl font-[800] tracking-tighter text-[#F5533D] uppercase font-headline">SKYNET</h1>
+            </div>
+            <div className="hidden md:flex gap-8 items-center">
+              <nav className="flex gap-6">
+                <button onClick={() => setResult(null)} className={`font-bold font-label text-sm tracking-widest uppercase ${!result ? 'text-primary-container border-b-2 border-primary-container' : 'text-on-surface-variant hover:text-white transition-colors'}`}>Create</button>
+                <button className={`font-bold font-label text-sm tracking-widest uppercase ${result ? 'text-primary-container border-b-2 border-primary-container' : 'text-on-surface-variant hover:text-white transition-colors'}`}>Results</button>
+              </nav>
+              {result && (
+                <button onClick={handleExport} disabled={exporting} className="bg-primary-container text-white px-6 py-2.5 rounded-xl font-label font-extrabold text-[10px] uppercase tracking-widest hover:bg-[#FC5842] transition-expo flex items-center gap-2 shadow-xl border border-white/10">
+                  <span className={`material-symbols-outlined text-sm ${exporting ? 'animate-spin' : ''}`} style={{fontVariationSettings: "'FILL' 1"}}>sync</span> Download .pptx
+                </button>
+              )}
+              {user && (
+                <div className="flex items-center gap-4 pl-4 border-l border-white/10">
+                  <div className="text-right">
+                    <div className="text-[10px] font-label font-black text-white uppercase tracking-widest leading-none">{user?.full_name}</div>
+                    <div className="text-[9px] font-label text-on-surface-variant uppercase tracking-[0.2em]">{user?.email}</div>
+                  </div>
+                  <button onClick={logout} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-error/10 hover:border-error/20 hover:text-error transition-all group">
+                    <span className="material-symbols-outlined text-xl">logout</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </header>
 
-      <main className={`relative pt-32 pb-24 mx-auto min-h-screen ${result ? 'px-8 max-w-[1400px]' : 'px-6 max-w-5xl'}`}>
+          <DottedSurface className="opacity-80" />
+        <main className={`relative pt-32 pb-24 mx-auto min-h-screen ${result ? 'px-8 max-w-[1400px]' : 'px-6 max-w-5xl'}`}>
         
         {/* FORM STATE */}
         {!result && !loading && (
@@ -285,7 +359,7 @@ export default function App() {
                   Turn ideas into <span className="text-primary-container drop-shadow-md">[polished decks_]</span>
                 </h2>
                 <p className="text-on-surface-variant text-lg font-medium max-w-lg drop-shadow-md">
-                  The Kinetic Curator uses high-performance AI to transform raw concepts into executive-ready presentations in seconds.
+                  SKYNET CORE uses high-performance AI to transform raw concepts into executive-ready presentations in seconds.
                 </p>
               </div>
               <div className="hidden lg:block">
@@ -353,7 +427,7 @@ export default function App() {
               <aside className="lg:col-span-4 space-y-8">
                 <div className="glass-card p-10 rounded-3xl border border-white/5 shadow-2xl relative overflow-hidden">
                    <div className="signature-bar bg-primary/40"></div>
-                   <h3 className="font-label text-xs font-black text-primary-container tracking-widest uppercase mb-6 drop-shadow-lg">NEO_INTELLIGENCE</h3>
+                   <h3 className="font-label text-xs font-black text-primary-container tracking-widest uppercase mb-6 drop-shadow-lg">SKYNET_INTELLIGENCE</h3>
                    <div onClick={()=>setIsContextModalOpen(true)} className="flex items-center gap-5 p-6 glass-pill border-[#f5533d]/30 bg-[#f5533d]/5 hover:bg-[#f5533d]/10 cursor-pointer transition-all rounded-2xl group">
                       <span className="material-symbols-outlined text-[#f5533d] group-hover:scale-110 transition-transform" style={{fontVariationSettings: "'FILL' 1"}}>auto_awesome</span>
                       <div>
@@ -418,7 +492,7 @@ export default function App() {
               <div className="bg-surface-container p-6 rounded-xl relative overflow-hidden group hover:bg-surface-container-high transition-expo border border-outline-variant/10">
                 <div className="flex flex-col">
                   <span className="text-on-surface-variant text-xs font-label uppercase tracking-widest mb-1">Visual Theme Paradigm</span>
-                  <h3 className="text-3xl font-headline text-on-surface text-secondary truncate">{THEMES.find(t=>t.id===result.theme)?.label || 'Neon Noir'}</h3>
+                  <h3 className="text-3xl font-headline text-on-surface text-secondary truncate">{THEMES.find(t=>t.id===result?.theme)?.label || 'Neon Noir'}</h3>
                 </div>
                 <div className="absolute bottom-0 left-0 h-1 bg-secondary w-1/2"></div>
               </div>
@@ -451,11 +525,27 @@ export default function App() {
                     <SlideCard key={i} slide={slide} index={i}
                       onUpdate={newS => setSlides(prev => prev.map((s, idx)=>idx===i?newS:s))}
                       onRegenSlide={async () => {
-                        const r = await fetch(`${API_BASE}/regenerate-slide`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ title: result.title, context, tone, existing_titles: slides.map(s=>s.title) })});
+                        const r = await fetch(`${API_BASE}/regenerate-slide`, {
+                          method:'POST',
+                          headers:{
+                            'Content-Type':'application/json',
+                            'Authorization': `Bearer ${token}`
+                          },
+                          body:JSON.stringify({ title: result.title, context, tone, existing_titles: slides.map(s=>s.title) })
+                        });
+                        if (r.status === 401) { logout(); return; }
                         if (r.ok){ const n = await r.json(); setSlides(p=>p.map((s, idx)=>idx===i?n:s)); }
                       }}
                       onRegenImage={async () => {
-                        const r = await fetch(`${API_BASE}/regenerate-image`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ query: slide.image_query || slide.title })});
+                        const r = await fetch(`${API_BASE}/regenerate-image`, {
+                          method:'POST',
+                          headers:{
+                            'Content-Type':'application/json',
+                            'Authorization': `Bearer ${token}`
+                          },
+                          body:JSON.stringify({ query: slide.image_query || slide.title })
+                        });
+                        if (r.status === 401) { logout(); return; }
                         if(r.ok){ const {image_base64} = await r.json(); setSlides(p=>p.map((s, idx)=>idx===i?{...s, image_base64}:s)); }
                       }}
                     />
@@ -466,17 +556,6 @@ export default function App() {
         )}
       </main>
 
-      {/* PAGE FOOTER */}
-      <footer className="relative w-full h-[40px] glass-heavy flex items-center justify-between px-8 border-t border-white/5 animate-footer-scan">
-          <div className="flex items-center gap-6 text-[#c24535] font-label text-[11px] tracking-[0.3em] uppercase font-black">
-            <div className="flex items-center gap-2"><span className="animate-pulse">●</span> GROQ_LLAMA3_OK</div>
-            <div className="flex items-center gap-2 opacity-80 outline-none">● MODEL: LLAMA 3.3 70B</div>
-            <div className="flex items-center gap-2 opacity-60">● KINETIC_CURATOR_V4.3</div>
-          </div>
-          <div className="text-white/60 font-label text-[11px] tracking-[0.3em] uppercase">SYSTEM_TIME // <span className="text-white font-bold">LIVE</span></div>
-      </footer>
-
-      {/* MODAL */}
       {isContextModalOpen && (
         <ContextModal 
           isOpen={isContextModalOpen} 
@@ -484,6 +563,18 @@ export default function App() {
           onClose={()=>setIsContextModalOpen(false)} 
           onSave={v=>{setContext(v); setIsContextModalOpen(false);}} 
         />
+      )}
+
+          {/* PAGE FOOTER */}
+          <footer className="relative w-full h-[40px] glass-heavy flex items-center justify-between px-8 border-t border-white/5 animate-footer-scan">
+              <div className="flex items-center gap-6 text-[#c24535] font-label text-[11px] tracking-[0.3em] uppercase font-black">
+                <div className="flex items-center gap-2"><span className="animate-pulse">●</span> SKYNET_CORE_OK</div>
+                <div className="flex items-center gap-2 opacity-80 outline-none">● MODEL: LLAMA 3.3 70B</div>
+                <div className="flex items-center gap-2 opacity-60">● SKYNET_V4.3</div>
+              </div>
+              <div className="text-white/60 font-label text-[11px] tracking-[0.3em] uppercase">SYSTEM_TIME // <span className="text-white font-bold">LIVE</span></div>
+          </footer>
+        </>
       )}
     </ThemeProvider>
   );
@@ -498,7 +589,12 @@ function ContextModal({ isOpen, currentValue, onClose, onSave }: { isOpen: boole
     setUploading(true);
     const fd = new FormData(); fd.append('file', file);
     try {
-      const r = await fetch(`${API_BASE}/upload-context`, { method:'POST', body:fd });
+      const r = await fetch(`${API_BASE}/upload-context`, {
+        method:'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
+        body:fd
+      });
+      if (r.status === 401) { window.location.reload(); return; }
       const d = await r.json();
       setText(p => (p ? p + "\n" + d.text : d.text));
     } catch { alert("Extraction failed"); } 

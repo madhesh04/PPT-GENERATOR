@@ -10,3 +10,6 @@ httpx
 pypdf
 python-docx
 Pillow
+motor
+PyJWT
+passlib[bcrypt]

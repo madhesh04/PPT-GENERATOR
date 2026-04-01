@@ -54,6 +54,35 @@
   --font-headline: 'Syne', sans-serif;
   --font-body: 'DM Sans', sans-serif;
   --font-label: 'Space Grotesk', monospace;
+
+  /* SKYNET Core palette */
+  --skynet-void:      #020408;
+  --skynet-deep:      #040810;
+  --skynet-surface:   #060d1a;
+  --skynet-panel:     rgba(4, 12, 28, 0.88);
+  --skynet-field:     rgba(0, 240, 255, 0.03);
+
+  /* Neon accents */
+  --skynet-cyan:         #00f0ff;
+  --skynet-cyan-dim:     rgba(0, 240, 255, 0.55);
+  --skynet-cyan-glow:    rgba(0, 240, 255, 0.15);
+  --skynet-cyan-border:  rgba(0, 240, 255, 0.25);
+  --skynet-green:        #00ff9d;
+  --skynet-green-dim:    rgba(0, 255, 157, 0.6);
+  --skynet-green-glow:   rgba(0, 255, 157, 0.12);
+  --skynet-red:          #ff2d55;
+  --skynet-amber:        #ffb800;
+
+  /* Text hierarchy */
+  --skynet-text-primary:   #e8f4ff;
+  --skynet-text-secondary: #6a8aaa;
+  --skynet-text-terminal:  #00f0ff;
+  --skynet-text-muted:     #2a4060;
+
+  /* Typography stacks */
+  --font-skynet-display:  'Orbitron', monospace;
+  --font-skynet-mono:     'Share Tech Mono', monospace;
+  --font-skynet-body:     'Rajdhani', sans-serif;
 }
 
 /* ── Base ── */
@@ -160,4 +189,133 @@ input[type="text"]:focus, textarea:focus {
   background: linear-gradient(90deg, transparent 0%, rgba(245, 83, 61, 0.05) 45%, rgba(245, 83, 61, 0.1) 50%, rgba(245, 83, 61, 0.05) 55%, transparent 100%);
   background-size: 200% 100%;
   animation: scan-glow 4s linear infinite;
+}
+
+/* ── SKYNET Additions ── */
+.skynet-bg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  background:
+    radial-gradient(ellipse 70% 60% at 80% 50%, rgba(0, 30, 60, 0.55) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 50% at 20% 80%, rgba(0, 15, 35, 0.7) 0%, transparent 60%),
+    radial-gradient(ellipse 100% 100% at 50% 50%, transparent 40%, rgba(2, 4, 8, 0.85) 100%);
+  pointer-events: none;
+}
+
+.skynet-scanlines {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 240, 255, 0.012) 2px, rgba(0, 240, 255, 0.012) 4px);
+  pointer-events: none;
+  animation: scanlineShift 8s linear infinite;
+}
+
+.skynet-scan-beam {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 3;
+  background: linear-gradient(90deg, transparent 0%, rgba(0, 240, 255, 0.5) 30%, rgba(0, 240, 255, 0.9) 50%, rgba(0, 240, 255, 0.5) 70%, transparent 100%);
+  filter: blur(1px);
+  animation: beamScan 7s linear infinite;
+  pointer-events: none;
+}
+
+.skynet-corner {
+  position: fixed;
+  width: 40px;
+  height: 40px;
+  z-index: 4;
+  pointer-events: none;
+}
+.skynet-corner--tl { top: 20px; left: 20px; border-top: 1.5px solid var(--skynet-cyan); border-left: 1.5px solid var(--skynet-cyan); }
+.skynet-corner--tr { top: 20px; right: 20px; border-top: 1.5px solid var(--skynet-cyan); border-right: 1.5px solid var(--skynet-cyan); }
+.skynet-corner--bl { bottom: 20px; left: 20px; border-bottom: 1.5px solid var(--skynet-cyan); border-left: 1.5px solid var(--skynet-cyan); }
+.skynet-corner--br { bottom: 20px; right: 20px; border-bottom: 1.5px solid var(--skynet-cyan); border-right: 1.5px solid var(--skynet-cyan); }
+
+@keyframes beamScan {
+  0%   { top: -4px;  opacity: 0.8; }
+  5%   { opacity: 1; }
+  95%  { opacity: 0.8; }
+  100% { top: 100vh; opacity: 0; }
+}
+
+@keyframes scanlineShift {
+  0%   { background-position: 0 0; }
+  100% { background-position: 0 100px; }
+}
+
+.skynet-cursor-outer {
+  position: fixed;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--skynet-cyan);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: width 0.2s, height 0.2s, border-color 0.2s, opacity 0.2s;
+  opacity: 0.7;
+}
+.skynet-cursor-inner {
+  position: fixed;
+  width: 4px;
+  height: 4px;
+  background: var(--skynet-cyan);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 8px var(--skynet-cyan);
+  transition: transform 0.1s;
+}
+
+body:has(input:focus) .skynet-cursor-outer,
+body:has(button:hover) .skynet-cursor-outer {
+  width: 48px;
+  height: 48px;
+  border-color: var(--skynet-green);
+  opacity: 1;
+}
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(0.7); }
+}
+
+@keyframes panelReveal {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes borderRotate {
+  0%   { background: linear-gradient(0deg, rgba(0,240,255,0.4), transparent 40%, transparent 60%, rgba(0,255,157,0.2)); }
+  25%  { background: linear-gradient(90deg, rgba(0,240,255,0.4), transparent 40%, transparent 60%, rgba(0,255,157,0.2)); }
+  50%  { background: linear-gradient(180deg, rgba(0,240,255,0.4), transparent 40%, transparent 60%, rgba(0,255,157,0.2)); }
+  75%  { background: linear-gradient(270deg, rgba(0,240,255,0.4), transparent 40%, transparent 60%, rgba(0,255,157,0.2)); }
+  100% { background: linear-gradient(360deg, rgba(0,240,255,0.4), transparent 40%, transparent 60%, rgba(0,255,157,0.2)); }
+}
+
+/* ── Missing Animation Keyframes for Login/Signup ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-down {
+  animation: fadeDown 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
 }

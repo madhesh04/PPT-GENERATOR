@@ -38,6 +38,8 @@ nosetests.xml
 coverage.xml
 .coverage
 htmlcov/
+diag_*.py
+test_*.py
 
 # Logs
 *.log
