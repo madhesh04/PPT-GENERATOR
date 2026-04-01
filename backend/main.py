@@ -11,8 +11,10 @@ from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field, field_validator
-from typing import List, Annotated, Optional
+from typing import List, Annotated, Optional, Any
 from dotenv import load_dotenv
+import hashlib
+from bson import ObjectId
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -43,6 +45,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 24 hours
 client = AsyncIOMotorClient(MONGODB_URI)
 db = client.get_database("skynet_db")
 users_collection = db.get_collection("users")
+presentations_collection = db.get_collection("presentations")
+generation_logs_collection = db.get_collection("generation_logs")
 
 def verify_password(plain_password: str, hashed_password: str):
     return bcrypt.checkpw(
@@ -100,11 +104,13 @@ async def lifespan(app: FastAPI):
     async def _ensure_indexes():
         try:
             await users_collection.create_index("email", unique=True)
-            logger.info("MongoDB connected — skynet_db.users index ensured.")
+            await presentations_collection.create_index("content_hash")
+            await presentations_collection.create_index("user_id")
+            logger.info("MongoDB connected — indexes ensured.")
         except Exception as e:
             logger.warning("MongoDB index creation deferred: %s", e)
     asyncio.create_task(_ensure_indexes())
-    task = asyncio.create_task(_cleanup_expired_tokens())
+    # No TTL cleanup needed anymore since we persist to DB
     yield
     task.cancel()
 
@@ -270,32 +276,61 @@ async def login(credentials: UserLogin):
 @app.post("/generate")
 @limiter.limit("10/minute")
 async def generate_ppt(request: Request, body: PresentationRequest, current_user: Annotated[dict, Depends(get_current_user)]):
-    """Generate slide content + images, build PPTX, render slide previews."""
-    logger.info("Generate request: title=%r, slides=%d, tone=%s, theme=%s",
-                body.title, body.num_slides, body.tone, body.theme)
+    """Generate slide content + images, and persist to MongoDB blueprint with caching."""
+    start_time = time.time()
+    user_id = current_user["_id"]
+    
     try:
-        # 1. Generate slide text content via LLM
-        presentation_data = await generate_slide_content(
-            body.title, body.topics, body.num_slides, body.context, body.tone
-        )
+        # 1. Hashing Algorithm for Caching
+        normalized_str = f"{body.title.lower().strip()}-{'|'.join(sorted([t.lower().strip() for t in body.topics]))}-{body.tone}-{body.theme}"
+        content_hash = hashlib.sha256(normalized_str.encode('utf-8')).hexdigest()
+        
+        # 2. Check Database for Existing Presentation
+        cached_presentation = await presentations_collection.find_one({"content_hash": content_hash})
+        
+        if cached_presentation:
+            logger.info(f"Cache Hit for hash {content_hash}. Re-routing blueprint to user.")
+            
+            new_presentation_doc = {
+                "user_id": user_id,
+                "title": cached_presentation["title"],
+                "topics": cached_presentation["topics"],
+                "content_hash": content_hash,
+                "slides": cached_presentation["slides"],
+                "created_at": datetime.utcnow(),
+                "theme": cached_presentation.get("theme", body.theme)
+            }
+            res = await presentations_collection.insert_one(new_presentation_doc)
+            
+            await generation_logs_collection.insert_one({
+                "user_id": user_id,
+                "presentation_id": res.inserted_id,
+                "action": "generate",
+                "status": "cache_hit",
+                "execution_time_ms": int((time.time() - start_time) * 1000),
+                "timestamp": datetime.utcnow()
+            })
+            
+            return {
+                "title": new_presentation_doc["title"],
+                "slides": new_presentation_doc["slides"],
+                "theme": cached_presentation.get("theme", body.theme),
+                "token": str(res.inserted_id),
+                "filename": f"{cached_presentation['title'].replace(' ', '_')}.pptx"
+            }
+
+        # 3. Cache Miss - Full Generation Pipeline
+        logger.info("Cache Miss. Initiating LLM synthesis for %r", body.title)
+        presentation_data = await generate_slide_content(body.title, body.topics, body.num_slides, body.context, body.tone)
         if not presentation_data:
             raise HTTPException(status_code=500, detail="Failed to generate slide content from AI.")
 
-        # 2. Fetch images in parallel
-        image_tasks = [
-            fetch_slide_image(slide.get("image_query", slide.get("title", "")))
-            for slide in presentation_data
-        ]
+        # 4. Fetch images in parallel
+        image_tasks = [fetch_slide_image(slide.get("image_query", slide.get("title", ""))) for slide in presentation_data]
         image_bytes_list = await asyncio.gather(*image_tasks, return_exceptions=True)
-        # Sanitise: replace exceptions with None
-        image_bytes_list = [
-            img if isinstance(img, bytes) else None
-            for img in image_bytes_list
-        ]
+        image_bytes_list = [img if isinstance(img, bytes) else None for img in image_bytes_list]
 
-        logger.info("Images fetched: %d slides", len(presentation_data))
-
-        # 3. Embed base64 images into each slide dict so the frontend can show them
+        # 5. Embed base64 images into each slide dict
         for slide, img_bytes in zip(presentation_data, image_bytes_list):
             if img_bytes:
                 b64 = base64.b64encode(img_bytes).decode("utf-8")
@@ -303,24 +338,33 @@ async def generate_ppt(request: Request, body: PresentationRequest, current_user
             else:
                 slide["image_base64"] = None
 
-        # 4. Build the actual PPTX (with images injected)
-        buf, filename = create_presentation(
-            body.title, presentation_data, image_bytes_list, body.theme
-        )
-
-        # 5. Reset buffer so download endpoint can stream it
-        buf.seek(0)
-
-        # 6. Store the PPTX for future download
-        token = str(uuid.uuid4())
-        _ppt_store[token] = (buf, filename, time.time())
+        # 6. Save Blueprint to MongoDB
+        new_presentation_doc = {
+            "user_id": user_id,
+            "title": body.title,
+            "topics": body.topics,
+            "content_hash": content_hash,
+            "slides": presentation_data,
+            "created_at": datetime.utcnow(),
+            "theme": body.theme
+        }
+        res = await presentations_collection.insert_one(new_presentation_doc)
+        
+        await generation_logs_collection.insert_one({
+            "user_id": user_id,
+            "presentation_id": res.inserted_id,
+            "action": "generate",
+            "status": "success",
+            "execution_time_ms": int((time.time() - start_time) * 1000),
+            "timestamp": datetime.utcnow()
+        })
 
         return {
-            "title":    body.title,
-            "slides":   presentation_data,
-            "theme":    body.theme,
-            "token":    token,
-            "filename": filename,
+            "title": body.title,
+            "slides": presentation_data,
+            "theme": body.theme,
+            "token": str(res.inserted_id),
+            "filename": f"{body.title.replace(' ', '_')}.pptx"
         }
     except Exception as e:
         logger.exception("Error generating presentation: %s", e)
@@ -378,51 +422,130 @@ async def upload_context(file: UploadFile = File(...), current_user: Annotated[d
 
 @app.post("/export")
 async def export_ppt(body: ExportRequest, current_user: Annotated[dict, Depends(get_current_user)]):
-    """Generate PPTX from the current (potentially edited) slides in the frontend."""
+    """Save user edits as a new presentation branch in DB and return the download token."""
     try:
-        image_bytes_list = []
-        for slide in body.slides:
-            if slide.image_base64 and slide.image_base64.startswith("data:image"):
-                try:
-                    parts = slide.image_base64.split(",")
-                    if len(parts) > 1:
-                        image_bytes_list.append(base64.b64decode(parts[1]))
-                    else:
-                        image_bytes_list.append(None)
-                except:
-                    image_bytes_list.append(None)
-            else:
-                image_bytes_list.append(None)
+        user_id = current_user["_id"]
+        
+        # We append a timestamp to the hash to ensure edits are saved as unique blueprints
+        import time
+        normalized_str = f"edited-{body.title.lower().strip()}-{time.time()}"
+        content_hash = hashlib.sha256(normalized_str.encode('utf-8')).hexdigest()
 
-        slide_data_dicts = [s.model_dump() for s in body.slides]
-        buf, filename = create_presentation(body.title, slide_data_dicts, image_bytes_list, body.theme)
-
-        buf.seek(0)
-
-        token = str(uuid.uuid4())
-        _ppt_store[token] = (buf, filename, time.time())
-
-        return {"token": token, "filename": filename}
+        new_presentation_doc = {
+            "user_id": user_id,
+            "title": body.title,
+            "topics": ["Edited Format"],
+            "content_hash": content_hash,
+            "slides": [s.model_dump() for s in body.slides],
+            "created_at": datetime.utcnow(),
+            "theme": body.theme
+        }
+        res = await presentations_collection.insert_one(new_presentation_doc)
+        
+        filename = f"{body.title.replace(' ', '_')}.pptx"
+        
+        return {
+            "token": str(res.inserted_id),
+            "filename": filename
+        }
     except Exception as e:
         logger.exception("Export failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/download/{token}")
-async def download_ppt(token: str):
-    """Stream the in-memory PPTX to the client."""
-    entry = _ppt_store.get(token)
-    if entry is None:
-        raise HTTPException(status_code=404, detail="File not found or link expired. Please regenerate.")
+@app.get("/presentations/me")
+async def get_my_presentations(current_user: Annotated[dict, Depends(get_current_user)]):
+    """Fetch all presentation blueprints owned by the user."""
+    cursor = presentations_collection.find(
+        {"user_id": current_user["_id"]},
+        {"_id": 1, "title": 1, "theme": 1, "created_at": 1}
+    ).sort("created_at", -1)
+    
+    presentations = await cursor.to_list(length=100)
+    
+    # Stringify ObjectIds for JSON serialization
+    serialized = []
+    for p in presentations:
+        p["id"] = str(p.pop("_id"))
+        p["created_at"] = p["created_at"].isoformat()
+        serialized.append(p)
+        
+    return {"presentations": serialized}
 
-    buf, filename, _ = entry
+
+@app.delete("/presentations/{presentation_id}")
+async def delete_presentation(presentation_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
+    try:
+        obj_id = ObjectId(presentation_id)
+    except:
+        raise HTTPException(status_code=400, detail="Invalid presentation ID")
+        
+    result = await presentations_collection.delete_one({
+        "_id": obj_id,
+        "user_id": current_user["_id"]
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Presentation not found or unauthorized")
+    
+    return {"status": "success", "message": "Presentation deleted"}
+
+
+@app.get("/download/{presentation_id}")
+async def download_ppt(presentation_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
+    """Dynamically build PPTX from the requested BSON blueprint."""
+    try:
+        obj_id = ObjectId(presentation_id)
+    except:
+        raise HTTPException(status_code=400, detail="Invalid presentation ID format")
+        
+    presentation = await presentations_collection.find_one({
+        "_id": obj_id,
+        "user_id": current_user["_id"]
+    })
+    
+    if not presentation:
+        raise HTTPException(status_code=404, detail="Presentation not found or unauthorized.")
+
+    # Convert base64 fields back to bytes for generator.py
+    image_bytes_list = []
+    slides = presentation.get("slides", [])
+    
+    for slide in slides:
+        img_b64 = slide.get("image_base64")
+        if img_b64 and img_b64.startswith("data:image"):
+            try:
+                parts = img_b64.split(",")
+                if len(parts) > 1:
+                    image_bytes_list.append(base64.b64decode(parts[1]))
+                else:
+                    image_bytes_list.append(None)
+            except:
+                image_bytes_list.append(None)
+        else:
+            image_bytes_list.append(None)
+
+    # Reconstruct presentation on the fly
+    buf, filename = create_presentation(
+        presentation.get("title", "Untitled"),
+        slides, 
+        image_bytes_list, 
+        presentation.get("theme", "neon")
+    )
+
     buf.seek(0)
-    # _ppt_store.pop(token, None) # Keep it for multiple downloads during dev session
+
+    # Allow custom extension matching
+    if not filename.endswith(".pptx"):
+        filename += ".pptx"
+    
+    # Safe filename
+    safe_filename = filename.replace(" ", "_").replace("/", "-")
 
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f'attachment; filename="{safe_filename}"'},
     )
 
 

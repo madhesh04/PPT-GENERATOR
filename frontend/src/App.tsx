@@ -174,6 +174,131 @@ function EditableBullet({ point, onSave, accentClass }: { point: string; onSave:
   );
 }
 
+// ── Dashboard Component ────────────────────────────────────────────────────────
+
+interface SavedPresentation {
+  id: string;
+  title: string;
+  theme: string;
+  created_at: string;
+}
+
+function DashboardView({ token, apiBase, onDownload }: { token: string | null; apiBase: string; onDownload: (id: string, title: string) => void }) {
+  const [presentations, setPresentations] = useState<SavedPresentation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchPresentations = async () => {
+      try {
+        const res = await fetch(`${apiBase}/presentations/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPresentations(data.presentations);
+        }
+      } catch (err) {
+        console.error("Failed to fetch dashboard data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (token) fetchPresentations();
+  }, [token, apiBase]);
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      const res = await fetch(`${apiBase}/presentations/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setPresentations(prev => prev.filter(p => p.id !== id));
+      } else {
+        alert("Failed to delete presentation");
+      }
+    } catch (err) {
+      alert("Error issuing delete request");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[50vh] animate-fade-in text-center">
+         <div className="w-16 h-16 border-2 border-primary-container border-r-transparent rounded-full animate-spin mb-6"></div>
+         <p className="font-label text-xs uppercase tracking-widest text-on-surface-variant">Retrieving Storage Vectors...</p>
+      </div>
+    );
+  }
+
+  if (presentations.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[50vh] text-center border border-dashed border-white/10 rounded-3xl p-10 bg-white/5 animate-fade-in">
+        <span className="material-symbols-outlined text-6xl text-white/20 mb-4">folder_open</span>
+        <h2 className="text-2xl font-headline tracking-tighter text-white uppercase mb-2">No Records Found</h2>
+        <p className="text-on-surface-variant max-w-sm mb-6">You have not generated any SKYNET presentations yet. Return to the Create tab to synthesise new data.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="animate-fade-in relative z-10 w-full mb-24">
+      <div className="flex items-center gap-6 mb-10">
+         <h2 className="text-4xl font-headline tracking-tighter text-white uppercase border-l-4 border-primary-container pl-4">Local Storage</h2>
+         <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent"></div>
+         <span className="text-primary-container font-label text-[10px] tracking-widest font-black uppercase shadow-lg bg-primary-container/10 px-3 py-1 rounded-full border border-primary-container/20">{presentations.length} Records</span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {presentations.map((p) => {
+           const date = new Date(p.created_at);
+           return (
+             <div key={p.id} className="glass-card p-6 rounded-2xl relative overflow-hidden group hover:border-white/20 transition-all border border-white/5 shadow-xl flex flex-col h-full bg-surface-container-low/50">
+                <div className="signature-bar bg-white/20 group-hover:bg-primary-container transition-colors"></div>
+                
+                <div className="flex justify-between items-start mb-4">
+                  <span className="font-label text-[9px] uppercase tracking-widest text-on-surface-variant bg-surface-container-high px-2 py-1 rounded-md border border-white/5 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-secondary"></span> {p.theme}</span>
+                  <span className="material-symbols-outlined text-white/20 text-sm">deployed_code</span>
+                </div>
+                
+                <h3 className="font-headline text-xl text-white font-bold leading-tight mb-6 line-clamp-3 flex-1">{p.title}</h3>
+                
+                <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
+                   <div className="flex flex-col">
+                      <span className="font-label text-[8px] uppercase tracking-widest text-on-surface-variant opacity-70">Synthesized Date</span>
+                      <span className="text-[10px] font-label text-white tracking-wider">{date.toLocaleDateString()}</span>
+                   </div>
+                   
+                   <div className="flex gap-2 relative z-10">
+                      <button 
+                        onClick={() => onDownload(p.id, p.title)}
+                        className="w-10 h-10 rounded-lg bg-primary-container/10 border border-primary-container/30 text-primary-container hover:bg-primary-container hover:text-white flex items-center justify-center transition-colors shadow-lg"
+                        title="Download .pptx"
+                      >
+                         <span className="material-symbols-outlined text-sm">get_app</span>
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(p.id)}
+                        disabled={deletingId === p.id}
+                        className="w-10 h-10 rounded-lg bg-error/5 border border-error/20 text-error hover:bg-error hover:text-white flex items-center justify-center transition-colors disabled:opacity-50"
+                        title="Delete record"
+                      >
+                         <span className={`material-symbols-outlined text-sm ${deletingId === p.id ? 'animate-spin' : ''}`}>{deletingId === p.id ? 'sync' : 'delete'}</span>
+                      </button>
+                   </div>
+                </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Application Root ──────────────────────────────────────────────────────────
 
 export default function App() {
@@ -193,6 +318,7 @@ export default function App() {
   const [isContextModalOpen, setIsContextModalOpen] = useState(false);
   const { token, user, logout, isAuthenticated } = useAuth();
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [currentView, setCurrentView] = useState<'create' | 'dashboard'>('create');
 
   // Custom Cursor Logic
   const cursorOuterRef = useRef<HTMLDivElement>(null);
@@ -291,11 +417,11 @@ export default function App() {
     finally { setExporting(false); }
   };
 
-  const handleDownload = async (token = result?.token, filename = result?.filename) => {
-    if (!token) return;
+  const handleDownload = async (dlToken = result?.token, filename = result?.filename) => {
+    if (!dlToken) return;
     try {
-      const dl = await fetch(`${API_BASE}/download/${token}`, {
-        headers: { 'Authorization': `Bearer ${useAuth().token}` }
+      const dl = await fetch(`${API_BASE}/download/${dlToken}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (dl.status === 401) { logout(); return; }
       const blob = await dl.blob();
@@ -325,10 +451,18 @@ export default function App() {
             </div>
             <div className="hidden md:flex gap-8 items-center">
               <nav className="flex gap-6">
-                <button onClick={() => setResult(null)} className={`font-bold font-label text-sm tracking-widest uppercase ${!result ? 'text-primary-container border-b-2 border-primary-container' : 'text-on-surface-variant hover:text-white transition-colors'}`}>Create</button>
-                <button className={`font-bold font-label text-sm tracking-widest uppercase ${result ? 'text-primary-container border-b-2 border-primary-container' : 'text-on-surface-variant hover:text-white transition-colors'}`}>Results</button>
+                <button 
+                  onClick={() => setCurrentView('create')} 
+                  className={`font-bold font-label text-sm tracking-widest uppercase pb-1 ${currentView === 'create' ? 'text-primary-container border-b-2 border-primary-container' : 'text-on-surface-variant hover:text-white transition-colors'}`}>
+                    Create
+                </button>
+                <button 
+                  onClick={() => setCurrentView('dashboard')} 
+                  className={`font-bold font-label text-sm tracking-widest uppercase pb-1 ${currentView === 'dashboard' ? 'text-primary-container border-b-2 border-primary-container' : 'text-on-surface-variant hover:text-white transition-colors'}`}>
+                    Local Storage
+                </button>
               </nav>
-              {result && (
+              {result && currentView === 'create' && (
                 <button onClick={handleExport} disabled={exporting} className="bg-primary-container text-white px-6 py-2.5 rounded-xl font-label font-extrabold text-[10px] uppercase tracking-widest hover:bg-[#FC5842] transition-expo flex items-center gap-2 shadow-xl border border-white/10">
                   <span className={`material-symbols-outlined text-sm ${exporting ? 'animate-spin' : ''}`} style={{fontVariationSettings: "'FILL' 1"}}>sync</span> Download .pptx
                 </button>
@@ -348,10 +482,16 @@ export default function App() {
           </header>
 
           <DottedSurface className="opacity-80" />
-        <main className={`relative pt-32 pb-24 mx-auto min-h-screen ${result ? 'px-8 max-w-[1400px]' : 'px-6 max-w-5xl'}`}>
+        <main className={`relative pt-32 pb-24 mx-auto min-h-screen ${result || currentView === 'dashboard' ? 'px-8 max-w-[1400px]' : 'px-6 max-w-5xl'}`}>
         
-        {/* FORM STATE */}
-        {!result && !loading && (
+        {currentView === 'dashboard' && (
+           <DashboardView token={token} apiBase={API_BASE} onDownload={(id, title) => handleDownload(id, `${title.replace(/\s+/g, '_')}.pptx`)} />
+        )}
+
+        {currentView === 'create' && (
+          <>
+            {/* FORM STATE */}
+            {!result && !loading && (
           <div className="animate-fade-in">
             <section className="mb-16 text-center md:text-left flex flex-col md:flex-row md:items-end justify-between gap-8">
               <div className="max-w-2xl">
@@ -553,6 +693,8 @@ export default function App() {
                </div>
             </section>
           </div>
+        )}
+          </>
         )}
       </main>
 
