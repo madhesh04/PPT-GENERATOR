@@ -1,13 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
   <defs>
-    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#F5533D"/>
-      <stop offset="100%" stop-color="#FF6B35"/>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f0ff"/>
+      <stop offset="100%" stop-color="#00ff9d"/>
     </linearGradient>
   </defs>
-  <!-- Rounded square background -->
-  <rect width="32" height="32" rx="8" fill="url(#grad)"/>
-  <!-- "N" letter -->
-  <text x="16" y="23" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800"
-        text-anchor="middle" fill="white" letter-spacing="-0.5">N</text>
+  <!-- Background transparent or dark hex base -->
+  <polygon points="16,2 30,10 30,22 16,30 2,22 2,10" fill="#020408" stroke="#00f0ff" stroke-width="1.5" stroke-opacity="0.3"/>
+  <polygon points="16,4 28,11 28,21 16,28 4,21 4,11" fill="url(#glow)" fill-opacity="0.1"/>
+  
+  <!-- Neural node connections -->
+  <circle cx="16" cy="10" r="2.5" fill="#00f0ff" />
+  <circle cx="10" cy="21" r="2" fill="#00ff9d" />
+  <circle cx="22" cy="21" r="2" fill="#0050c8" />
+  <circle cx="16" cy="16" r="1.5" fill="#ffffff" />
+  
+  <!-- Beam connections -->
+  <line x1="16" y1="10" x2="16" y2="16" stroke="url(#glow)" stroke-width="1.5" />
+  <line x1="10" y1="21" x2="16" y2="16" stroke="url(#glow)" stroke-width="1.5" />
+  <line x1="22" y1="21" x2="16" y2="16" stroke="url(#glow)" stroke-width="1.5" />
 </svg>

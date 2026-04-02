@@ -208,6 +208,11 @@ async def get_current_user(request: Request):
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+async def require_admin(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Forbidden: Admin access required")
+    return current_user
+
 # ── Extraction Helper ──────────────────────────────────────────────────────────
 def extract_text_from_file(file_bytes: bytes, filename: str) -> str:
     text = ""
@@ -246,6 +251,7 @@ async def register(user_data: UserRegister):
         "email": user_data.email,
         "password": hashed_password,
         "full_name": user_data.full_name,
+        "role": "user",
         "created_at": datetime.utcnow()
     }
     await users_collection.insert_one(new_user)
@@ -268,7 +274,8 @@ async def login(credentials: UserLogin):
         "token_type": "bearer",
         "user": {
             "email": user["email"],
-            "full_name": user["full_name"]
+            "full_name": user["full_name"],
+            "role": user.get("role", "user")
         }
     }
 
@@ -471,6 +478,110 @@ async def get_my_presentations(current_user: Annotated[dict, Depends(get_current
         serialized.append(p)
         
     return {"presentations": serialized}
+
+
+# ── Admin Routes ─────────────────────────────────────────────────────────────
+
+@app.get("/admin/presentations")
+async def admin_get_all_presentations(admin_user: Annotated[dict, Depends(require_admin)]):
+    """Fetch all presentation blueprints globally for admin."""
+    cursor = presentations_collection.aggregate([
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "user_id",
+                "foreignField": "_id",
+                "as": "owner"
+            }
+        },
+        {"$unwind": {"path": "$owner", "preserveNullAndEmptyArrays": True}},
+        {
+            "$project": {
+                "_id": 1, 
+                "title": 1, 
+                "theme": 1, 
+                "created_at": 1,
+                "owner_email": "$owner.email"
+            }
+        },
+        {"$sort": {"created_at": -1}}
+    ])
+    
+    presentations = await cursor.to_list(length=500)
+    
+    serialized = []
+    for p in presentations:
+        p["id"] = str(p.pop("_id"))
+        if "created_at" in p:
+            p["created_at"] = p["created_at"].isoformat()
+        serialized.append(p)
+        
+    return {"presentations": serialized}
+
+@app.delete("/admin/presentations/{presentation_id}")
+async def admin_delete_presentation(presentation_id: str, admin_user: Annotated[dict, Depends(require_admin)]):
+    try:
+        obj_id = ObjectId(presentation_id)
+    except:
+        raise HTTPException(status_code=400, detail="Invalid presentation ID")
+        
+    result = await presentations_collection.delete_one({"_id": obj_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Presentation not found")
+    
+    return {"status": "success"}
+
+@app.get("/admin/users")
+async def admin_get_users(admin_user: Annotated[dict, Depends(require_admin)]):
+    """List all registered users."""
+    cursor = users_collection.find({}, {"password": 0}).sort("created_at", -1)
+    users = await cursor.to_list(length=500)
+    
+    serialized = []
+    for u in users:
+        u["id"] = str(u.pop("_id"))
+        if "created_at" in u:
+            u["created_at"] = u["created_at"].isoformat()
+        serialized.append(u)
+        
+    return {"users": serialized}
+
+@app.put("/admin/users/{user_id}/role")
+async def admin_update_user_role(user_id: str, payload: dict, admin_user: Annotated[dict, Depends(require_admin)]):
+    role = payload.get("role")
+    if role not in ["user", "admin"]:
+        raise HTTPException(status_code=400, detail="Invalid role specified")
+        
+    try:
+        obj_id = ObjectId(user_id)
+    except:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+        
+    result = await users_collection.update_one({"_id": obj_id}, {"$set": {"role": role}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    return {"status": "success", "role": role}
+
+@app.delete("/admin/users/{user_id}")
+async def admin_delete_user(user_id: str, admin_user: Annotated[dict, Depends(require_admin)]):
+    try:
+        obj_id = ObjectId(user_id)
+    except:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+        
+    if str(admin_user["_id"]) == user_id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own admin account")
+        
+    # Delete user's presentations first
+    await presentations_collection.delete_many({"user_id": obj_id})
+    # Delete the user
+    result = await users_collection.delete_one({"_id": obj_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    return {"status": "success"}
 
 
 @app.delete("/presentations/{presentation_id}")
