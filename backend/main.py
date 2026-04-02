@@ -98,6 +98,9 @@ async def _cleanup_expired_tokens():
             logger.info("Cleaned up %d expired PPT token(s).", len(expired))
 
 
+# ── Master Account ─────────────────────────────────────────────────────────────
+MASTER_EMAIL = "admin@skynet.ai"
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create unique index on email for the users collection (non-blocking)
@@ -106,13 +109,17 @@ async def lifespan(app: FastAPI):
             await users_collection.create_index("email", unique=True)
             await presentations_collection.create_index("content_hash")
             await presentations_collection.create_index("user_id")
+            # Ensure all existing users have a status field
+            await users_collection.update_many(
+                {"status": {"$exists": False}},
+                {"$set": {"status": "active"}}
+            )
             logger.info("MongoDB connected — indexes ensured.")
         except Exception as e:
             logger.warning("MongoDB index creation deferred: %s", e)
     asyncio.create_task(_ensure_indexes())
-    # No TTL cleanup needed anymore since we persist to DB
+    asyncio.create_task(_cleanup_expired_tokens())
     yield
-    task.cancel()
 
 
 # ── App setup ──────────────────────────────────────────────────────────────────
@@ -181,10 +188,18 @@ class UserRegister(BaseModel):
     email: str
     password: str
     full_name: str
+    role: Optional[str] = "user"
 
 class UserLogin(BaseModel):
     email: str
     password: str
+    login_as: str
+
+class AdminCreateUser(BaseModel):
+    email: str
+    password: str
+    full_name: str
+    role: str = "user"
 
 async def get_current_user(request: Request):
     auth_header = request.headers.get("Authorization")
@@ -193,24 +208,25 @@ async def get_current_user(request: Request):
     
     token = auth_header.split(" ")[1]
     try:
+        # Load without DB lookup to rely on JWT role
         payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
-        user_email = payload.get("sub")
-        if user_email is None:
+        if "sub" not in payload or "role" not in payload:
             raise HTTPException(status_code=401, detail="Invalid token")
-        
-        user = await users_collection.find_one({"email": user_email})
-        if user is None:
-            raise HTTPException(status_code=401, detail="User not found")
-        
-        return user
+        return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 async def require_admin(current_user: Annotated[dict, Depends(get_current_user)]):
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Forbidden: Admin access required")
+    role = current_user.get("role", "USER").upper()
+    if role not in ["ADMIN", "MASTER"]:
+        raise HTTPException(status_code=403, detail="ACCESS_DENIED — Insufficient privileges")
+    return current_user
+
+async def require_master(current_user: Annotated[dict, Depends(get_current_user)]):
+    if current_user.get("sub") != MASTER_EMAIL:
+        raise HTTPException(status_code=403, detail="ACCESS_DENIED — Master privileges required")
     return current_user
 
 # ── Extraction Helper ──────────────────────────────────────────────────────────
@@ -247,26 +263,78 @@ async def register(user_data: UserRegister):
         raise HTTPException(status_code=400, detail="User with this email already exists")
     
     hashed_password = get_password_hash(user_data.password)
+    requested_role = user_data.role if user_data.role in ["user", "admin"] else "user"
+    # Admin registrations go to pending; users are immediately active
+    status = "pending" if requested_role == "admin" else "active"
+    
     new_user = {
         "email": user_data.email,
         "password": hashed_password,
         "full_name": user_data.full_name,
-        "role": "user",
+        "role": requested_role,
+        "status": status,
         "created_at": datetime.utcnow()
     }
     await users_collection.insert_one(new_user)
     
+    if status == "pending":
+        return {"message": "Admin registration submitted. Awaiting master approval."}
     return {"message": "Registration successful"}
 
 @app.post("/auth/login")
 async def login(credentials: UserLogin):
+    logger.info("Login attempt for %s (claimed: %s)", credentials.email, credentials.login_as)
     user = await users_collection.find_one({"email": credentials.email})
-    if not user or not verify_password(credentials.password, user["password"]):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+    if not user:
+        logger.warning("Login failed: User %s not found", credentials.email)
+        raise HTTPException(status_code=401, detail="AUTHENTICATION_FAILED — Invalid credentials")
+    
+    if not verify_password(credentials.password, user["password"]):
+        logger.warning("Login failed: Incorrect password for %s", credentials.email)
+        raise HTTPException(status_code=401, detail="AUTHENTICATION_FAILED — Invalid credentials")
+    
+    # 1. Normalize and compare DB role against claimed role
+    # Frontend sends 'employee' for regular user login
+    claimed_role = "user" if credentials.login_as == "employee" else credentials.login_as
+    db_role = user.get("role", "user").lower()
+    
+    # Allow hierarchical access: Admin/Master can login as a regular user
+    is_authorized = False
+    if claimed_role == "user":
+        is_authorized = True # All authenticated accounts can access the 'user' view
+    elif claimed_role == "admin":
+        if db_role in ["admin", "master"]:
+            is_authorized = True
+    elif claimed_role == "master":
+        if db_role == "master":
+            is_authorized = True
+            
+    if not is_authorized:
+        raise HTTPException(
+            status_code=403, 
+            detail=f"ACCESS_DENIED — Account role '{db_role}' is insufficient for '{claimed_role}' access"
+        )
+    
+    # 2. Check account status if logging in as admin
+    if db_role == "admin":
+        user_status = user.get("status", "active")
+        if user_status == "pending":
+            raise HTTPException(status_code=403, detail="ACCESS_PENDING — Awaiting master account approval")
+        if user_status == "rejected":
+            raise HTTPException(status_code=403, detail="ACCESS_REJECTED — Account access has been denied")
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    
+    # Generate token WITH embedded role and status mapping per spec
+    payload_data = {
+        "sub": user["email"],
+        "user_id": str(user["_id"]),
+        "username": user["full_name"],
+        "role": db_role.upper(),
+        "status": user.get("status", "active").upper()
+    }
     access_token = create_access_token(
-        data={"sub": user["email"]}, expires_delta=access_token_expires
+        data=payload_data, expires_delta=access_token_expires
     )
     
     return {
@@ -275,7 +343,7 @@ async def login(credentials: UserLogin):
         "user": {
             "email": user["email"],
             "full_name": user["full_name"],
-            "role": user.get("role", "user")
+            "role": db_role.upper()
         }
     }
 
@@ -285,7 +353,7 @@ async def login(credentials: UserLogin):
 async def generate_ppt(request: Request, body: PresentationRequest, current_user: Annotated[dict, Depends(get_current_user)]):
     """Generate slide content + images, and persist to MongoDB blueprint with caching."""
     start_time = time.time()
-    user_id = current_user["_id"]
+    user_id = ObjectId(current_user["user_id"])
     
     try:
         # 1. Hashing Algorithm for Caching
@@ -310,7 +378,7 @@ async def generate_ppt(request: Request, body: PresentationRequest, current_user
             res = await presentations_collection.insert_one(new_presentation_doc)
             
             await generation_logs_collection.insert_one({
-                "user_id": user_id,
+                "user_id": current_user.get("user_id"),
                 "presentation_id": res.inserted_id,
                 "action": "generate",
                 "status": "cache_hit",
@@ -347,7 +415,8 @@ async def generate_ppt(request: Request, body: PresentationRequest, current_user
 
         # 6. Save Blueprint to MongoDB
         new_presentation_doc = {
-            "user_id": user_id,
+            "user_id": ObjectId(current_user.get("user_id")) if current_user.get("user_id") else None,
+            "username": current_user.get("username", "Unknown"),
             "title": body.title,
             "topics": body.topics,
             "content_hash": content_hash,
@@ -358,7 +427,7 @@ async def generate_ppt(request: Request, body: PresentationRequest, current_user
         res = await presentations_collection.insert_one(new_presentation_doc)
         
         await generation_logs_collection.insert_one({
-            "user_id": user_id,
+            "user_id": current_user.get("user_id"),
             "presentation_id": res.inserted_id,
             "action": "generate",
             "status": "success",
@@ -431,7 +500,7 @@ async def upload_context(file: UploadFile = File(...), current_user: Annotated[d
 async def export_ppt(body: ExportRequest, current_user: Annotated[dict, Depends(get_current_user)]):
     """Save user edits as a new presentation branch in DB and return the download token."""
     try:
-        user_id = current_user["_id"]
+        user_id = ObjectId(current_user["user_id"])
         
         # We append a timestamp to the hash to ensure edits are saved as unique blueprints
         import time
@@ -464,7 +533,7 @@ async def export_ppt(body: ExportRequest, current_user: Annotated[dict, Depends(
 async def get_my_presentations(current_user: Annotated[dict, Depends(get_current_user)]):
     """Fetch all presentation blueprints owned by the user."""
     cursor = presentations_collection.find(
-        {"user_id": current_user["_id"]},
+        {"user_id": ObjectId(current_user["user_id"])},
         {"_id": 1, "title": 1, "theme": 1, "created_at": 1}
     ).sort("created_at", -1)
     
@@ -480,28 +549,41 @@ async def get_my_presentations(current_user: Annotated[dict, Depends(get_current
     return {"presentations": serialized}
 
 
-# ── Admin Routes ─────────────────────────────────────────────────────────────
+# ── Admin Endpoints ────────────────────────────────────────────────────────────
 
-@app.get("/admin/presentations")
+@app.get("/admin/stats")
+async def admin_get_stats(admin_user: Annotated[dict, Depends(require_admin)]):
+    total_users = await users_collection.count_documents({})
+    total_generations = await presentations_collection.count_documents({})
+    pending_approvals = await users_collection.count_documents({"status": "pending"})
+    
+    yesterday = datetime.utcnow() - timedelta(days=1)
+    active_today = await presentations_collection.aggregate([
+        {"$match": {"created_at": {"$gte": yesterday}}},
+        {"$group": {"_id": "$user_id"}},
+        {"$count": "active_users"}
+    ]).to_list(length=1)
+    active_count = active_today[0]["active_users"] if active_today else 0
+    
+    return {
+        "total_users": total_users,
+        "total_generations": total_generations,
+        "pending_approvals": pending_approvals,
+        "active_today": active_count
+    }
+
+@app.get("/admin/generations")
 async def admin_get_all_presentations(admin_user: Annotated[dict, Depends(require_admin)]):
     """Fetch all presentation blueprints globally for admin."""
     cursor = presentations_collection.aggregate([
-        {
-            "$lookup": {
-                "from": "users",
-                "localField": "user_id",
-                "foreignField": "_id",
-                "as": "owner"
-            }
-        },
-        {"$unwind": {"path": "$owner", "preserveNullAndEmptyArrays": True}},
         {
             "$project": {
                 "_id": 1, 
                 "title": 1, 
                 "theme": 1, 
                 "created_at": 1,
-                "owner_email": "$owner.email"
+                "username": {"$ifNull": ["$username", "Unknown"]},
+                "slides_count": {"$size": {"$ifNull": ["$slides", []]}}
             }
         },
         {"$sort": {"created_at": -1}}
@@ -512,13 +594,17 @@ async def admin_get_all_presentations(admin_user: Annotated[dict, Depends(requir
     serialized = []
     for p in presentations:
         p["id"] = str(p.pop("_id"))
+        p["generated_by"] = p.pop("username")
+        p["slides"] = p.pop("slides_count")
+        p["tone"] = "Professional" # Stub tone since not stored explicitly
+        p["status"] = "COMPLETE"
         if "created_at" in p:
             p["created_at"] = p["created_at"].isoformat()
         serialized.append(p)
         
     return {"presentations": serialized}
 
-@app.delete("/admin/presentations/{presentation_id}")
+@app.delete("/admin/generations/{presentation_id}")
 async def admin_delete_presentation(presentation_id: str, admin_user: Annotated[dict, Depends(require_admin)]):
     try:
         obj_id = ObjectId(presentation_id)
@@ -533,8 +619,25 @@ async def admin_delete_presentation(presentation_id: str, admin_user: Annotated[
 
 @app.get("/admin/users")
 async def admin_get_users(admin_user: Annotated[dict, Depends(require_admin)]):
-    """List all registered users."""
-    cursor = users_collection.find({}, {"password": 0}).sort("created_at", -1)
+    """List all registered users with aggregated stats."""
+    cursor = users_collection.aggregate([
+        {"$project": {"password": 0}},
+        {
+            "$lookup": {
+                "from": "presentations",
+                "localField": "_id",
+                "foreignField": "user_id",
+                "as": "presentations"
+            }
+        },
+        {
+            "$addFields": {
+                "ppt_count": {"$size": "$presentations"}
+            }
+        },
+        {"$project": {"presentations": 0}},
+        {"$sort": {"created_at": -1}}
+    ])
     users = await cursor.to_list(length=500)
     
     serialized = []
@@ -542,6 +645,8 @@ async def admin_get_users(admin_user: Annotated[dict, Depends(require_admin)]):
         u["id"] = str(u.pop("_id"))
         if "created_at" in u:
             u["created_at"] = u["created_at"].isoformat()
+        u.setdefault("status", "active")
+        u.setdefault("role", "user")
         serialized.append(u)
         
     return {"users": serialized}
@@ -562,6 +667,46 @@ async def admin_update_user_role(user_id: str, payload: dict, admin_user: Annota
         raise HTTPException(status_code=404, detail="User not found")
         
     return {"status": "success", "role": role}
+
+@app.get("/admin/users/{user_id}/ppts")
+async def admin_get_user_presentations(user_id: str, admin_user: Annotated[dict, Depends(require_admin)]):
+    """Fetch all presentations for a specific user ID."""
+    try:
+        obj_id = ObjectId(user_id)
+    except:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+        
+    cursor = presentations_collection.find(
+        {"user_id": obj_id},
+        {"_id": 1, "title": 1, "theme": 1, "created_at": 1, "username": 1}
+    ).sort("created_at", -1)
+    
+    ppts = await cursor.to_list(length=200)
+    serialized = []
+    for p in ppts:
+        p["id"] = str(p.pop("_id"))
+        p["created_at"] = p["created_at"].isoformat()
+        serialized.append(p)
+        
+    return {"presentations": serialized}
+
+@app.patch("/admin/users/{user_id}/status")
+async def admin_update_user_status(user_id: str, payload: dict, admin_user: Annotated[dict, Depends(require_admin)]):
+    """Update user account status (active, suspended)."""
+    status = payload.get("status")
+    if status not in ["active", "suspended", "pending"]:
+        raise HTTPException(status_code=400, detail="Invalid status specified")
+        
+    try:
+        obj_id = ObjectId(user_id)
+    except:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+        
+    result = await users_collection.update_one({"_id": obj_id}, {"$set": {"status": status}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    return {"status": "success", "user_status": status}
 
 @app.delete("/admin/users/{user_id}")
 async def admin_delete_user(user_id: str, admin_user: Annotated[dict, Depends(require_admin)]):
@@ -584,6 +729,89 @@ async def admin_delete_user(user_id: str, admin_user: Annotated[dict, Depends(re
     return {"status": "success"}
 
 
+@app.post("/admin/users/create")
+async def admin_create_user(body: AdminCreateUser, admin_user: Annotated[dict, Depends(require_admin)]):
+    """Admin creates a new user account."""
+    existing = await users_collection.find_one({"email": body.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+    
+    role = body.role if body.role in ["user", "admin"] else "user"
+    # Admin-created users with role=user are immediately active
+    # Admin-created admins still need master approval unless creator IS the master
+    if role == "admin" and admin_user.get("email") != MASTER_EMAIL:
+        status = "pending"
+    else:
+        status = "active"
+    
+    new_user = {
+        "email": body.email,
+        "password": get_password_hash(body.password),
+        "full_name": body.full_name,
+        "role": role,
+        "status": status,
+        "created_at": datetime.utcnow()
+    }
+    await users_collection.insert_one(new_user)
+    
+    return {"status": "success", "message": f"Account created with status: {status}"}
+
+
+@app.get("/admin/pending")
+async def admin_get_pending(master_user: Annotated[dict, Depends(require_master)]):
+    """List all pending admin approval requests (master only)."""
+    cursor = users_collection.find(
+        {"status": "pending"},
+        {"password": 0}
+    ).sort("created_at", -1)
+    pending = await cursor.to_list(length=100)
+    
+    serialized = []
+    for u in pending:
+        u["id"] = str(u.pop("_id"))
+        if "created_at" in u:
+            u["created_at"] = u["created_at"].isoformat()
+        serialized.append(u)
+        
+    return {"pending": serialized}
+
+
+@app.post("/admin/approve/{user_id}")
+async def admin_approve_user(user_id: str, master_user: Annotated[dict, Depends(require_master)]):
+    """Master approves a pending admin account."""
+    try:
+        obj_id = ObjectId(user_id)
+    except:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+    
+    result = await users_collection.update_one(
+        {"_id": obj_id, "status": "pending"},
+        {"$set": {"status": "active"}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Pending user not found")
+    
+    return {"status": "success", "message": "User approved and activated"}
+
+
+@app.post("/admin/reject/{user_id}")
+async def admin_reject_user(user_id: str, master_user: Annotated[dict, Depends(require_master)]):
+    """Master rejects a pending admin account."""
+    try:
+        obj_id = ObjectId(user_id)
+    except:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+    
+    result = await users_collection.update_one(
+        {"_id": obj_id, "status": "pending"},
+        {"$set": {"status": "rejected"}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Pending user not found")
+    
+    return {"status": "success", "message": "User rejected"}
+
+
 @app.delete("/presentations/{presentation_id}")
 async def delete_presentation(presentation_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
     try:
@@ -593,7 +821,7 @@ async def delete_presentation(presentation_id: str, current_user: Annotated[dict
         
     result = await presentations_collection.delete_one({
         "_id": obj_id,
-        "user_id": current_user["_id"]
+        "user_id": ObjectId(current_user["user_id"])
     })
     
     if result.deleted_count == 0:
@@ -612,7 +840,7 @@ async def download_ppt(presentation_id: str, current_user: Annotated[dict, Depen
         
     presentation = await presentations_collection.find_one({
         "_id": obj_id,
-        "user_id": current_user["_id"]
+        "user_id": ObjectId(current_user["user_id"])
     })
     
     if not presentation:

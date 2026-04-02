@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import './index.css';
 import { useAuth } from './AuthContext';
@@ -112,8 +112,8 @@ export default function App() {
   const { token, user, logout, isAuthenticated } = useAuth();
   const [authMode, setAuthMode] = useState<'login'|'signup'>('login');
   
-  const [view, setView] = useState<'dashboard'|'create'|'preview'|'history'|'settings'|'admin'>('dashboard');
-  const BC: Record<string,string> = {dashboard:'DASHBOARD',create:'CREATE_PPT',preview:'SLIDE_PREVIEW',history:'DECK_HISTORY',settings:'SETTINGS',admin:'ADMIN_PANEL'};
+  const [view, setView] = useState<'dashboard'|'create'|'preview'|'history'|'settings'|'admin_panel'|'user_mgmt'|'pending'|'global_gen'>('dashboard');
+  const BC: Record<string,string> = {dashboard:'DASHBOARD',create:'CREATE_PPT',preview:'SLIDE_PREVIEW',history:'DECK_HISTORY',settings:'SETTINGS',admin_panel:'ADMIN_PANEL',user_mgmt:'USER_MANAGEMENT',pending:'PENDING_APPROVALS',global_gen:'GLOBAL_GENERATIONS'};
 
   const [toastData, setToastData] = useState({ show: false, msg: '' });
   const showToast = (msg: string, dur=3000) => {
@@ -160,24 +160,38 @@ export default function App() {
   const [savedPresentations, setSavedPresentations] = useState<SavedPresentation[]>([]);
 
   // Admin API State
+  const [adminStats, setAdminStats] = useState<any>(null);
   const [adminPpts, setAdminPpts] = useState<any[]>([]);
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [loadingAdmin, setLoadingAdmin] = useState(false);
+  const [pendingUsers, setPendingUsers] = useState<any[]>([]);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newUser, setNewUser] = useState({ full_name: '', email: '', password: '', role: 'user' });
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const isMaster = user?.email === 'admin@skynet.ai';
+  const isAdminRole = user?.role?.toUpperCase() === 'ADMIN' || user?.role?.toUpperCase() === 'MASTER';
 
   const fetchAdminData = async () => {
     setLoadingAdmin(true);
     try {
-      const [pptsRes, usersRes] = await Promise.all([
-        fetch(`${API_BASE}/admin/presentations`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE}/admin/users`, { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
-      if (pptsRes.ok) {
-        const pData = await pptsRes.json();
-        setAdminPpts(pData.presentations || []);
+      if (view === 'admin_panel') {
+        const statsRes = await fetch(`${API_BASE}/admin/stats`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (statsRes.ok) setAdminStats(await statsRes.json());
       }
-      if (usersRes.ok) {
-        const uData = await usersRes.json();
-        setAdminUsers(uData.users || []);
+      if (view === 'global_gen') {
+        const url = selectedUser ? `${API_BASE}/admin/users/${selectedUser.id}/ppts` : `${API_BASE}/admin/generations`;
+        const pptsRes = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (pptsRes.ok) setAdminPpts((await pptsRes.json()).presentations || []);
+      }
+      if (view === 'user_mgmt') {
+        const usersRes = await fetch(`${API_BASE}/admin/users`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (usersRes.ok) setAdminUsers((await usersRes.json()).users || []);
+      }
+      if (isMaster) {
+        try {
+          const pendingRes = await fetch(`${API_BASE}/admin/pending`, { headers: { 'Authorization': `Bearer ${token}` } });
+          if (pendingRes.ok) setPendingUsers((await pendingRes.json()).pending || []);
+        } catch (_e) { /* not master */ }
       }
     } catch (err) {
       showToast("Error fetching admin data");
@@ -187,28 +201,12 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (isAuthenticated && view === 'admin' && token && user?.role === 'admin') {
+    if (isAuthenticated && ['admin_panel','user_mgmt','pending','global_gen'].includes(view) && token && isAdminRole) {
       fetchAdminData();
     }
-  }, [view, isAuthenticated, token, user]);
+  }, [view, isAuthenticated, token, user, isAdminRole]);
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    try {
-      const res = await fetch(`${API_BASE}/admin/users/${userId}/role`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: newRole })
-      });
-      if (res.ok) {
-        showToast(`User role updated to ${newRole}`);
-        fetchAdminData();
-      } else {
-        showToast("Failed to update role");
-      }
-    } catch (e) {
-      showToast("Failed to update role");
-    }
-  };
+  // Removed handleRoleChange as per new specs
 
   const handleDeleteUser = async (userId: string) => {
     if (!window.confirm("Are you sure you want to delete this user? This will also delete all their presentations.")) return;
@@ -231,7 +229,7 @@ export default function App() {
   const handleDeleteGlobalPpt = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this presentation?")) return;
     try {
-      const res = await fetch(`${API_BASE}/admin/presentations/${id}`, {
+      const res = await fetch(`${API_BASE}/admin/generations/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -243,6 +241,66 @@ export default function App() {
       }
     } catch (e) {
       showToast("Deletion error");
+    }
+  };
+
+  const handleCreateUser = async () => {
+    if (!newUser.full_name || !newUser.email || !newUser.password) {
+      showToast('All fields are required'); return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/admin/users/create`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        showToast(data.message || 'Account created');
+        setShowCreateForm(false);
+        setNewUser({ full_name: '', email: '', password: '', role: 'user' });
+        fetchAdminData();
+      } else {
+        const err = await res.json();
+        showToast(err.detail || 'Creation failed');
+      }
+    } catch (e) {
+      showToast('Creation failed');
+    }
+  };
+
+  const handleApprove = async (userId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/approve/${userId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        showToast('User approved and activated');
+        fetchAdminData();
+      } else {
+        showToast('Approval failed');
+      }
+    } catch (e) {
+      showToast('Approval failed');
+    }
+  };
+
+  const handleReject = async (userId: string) => {
+    if (!window.confirm('Reject this admin request?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/admin/reject/${userId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        showToast('User rejected');
+        fetchAdminData();
+      } else {
+        showToast('Rejection failed');
+      }
+    } catch (e) {
+      showToast('Rejection failed');
     }
   };
 
@@ -332,8 +390,13 @@ export default function App() {
   };
 
   if (!isAuthenticated) {
+    const handleLoginSuccess = (mode: 'employee' | 'admin') => {
+      if (mode === 'admin') {
+        setTimeout(() => setView('admin_panel'), 100);
+      }
+    };
     return authMode === 'login' 
-      ? <Login onSwitchToSignup={() => setAuthMode('signup')} /> 
+      ? <Login onSwitchToSignup={() => setAuthMode('signup')} onLoginSuccess={handleLoginSuccess} /> 
       : <Signup onSwitchToLogin={() => setAuthMode('login')} />;
   }
 
@@ -363,6 +426,12 @@ export default function App() {
         </div>
         <div className="hr2">
           <div className="hbdg"><div className="sd g"></div>ALL_SYSTEMS_NOMINAL</div>
+          {isMaster && pendingUsers.length > 0 && (
+            <div className="hbdg" style={{cursor:'pointer',borderColor:'rgba(255,184,0,.4)',color:'#ffb800',background:'rgba(255,184,0,.06)'}} onClick={() => setView('pending')}>
+              <div className="sd" style={{background:'#ffb800',boxShadow:'0 0 6px #ffb800'}}></div>
+              {pendingUsers.length} PENDING
+            </div>
+          )}
           <div className="husr" onClick={logout} title="Click to logout">
             <div className="hav">{user?.full_name?.[0].toUpperCase() || 'U'}</div>
             <div className="hun">{user?.full_name?.split(' ')[0] || 'User'}</div>
@@ -403,14 +472,32 @@ export default function App() {
             <span className="ni-lbl">LOGOUT</span>
           </div>
         </div>
-        {user?.role === 'admin' && (
-          <div className="ns">
-            <div className="nsl">// ADMINISTRATION</div>
-            <div className={`ni ${view==='admin'?'act':''}`} onClick={()=>setView('admin')}>
-              <svg className="ni-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              <span className="ni-lbl">ADMIN PANEL</span>
+        {isAdminRole && (
+          <>
+            <div className="ndv"></div>
+            <div className="ns">
+              <div className="nsl">// ADMIN</div>
+              <div className={`ni ${view==='admin_panel'?'act':''}`} onClick={()=>setView('admin_panel')}>
+                <svg className="ni-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span className="ni-lbl">ADMIN_PANEL</span>
+              </div>
+              <div className={`ni ${view==='user_mgmt'?'act':''}`} onClick={()=>setView('user_mgmt')}>
+                <svg className="ni-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                <span className="ni-lbl">USER_MANAGEMENT</span>
+              </div>
+              {isMaster && (
+                <div className={`ni ${view==='pending'?'act':''}`} onClick={()=>setView('pending')}>
+                  <svg className="ni-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                  <span className="ni-lbl">PENDING_APPROVALS</span>
+                  {pendingUsers.length > 0 && <span className="ni-b">{pendingUsers.length}</span>}
+                </div>
+              )}
+              <div className={`ni ${view==='global_gen'?'act':''}`} onClick={()=>{ setSelectedUser(null); setView('global_gen'); }}>
+                <svg className="ni-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                <span className="ni-lbl">GLOBAL_GENERATIONS</span>
+              </div>
             </div>
-          </div>
+          </>
         )}
         <div className="sbf">SKYNET_CORE v2.4.0<br/>GROQ_LLM // CONNECTED<br/>IMAGE_API // ACTIVE</div>
       </aside>
@@ -780,78 +867,217 @@ export default function App() {
           </div>
         </div>
 
-        {/* ADMIN */}
-        {user?.role === 'admin' && (
-          <div className={`pg ${view==='admin'?'act':''}`}>
+        {/* ═══ ADMIN OVERVIEW ═══ */}
+        {isAdminRole && (
+          <div className={`pg ${view==='admin_panel'?'act':''}`}>
             <div className="pey">// SYSTEM_ADMINISTRATION</div>
             <div className="ptl">GLOBAL <span className="ac">CONTROL_PANEL</span></div>
             <div className="psub">// Oversee platform metrics, users, and all generated artifacts</div>
+            
+            <div className="sgd" style={{gridTemplateColumns:'repeat(4, 1fr)', gap:16, marginBottom:24}}>
+              <div className="scard" style={{padding:20}}>
+                <div className="sclbl" style={{marginBottom:8}}>TOTAL_USERS</div>
+                <div className="scval cy" style={{fontSize:28}}>{adminStats?.total_users || 0}</div>
+                <div className="scsub" style={{marginTop:8}}>registered</div>
+              </div>
+              <div className="scard" style={{padding:20}}>
+                <div className="sclbl" style={{marginBottom:8}}>TOTAL_GENERATIONS</div>
+                <div className="scval am" style={{fontSize:28, color:'#00f0ff'}}>{adminStats?.total_generations || 0}</div>
+                <div className="scsub" style={{marginTop:8}}>all time</div>
+              </div>
+              <div className="scard" style={{padding:20}}>
+                <div className="sclbl" style={{marginBottom:8}}>PENDING_APPROVALS</div>
+                <div className="scval" style={{fontSize:28, color:'#ffb800'}}>{adminStats?.pending_approvals || 0}</div>
+                <div className="scsub" style={{marginTop:8}}>awaiting master</div>
+              </div>
+              <div className="scard" style={{padding:20}}>
+                <div className="sclbl" style={{marginBottom:8}}>ACTIVE_TODAY</div>
+                <div className="scval gn" style={{fontSize:28}}>{adminStats?.active_today || 0}</div>
+                <div className="scsub" style={{marginTop:8}}>last 24h</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ USER MANAGEMENT ═══ */}
+        {isAdminRole && (
+          <div className={`pg ${view==='user_mgmt'?'act':''}`}>
+            <div className="pey">// SYSTEM_ADMINISTRATION</div>
+            <div className="ptl">USER <span className="ac">MANAGEMENT</span></div>
+            <div className="psub">// Manage accounts, roles, and suspend users</div>
+
+            <div style={{marginBottom:16, display:'flex', justifyContent:'flex-end'}}>
+              <button className="btn bp shim" onClick={() => setShowCreateForm(!showCreateForm)} style={{height:38}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                CREATE_ACCOUNT
+              </button>
+            </div>
+
+            {showCreateForm && (
+              <div className="card mb20" style={{padding:22}}>
+                <div className="cc tl"></div><div className="cc tr"></div>
+                <div className="fl mb12">// NEW_ACCOUNT</div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+                  <div className="fg">
+                    <div className="fl"><span className="fn">01 //</span> USERNAME</div>
+                    <div className="fb2"><input className="finp" placeholder="skynet_user" value={newUser.full_name} onChange={e => setNewUser({...newUser, full_name: e.target.value})} /></div>
+                  </div>
+                  <div className="fg">
+                    <div className="fl"><span className="fn">02 //</span> EMAIL</div>
+                    <div className="fb2"><input className="finp" type="email" placeholder="user@skynet.ai" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} /></div>
+                  </div>
+                  <div className="fg">
+                    <div className="fl"><span className="fn">03 //</span> PASSWORD</div>
+                    <div className="fb2"><input className="finp" type="password" placeholder="••••••••" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} /></div>
+                  </div>
+                  <div className="fg">
+                    <div className="fl"><span className="fn">04 //</span> ROLE</div>
+                    <div className="fb2">
+                      <select className="seld" style={{width:'100%',background:'rgba(0,240,255,.03)'}} value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value})}>
+                        <option value="USER">USER</option>
+                        <option value="ADMIN">ADMIN</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div className="fx gap8">
+                  <button className="btn bp shim" style={{height:38}} onClick={handleCreateUser}>REGISTER_ACCOUNT</button>
+                  <button className="btn bs" style={{height:38}} onClick={() => setShowCreateForm(false)}>CANCEL</button>
+                </div>
+              </div>
+            )}
 
             <div className="card mb20">
               <div className="stog">
-                <svg viewBox="0 0 24 24" className="w-[14px] h-[14px] text-[rgba(0,240,255,0.7)]" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                <svg viewBox="0 0 24 24" style={{width:14,height:14,color:'rgba(0,240,255,0.7)'}} fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
                 <div className="sttl" style={{marginLeft: 8}}>REGISTERED USERS</div>
+                {loadingAdmin && <div style={{marginLeft:'auto',width:12,height:12,borderRadius:'50%',border:'2px solid #00f0ff',borderTopColor:'transparent',animation:'spin 1s linear infinite'}}></div>}
               </div>
               <div className="sbody" style={{ padding: 0 }}>
-                <div className="overflow-x-auto">
+                <div style={{overflowX:'auto'}}>
                   <table className="htbl">
                     <thead>
-                      <tr><th>EMAIL</th><th>NAME</th><th>ROLE</th><th>ACTIONS</th></tr>
+                      <tr><th>USERNAME</th><th>EMAIL</th><th>ROLE</th><th>STATUS</th><th>JOINED</th><th>PPT_COUNT</th><th>ACTIONS</th></tr>
                     </thead>
                     <tbody>
                       {adminUsers.map(u => (
                         <tr key={u.id}>
-                          <td style={{fontFamily:'var(--fd)', color:'var(--cy)'}}>{u.email}</td>
-                          <td>{u.full_name}</td>
+                          <td style={{fontFamily:'var(--fd)', color:'var(--cy)'}}>{u.full_name}</td>
+                          <td>{u.email}</td>
+                          <td>{u.role?.toUpperCase()}</td>
                           <td>
-                            <select 
-                              className="seld" style={{background:'rgba(0,240,255,.05)', border:'1px solid rgba(0,240,255,.2)'}}
-                              value={u.role || 'user'}
-                              onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                            >
-                              <option value="user">User</option>
-                              <option value="admin">Admin</option>
-                            </select>
+                            <span className="hbdg" style={{
+                              color: u.status === 'active' ? 'var(--gn)' : u.status === 'pending' ? '#ffb800' : '#ff2d55',
+                              borderColor: u.status === 'active' ? 'rgba(0,255,157,.3)' : u.status === 'pending' ? 'rgba(255,184,0,.3)' : 'rgba(255,45,85,.3)',
+                              background: u.status === 'active' ? 'rgba(0,255,157,.08)' : u.status === 'pending' ? 'rgba(255,184,0,.08)' : 'rgba(255,45,85,.08)'
+                            }}>{(u.status || 'active').toUpperCase()}</span>
                           </td>
-                          <td>
+                          <td style={{fontFamily:'var(--fm)',fontSize:9}}>{u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}</td>
+                          <td style={{fontFamily:'var(--fd)',textAlign:'center'}}>{u.ppt_count || 0}</td>
+                          <td style={{display:'flex',gap:6}}>
+                            <button className="btn bs bsm" onClick={() => { setSelectedUser(u); setView('global_gen'); }}>VIEW_PPTS</button>
                             <button className="btn bs bsm" style={{color:'var(--rd)', borderColor:'rgba(255,45,85,.3)'}} onClick={() => handleDeleteUser(u.id)}>DELETE</button>
                           </td>
                         </tr>
                       ))}
                       {adminUsers.length === 0 && (
-                        <tr><td colSpan={4} style={{textAlign:'center', padding:40, color:'var(--t3)'}}>NO USERS FOUND.</td></tr>
+                        <tr><td colSpan={7} style={{textAlign:'center', padding:40, color:'var(--t3)'}}>NO USERS FOUND.</td></tr>
                       )}
                     </tbody>
                   </table>
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ═══ PENDING APPROVALS ═══ */}
+        {isAdminRole && isMaster && (
+          <div className={`pg ${view==='pending'?'act':''}`}>
+            <div className="pey">// SYSTEM_ADMINISTRATION</div>
+            <div className="ptl">PENDING <span className="ac">APPROVALS</span></div>
+            <div className="psub">// Master account approval queue for new admin requests</div>
+
+            <div className="card mb20" style={{borderColor:'rgba(255,184,0,.3)'}}>
+              <div className="stog">
+                <svg viewBox="0 0 24 24" style={{width:14,height:14,color:'#ffb800'}} fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                <div className="sttl" style={{marginLeft:8,color:'#ffb800'}}>MASTER APPROVAL QUEUE</div>
+              </div>
+              <div className="sbody" style={{padding:0}}>
+                <table className="htbl">
+                  <thead><tr><th>USERNAME</th><th>EMAIL</th><th>ROLE REQUESTED</th><th>REQUESTED DATE</th><th>ACTIONS</th></tr></thead>
+                  <tbody>
+                    {pendingUsers.map(u => (
+                      <tr key={u.id}>
+                        <td>{u.full_name}</td>
+                        <td style={{fontFamily:'var(--fd)',color:'#ffb800'}}>{u.email}</td>
+                        <td><span className="hbdg" style={{color:'#ffb800',borderColor:'rgba(255,184,0,.3)'}}>{u.role?.toUpperCase()}</span></td>
+                        <td>{u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}</td>
+                        <td style={{display:'flex',gap:6}}>
+                          <button className="btn bs bsm" style={{color:'var(--gn)',borderColor:'rgba(0,255,157,.3)'}} onClick={() => handleApprove(u.id)}>APPROVE</button>
+                          <button className="btn bs bsm" style={{color:'var(--rd)',borderColor:'rgba(255,45,85,.3)'}} onClick={() => handleReject(u.id)}>REJECT</button>
+                        </td>
+                      </tr>
+                    ))}
+                    {pendingUsers.length === 0 && (
+                      <tr><td colSpan={5} style={{textAlign:'center', padding:40, color:'var(--t3)'}}>// NO_PENDING_REQUESTS — All admin accounts are approved or rejected</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ GLOBAL GENERATIONS ═══ */}
+        {isAdminRole && (
+          <div className={`pg ${view==='global_gen'?'act':''}`}>
+            <div className="pey">// SYSTEM_ADMINISTRATION</div>
+            <div className="ptl">{selectedUser ? `${selectedUser.full_name?.toUpperCase()}'S` : 'GLOBAL'} <span className="ac">GENERATIONS</span></div>
+            <div className="psub">// {selectedUser ? `Viewing presentation artifacts for node: ${selectedUser.email}` : 'System-wide presentation artifacts'}</div>
 
             <div className="card">
               <div className="stog">
-                <svg viewBox="0 0 24 24" className="w-[14px] h-[14px] text-[rgba(0,240,255,0.7)]" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 22h14a2 2 0 002-2V7.5L14.5 2H6a2 2 0 00-2 2v4"/><polyline points="14 2 14 8 20 8"/><path d="M2 15h10"/><path d="M9 18l3-3-3-3"/></svg>
-                <div className="sttl" style={{marginLeft: 8}}>GLOBAL PRESENTATIONS</div>
+                <svg viewBox="0 0 24 24" style={{width:14,height:14,color:'rgba(0,240,255,0.7)'}} fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 22h14a2 2 0 002-2V7.5L14.5 2H6a2 2 0 00-2 2v4"/><polyline points="14 2 14 8 20 8"/><path d="M2 15h10"/><path d="M9 18l3-3-3-3"/></svg>
+                <div className="sttl" style={{marginLeft: 8}}>GENERATED ARTIFACTS ({adminPpts.length})</div>
               </div>
               <div className="sbody" style={{ padding: 0 }}>
-                <div className="overflow-x-auto">
+                <div style={{overflowX:'auto'}}>
                   <table className="htbl">
                     <thead>
-                      <tr><th>ID</th><th>TITLE</th><th>OWNER</th><th>THEME</th><th>ACTIONS</th></tr>
+                      <tr><th>TITLE</th><th>GENERATED_BY</th><th>SLIDES</th><th>TONE</th><th>DATE</th><th>STATUS</th><th>ACTIONS</th></tr>
                     </thead>
                     <tbody>
                       {adminPpts.map(p => (
                         <tr key={p.id}>
-                          <td style={{fontFamily:'var(--fm)', fontSize:8}}>{p.id}</td>
-                          <td className="cy font-bold">{p.title}</td>
-                          <td>{p.owner_email || 'Unknown'}</td>
-                          <td><span className="hbdg pr">{p.theme?.toUpperCase() || 'NEON'}</span></td>
+                          <td style={{fontFamily:'var(--fd)',color:'var(--cy)',fontWeight:600}}>{p.title}</td>
                           <td>
-                            <button className="btn bs bsm" style={{color:'var(--rd)', borderColor:'rgba(255,45,85,.3)'}} onClick={() => handleDeleteGlobalPpt(p.id)}>PURGE</button>
+                            <span style={{
+                              display:'inline-flex',
+                              alignItems:'center',
+                              background:'rgba(0,240,255,.1)',
+                              border:'1px solid rgba(0,240,255,.2)',
+                              borderRadius:3,
+                              padding:'2px 8px',
+                              fontFamily:"'Share Tech Mono', monospace",
+                              fontSize:9,
+                              color:'#00f0ff',
+                              letterSpacing:'.06em'
+                            }}>[{p.generated_by}]</span>
+                          </td>
+                          <td style={{fontFamily:'var(--fm)',fontSize:11,textAlign:'center'}}>{p.slides}</td>
+                          <td>{p.tone}</td>
+                          <td style={{fontFamily:'var(--fm)',fontSize:9}}>{p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A'}</td>
+                          <td>
+                            <span className="hbdg" style={{color:'var(--gn)',borderColor:'rgba(0,255,157,.3)'}}>{p.status}</span>
+                          </td>
+                          <td>
+                            <button className="btn bs bsm" style={{color:'var(--rd)', borderColor:'rgba(255,45,85,.3)'}} onClick={() => handleDeleteGlobalPpt(p.id)}>DELETE</button>
                           </td>
                         </tr>
                       ))}
                       {adminPpts.length === 0 && (
-                        <tr><td colSpan={5} style={{textAlign:'center', padding:40, color:'var(--t3)'}}>NO PRESENTATIONS EXIST.</td></tr>
+                        <tr><td colSpan={7} style={{textAlign:'center', padding:40, color:'var(--t3)'}}>NO PRESENTATIONS EXIST.</td></tr>
                       )}
                     </tbody>
                   </table>

@@ -4,9 +4,10 @@ import SkynetBackground from './SkynetBackground';
 
 interface LoginProps {
   onSwitchToSignup: () => void;
+  onLoginSuccess?: (mode: 'employee' | 'admin') => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onSwitchToSignup }) => {
+const Login: React.FC<LoginProps> = ({ onSwitchToSignup, onLoginSuccess }) => {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,6 +15,7 @@ const Login: React.FC<LoginProps> = ({ onSwitchToSignup }) => {
   const [error, setError] = useState('');
   const [pwdVisible, setPwdVisible] = useState(false);
   const [clock, setClock] = useState('--:--:-- IST');
+  const [loginMode, setLoginMode] = useState<'employee' | 'admin'>('employee');
 
   useEffect(() => {
     const updateClock = () => {
@@ -41,7 +43,7 @@ const Login: React.FC<LoginProps> = ({ onSwitchToSignup }) => {
       const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, login_as: loginMode }),
       });
 
       if (!response.ok) {
@@ -51,9 +53,9 @@ const Login: React.FC<LoginProps> = ({ onSwitchToSignup }) => {
 
       const data = await response.json();
       login(data.access_token, data.user);
+      onLoginSuccess?.(loginMode);
     } catch (err: any) {
       setError(err.message);
-      // Shake animation on panel
       const panel = document.querySelector('.skynet-panel-container');
       if (panel) {
         panel.animate([
@@ -72,18 +74,15 @@ const Login: React.FC<LoginProps> = ({ onSwitchToSignup }) => {
     <div className="min-h-screen bg-[#020408] text-[#e8f4ff] font-['Rajdhani'] relative overflow-hidden">
       <SkynetBackground />
       
-      {/* Overlays */}
       <div className="skynet-bg-overlay"></div>
       <div className="skynet-scanlines"></div>
       <div className="skynet-scan-beam"></div>
 
-      {/* Fullscreen Corners */}
       <div className="skynet-corner skynet-corner--tl"></div>
       <div className="skynet-corner skynet-corner--tr"></div>
       <div className="skynet-corner skynet-corner--bl"></div>
       <div className="skynet-corner skynet-corner--br"></div>
 
-      {/* Top Badge */}
       <div className="fixed top-[22px] left-[28px] flex items-center gap-[12px] z-20 animate-fade-down" style={{ animationDelay: '0.4s', animationFillMode: 'forwards', opacity: 0 }}>
         <div className="w-[36px] h-[36px] bg-gradient-to-br from-[#00f0ff] to-[#0060ff] rounded-[8px] flex items-center justify-center font-['Orbitron'] font-black text-[14px] color-[#000] shadow-[0_0_20px_rgba(0,240,255,0.5)] relative after:content-[''] after:absolute after:right-[-3px] after:bottom-[-3px] after:w-[36px] after:h-[36px] after:bg-[#003050] after:rounded-[8px] after:z-[-1]">S</div>
         <div className="flex flex-col">
@@ -97,7 +96,6 @@ const Login: React.FC<LoginProps> = ({ onSwitchToSignup }) => {
         ALL_SYSTEMS_NOMINAL
       </div>
 
-      {/* Status Bar */}
       <div className="fixed bottom-0 left-0 right-0 h-[30px] bg-[rgba(2,8,18,0.92)] border-t border-[rgba(0,240,255,0.25)] flex items-center px-[24px] gap-[28px] z-20 backdrop-blur-[10px] animate-fade-up" style={{ animationDelay: '1.8s', animationFillMode: 'forwards', opacity: 0 }}>
         <div className="flex items-center gap-[6px] font-['Share_Tech_Mono'] text-[9px] text-[#6a8aaa] tracking-[0.1em]">
           <div className="w-[5px] h-[5px] rounded-full bg-[#00ff9d] shadow-[0_0_6px_#00ff9d] animate-[dotPulse_2s_ease-in-out_infinite]"></div>
@@ -110,14 +108,11 @@ const Login: React.FC<LoginProps> = ({ onSwitchToSignup }) => {
         <div className="ml-auto font-['Share_Tech_Mono'] text-[10px] text-[#00f0ff] tracking-[0.08em]">{clock}</div>
       </div>
 
-      {/* Main Layout */}
       <div className="relative z-10 w-full h-screen overflow-hidden flex items-center justify-center p-[10px]">
         <div className="skynet-panel-container w-[400px] max-w-full bg-[rgba(4,12,28,0.92)] border border-[rgba(0,240,255,0.2)] rounded-[12px] p-[24px_28px] relative backdrop-blur-[30px] shadow-[0_0_50px_rgba(0,240,255,0.06),0_20px_60px_rgba(0,0,0,0.8)] animate-[panelReveal_0.8s_cubic-bezier(0.22,1,0.36,1)_0.5s_forwards]" style={{ opacity: 0, transform: 'translateY(20px)' }}>
           
-          {/* Animated Glowing Border */}
           <div className="absolute inset-[-1px] rounded-[13px] p-[1px] pointer-events-none animate-[borderRotate_6s_linear_infinite]" style={{ background: 'linear-gradient(0deg, rgba(0,240,255,0.3), transparent 40%, transparent 60%, rgba(0,255,157,0.2))', WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude' }}></div>
 
-          {/* Panel Corners */}
           <div className="absolute w-[14px] h-[14px] top-[-1px] left-[-1px] border-t-2 border-l-2 border-[#00f0ff] rounded-[2px_0_0_0]"></div>
           <div className="absolute w-[14px] h-[14px] top-[-1px] right-[-1px] border-t-2 border-r-2 border-[#00f0ff] rounded-[0_2px_0_0]"></div>
           <div className="absolute w-[14px] h-[14px] bottom-[-1px] left-[-1px] border-b-2 border-l-2 border-[#00f0ff] rounded-[0_0_0_2px]"></div>
@@ -132,10 +127,39 @@ const Login: React.FC<LoginProps> = ({ onSwitchToSignup }) => {
             SKY<span className="text-[#00f0ff] drop-shadow-[0_0_15px_rgba(0,240,255,0.4)]">NET</span>
           </h2>
 
-          <div className="flex items-center gap-[8px] font-['Share_Tech_Mono'] text-[9px] text-[#6a8aaa] tracking-[0.06em] mb-[20px] animate-fade-up" style={{ animationDelay: '0.9s', animationFillMode: 'forwards', opacity: 0 }}>
+          <div className="flex items-center gap-[8px] font-['Share_Tech_Mono'] text-[9px] text-[#6a8aaa] tracking-[0.06em] mb-[14px] animate-fade-up" style={{ animationDelay: '0.9s', animationFillMode: 'forwards', opacity: 0 }}>
             <span className="text-[#00f0ff]">›</span>
-            <span>_ AWAITING_CREDENTIALS</span>
+            <span>_ {loginMode === 'admin' ? 'ADMIN_AUTHENTICATION' : 'AWAITING_CREDENTIALS'}</span>
             <span className="inline-block w-[6px] h-[11px] bg-[#00f0ff] rounded-[1px] ml-[2px] animate-[cursorBlink_1.1s_step-end_infinite] shadow-[0_0_6px_#00f0ff]"></span>
+          </div>
+
+          {/* ═══ EMPLOYEE / ADMIN TAB SELECTOR ═══ */}
+          <div className="flex mb-[16px] border border-[rgba(0,240,255,0.15)] rounded-[6px] overflow-hidden animate-fade-up" style={{ animationDelay: '0.95s', animationFillMode: 'forwards', opacity: 0 }}>
+            <button
+              type="button"
+              onClick={() => { setLoginMode('employee'); setError(''); }}
+              className={`flex-1 py-[10px] font-['Orbitron'] text-[10px] font-bold tracking-[0.16em] transition-all duration-300 flex items-center justify-center gap-[6px] ${
+                loginMode === 'employee'
+                  ? 'bg-gradient-to-r from-[rgba(0,240,255,0.12)] to-[rgba(0,96,255,0.08)] text-[#00f0ff] shadow-[inset_0_-2px_0_#00f0ff]'
+                  : 'bg-transparent text-[#4a6a8a] hover:text-[#6a8aaa]'
+              }`}
+            >
+              <svg viewBox="0 0 24 24" className="w-[12px] h-[12px]" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              EMPLOYEE
+            </button>
+            <div className="w-[1px] bg-[rgba(0,240,255,0.15)]"></div>
+            <button
+              type="button"
+              onClick={() => { setLoginMode('admin'); setError(''); }}
+              className={`flex-1 py-[10px] font-['Orbitron'] text-[10px] font-bold tracking-[0.16em] transition-all duration-300 flex items-center justify-center gap-[6px] ${
+                loginMode === 'admin'
+                  ? 'bg-gradient-to-r from-[rgba(255,184,0,0.1)] to-[rgba(255,107,53,0.06)] text-[#ffb800] shadow-[inset_0_-2px_0_#ffb800]'
+                  : 'bg-transparent text-[#4a6a8a] hover:text-[#6a8aaa]'
+              }`}
+            >
+              <svg viewBox="0 0 24 24" className="w-[12px] h-[12px]" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              ADMIN
+            </button>
           </div>
 
           {error && (
@@ -149,14 +173,14 @@ const Login: React.FC<LoginProps> = ({ onSwitchToSignup }) => {
             <div className="flex flex-col gap-[4px]">
               <label className="font-['Share_Tech_Mono'] text-[8px] tracking-[0.14em] text-[#4a6a8a] flex items-center gap-[5px]">
                 <span className="text-[rgba(0,240,255,0.4)]">01 //</span>
-                CREDENTIALS
+                {loginMode === 'admin' ? 'ADMIN_CREDENTIALS' : 'CREDENTIALS'}
               </label>
               <div className="relative flex items-center h-[46px] bg-[rgba(0,240,255,0.02)] border border-[rgba(0,240,255,0.15)] rounded-[4px] px-[12px] gap-[8px] transition-all focus-within:border-[#00f0ff] focus-within:bg-[rgba(0,240,255,0.04)]">
                 <svg viewBox="0 0 24 24" className="w-[13px] h-[13px] text-[rgba(0,240,255,0.4)]" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 <input
                   type="email"
                   className="flex-1 bg-transparent !border-none !outline-none !ring-0 font-['Share_Tech_Mono'] text-[12px] text-[#e8f4ff] tracking-[0.04em] placeholder:text-[#2a4060]"
-                  placeholder="user@skynet.ai"
+                  placeholder={loginMode === 'admin' ? 'admin@skynet.ai' : 'user@skynet.ai'}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -196,9 +220,13 @@ const Login: React.FC<LoginProps> = ({ onSwitchToSignup }) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-[46px] bg-gradient-to-r from-[#0050c8] to-[#00b8ff] rounded-[4px] font-['Orbitron'] text-[11px] font-bold tracking-[0.2em] text-[#fff] shadow-[0_0_15px_rgba(0,144,255,0.3)] hover:translate-y-[-1px] transition-all disabled:opacity-50 mt-[4px]"
+              className={`w-full h-[46px] rounded-[4px] font-['Orbitron'] text-[11px] font-bold tracking-[0.2em] text-[#fff] hover:translate-y-[-1px] transition-all disabled:opacity-50 mt-[4px] ${
+                loginMode === 'admin'
+                  ? 'bg-gradient-to-r from-[#c87800] to-[#ffb800] shadow-[0_0_15px_rgba(255,184,0,0.3)] text-[#000]'
+                  : 'bg-gradient-to-r from-[#0050c8] to-[#00b8ff] shadow-[0_0_15px_rgba(0,144,255,0.3)]'
+              }`}
             >
-              {loading ? 'AUTHENTICATING...' : 'AUTHENTICATE'}
+              {loading ? 'AUTHENTICATING...' : (loginMode === 'admin' ? 'ADMIN_AUTHENTICATE' : 'AUTHENTICATE')}
             </button>
 
             <div className="flex items-center gap-[10px] my-[2px]">
