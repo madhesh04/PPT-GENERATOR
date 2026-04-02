@@ -1,6 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { ThemeProvider } from 'next-themes';
-import { DottedSurface } from './components/ui/dotted-surface';
+import React, { useState, useRef, useEffect } from 'react';
+import * as THREE from 'three';
 import './index.css';
 import { useAuth } from './AuthContext';
 import Login from './components/Login';
@@ -23,159 +22,6 @@ interface GenerateResponse {
   filename: string;
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? 'http://localhost:8000';
-
-const PROGRESS_STEPS = [
-  { label: 'System Check', detail: 'Allocating resources' },
-  { label: 'LLM Agent', detail: 'Synthesizing knowledge vectors' },
-  { label: 'Image Engine', detail: 'Generating visual assets' },
-];
-
-const TONES = [
-  { id: 'executive', label: 'Executive', icon: 'workspace_premium', desc: 'Formal, data-heavy, decision-oriented.' },
-  { id: 'sales', label: 'Startup Pitch', icon: 'rocket_launch', desc: 'Visionary, fast-paced, high energy.' },
-  { id: 'academic', label: 'Educational', icon: 'school', desc: 'Step-by-step, explanatory, clear.' },
-  { id: 'simple', label: 'Creative', icon: 'brush', desc: 'Vibrant, bold imagery, minimal text.' },
-  { id: 'technical', label: 'Technical', icon: 'biotech', desc: 'Precise, schematic, specification-led.' },
-  { id: 'professional', label: 'Inspirational', icon: 'campaign', desc: 'Storytelling, emotional, punchy.' },
-];
-
-const THEMES = [
-  { id: 'neon', label: 'Neon Noir', activeBg: 'bg-primary-container', activeText: 'text-on-primary-container', border: 'border-transparent' },
-  { id: 'ocean', label: 'Oceanic Deep', activeBg: 'bg-[#0066FF]', activeText: 'text-white', border: 'border-transparent' },
-  { id: 'emerald', label: 'Emerald Swiss', activeBg: 'bg-[#10B981]', activeText: 'text-white', border: 'border-transparent' },
-  { id: 'dark', label: 'Monolith White', activeBg: 'bg-on-background', activeText: 'text-surface-dim', border: 'border-transparent' },
-];
-
-const getSlideAccentClass = (index: number) => {
-  const colors = ['bg-primary-container', 'bg-tertiary', 'bg-[#8B5CF6]', 'bg-secondary'];
-  return colors[index % colors.length];
-};
-const getSlideTextAccentClass = (index: number) => {
-  const colors = ['text-primary-container', 'text-tertiary', 'text-[#8B5CF6]', 'text-secondary'];
-  return colors[index % colors.length];
-};
-const getSlideContainerAccentClass = (index: number) => {
-  const colors = ['bg-primary-container', 'bg-tertiary-container', 'bg-[#8B5CF6]/20', 'bg-secondary-container'];
-  return colors[index % colors.length];
-};
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-function SlideCard({ 
-  slide, index, 
-  onUpdate, onRegenSlide, onRegenImage 
-}: { 
-  slide: SlideData; index: number; 
-  onUpdate: (s: SlideData) => void;
-  onRegenSlide: () => void; onRegenImage: () => void;
-}) {
-  const accent = getSlideAccentClass(index);
-  const textAccent = getSlideTextAccentClass(index);
-  const containerAccent = getSlideContainerAccentClass(index);
-
-  const [editingTitle, setEditingTitle] = useState(false);
-  const [titleVal, setTitleVal] = useState(slide.title);
-
-  const updateBullet = (bi: number, newText: string) => {
-    const newContent = [...slide.content]; 
-    newContent[bi] = newText;
-    onUpdate({ ...slide, content: newContent });
-  };
-
-  const handleTitleCommit = () => {
-    setEditingTitle(false);
-    onUpdate({ ...slide, title: titleVal.trim() || slide.title });
-  };
-
-  return (
-    <div className="bg-surface-container rounded-xl overflow-hidden relative group transition-expo border border-outline-variant/10 shadow-xl">
-      <div className={`absolute top-0 left-0 right-0 h-[3px] ${accent}`}></div>
-      <div className="p-8">
-        <div className="flex items-start gap-4 mb-8">
-          <div className="w-12 h-12 perspective-1000 flex-shrink-0">
-            <div className={`cube-3d w-full h-full relative flex items-center justify-center text-white font-label font-bold text-xl shadow-[4px_4px_0_rgba(0,0,0,0.3)] ${containerAccent}`}>
-              {String(index + 1).padStart(2, '0')}
-            </div>
-          </div>
-          <div className="flex-1 min-w-0">
-            {editingTitle ? (
-              <input autoFocus className="title-input bg-surface-container-highest px-3 py-1 rounded w-full border border-primary/20" value={titleVal} onChange={e=>setTitleVal(e.target.value)} onBlur={handleTitleCommit} onKeyDown={e => e.key === 'Enter' && handleTitleCommit()} />
-            ) : (
-              <h3 className="text-3xl font-headline leading-none text-on-surface cursor-pointer hover:opacity-80 transition-opacity truncate" onClick={() => {setTitleVal(slide.title); setEditingTitle(true);}}>
-                {slide.title}
-              </h3>
-            )}
-            <p className="text-on-surface-variant font-label text-[10px] uppercase tracking-widest mt-2">{slide.content.length} Data Points</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          <div className="space-y-4">
-            {slide.content.map((point, i) => (
-              <EditableBullet key={i} point={point} accentClass={accent} onSave={val => updateBullet(i, val)} />
-            ))}
-          </div>
-
-          <div className="space-y-4 flex flex-col justify-end">
-            <div className="aspect-video bg-surface-container-lowest rounded-lg border border-outline-variant/10 flex items-center justify-center group/img overflow-hidden relative shadow-inner">
-              {slide.image_base64 ? (
-                <>
-                  <img src={slide.image_base64} alt="visual" className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover/img:scale-105 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-surface/40 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
-                    <button onClick={onRegenImage} className="bg-surface-container px-4 py-2 rounded-lg font-label text-[10px] uppercase tracking-widest text-on-surface hover:text-primary transition-colors flex items-center gap-2 shadow-lg">
-                      <span className="material-symbols-outlined text-sm">refresh</span> New Logic
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="relative z-10 flex flex-col items-center opacity-60">
-                  <span className={`material-symbols-outlined text-4xl mb-2 ${textAccent}`}>broken_image</span>
-                  <span className="text-[10px] font-label text-on-surface-variant uppercase tracking-widest">Awaiting Render</span>
-                </div>
-              )}
-            </div>
-            
-            <button onClick={onRegenSlide} className="w-full py-2.5 bg-surface-container-high text-on-surface font-label text-[10px] tracking-widest uppercase hover:bg-surface-container-highest transition-expo rounded-lg flex items-center justify-center gap-2 border border-outline-variant/20 hover:border-primary/40">
-              <span className="material-symbols-outlined text-sm text-primary">auto_fix_high</span> Re-Synthesize Content
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function EditableBullet({ point, onSave, accentClass }: { point: string; onSave:(v:string)=>void; accentClass: string }) {
-  const [edit, setEdit] = useState(false);
-  const [val, setVal] = useState(point);
-  const ref = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => { if (edit) ref.current?.focus(); }, [edit]);
-  const commit = () => { setEdit(false); onSave(val); };
-
-  if (edit) {
-    return (
-      <div className="flex items-start gap-3 p-3 bg-surface-container-highest rounded-lg border border-primary/40 shadow-inner">
-        <span className={`w-1.5 h-1.5 rounded-full mt-2.5 flex-shrink-0 ${accentClass}`}></span>
-        <textarea ref={ref} value={val} onChange={e=>setVal(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter' && !e.shiftKey){e.preventDefault(); commit();}}}
-          className="bg-transparent border-none text-sm text-on-surface leading-relaxed flex-1 outline-none resize-none overflow-hidden h-[80px] font-body" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-start gap-3 group/edit cursor-text p-2 rounded-lg hover:bg-surface-container-high transition-colors" onClick={() => {setVal(point); setEdit(true);}}>
-      <span className={`w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0 ${accentClass}`}></span>
-      <p className="text-sm text-on-surface-variant leading-relaxed flex-1">{point}</p>
-      <span className="material-symbols-outlined text-[14px] text-on-surface-variant opacity-0 group-hover/edit:opacity-100">edit_square</span>
-    </div>
-  );
-}
-
-// ── Dashboard Component ────────────────────────────────────────────────────────
-
 interface SavedPresentation {
   id: string;
   title: string;
@@ -183,596 +29,668 @@ interface SavedPresentation {
   created_at: string;
 }
 
-function DashboardView({ token, apiBase, onDownload }: { token: string | null; apiBase: string; onDownload: (id: string, title: string) => void }) {
-  const [presentations, setPresentations] = useState<SavedPresentation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? 'http://localhost:8000';
 
+function ThreeBackground() {
+  const mountRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    const fetchPresentations = async () => {
-      try {
-        const res = await fetch(`${apiBase}/presentations/me`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setPresentations(data.presentations);
-        }
-      } catch (err) {
-        console.error("Failed to fetch dashboard data", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (token) fetchPresentations();
-  }, [token, apiBase]);
-
-  const handleDelete = async (id: string) => {
-    setDeletingId(id);
-    try {
-      const res = await fetch(`${apiBase}/presentations/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        setPresentations(prev => prev.filter(p => p.id !== id));
-      } else {
-        alert("Failed to delete presentation");
-      }
-    } catch (err) {
-      alert("Error issuing delete request");
-    } finally {
-      setDeletingId(null);
+    if (!mountRef.current) return;
+    const cv = mountRef.current;
+    const rr = new THREE.WebGLRenderer({canvas: cv, antialias: true, alpha: true});
+    rr.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    rr.setClearColor(0x000000, 0);
+    const sc = new THREE.Scene();
+    const cam = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, .1, 800);
+    cam.position.set(0, 0, 5);
+    const C = { cy: 0x00f0ff, gn: 0x00ff9d, bl: 0x0050c8 };
+    const iA = new THREE.Mesh(new THREE.IcosahedronGeometry(2.0, 1), new THREE.MeshBasicMaterial({color: C.cy, wireframe: true, transparent: true, opacity: .1}));
+    iA.position.set(3.4, .2, -4); sc.add(iA);
+    const iB = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 0), new THREE.MeshBasicMaterial({color: C.bl, wireframe: true, transparent: true, opacity: .055}));
+    iB.position.set(3.4, .2, -4); sc.add(iB);
+    const tA = new THREE.Mesh(new THREE.TorusGeometry(3.2, .007, 8, 110), new THREE.MeshBasicMaterial({color: C.cy, transparent: true, opacity: .15}));
+    tA.position.set(3.4, 0, -5); tA.rotation.x = Math.PI * .28; sc.add(tA);
+    const tB = new THREE.Mesh(new THREE.TorusGeometry(2.6, .005, 8, 90), new THREE.MeshBasicMaterial({color: C.gn, transparent: true, opacity: .09}));
+    tB.position.set(3.4, 0, -5); tB.rotation.x = Math.PI * .55; tB.rotation.z = Math.PI * .18; sc.add(tB);
+    const PC = 650, pos = new Float32Array(PC * 3);
+    for(let i=0; i<PC; i++){
+      pos[i*3] = (Math.random()-.5)*22;
+      pos[i*3+1] = (Math.random()-.5)*12;
+      pos[i*3+2] = (Math.random()-.5)*8-5;
     }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[50vh] animate-fade-in text-center">
-         <div className="w-16 h-16 border-2 border-primary-container border-r-transparent rounded-full animate-spin mb-6"></div>
-         <p className="font-label text-xs uppercase tracking-widest text-on-surface-variant">Retrieving Storage Vectors...</p>
-      </div>
-    );
-  }
-
-  if (presentations.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[50vh] text-center border border-dashed border-white/10 rounded-3xl p-10 bg-white/5 animate-fade-in">
-        <span className="material-symbols-outlined text-6xl text-white/20 mb-4">folder_open</span>
-        <h2 className="text-2xl font-headline tracking-tighter text-white uppercase mb-2">No Records Found</h2>
-        <p className="text-on-surface-variant max-w-sm mb-6">You have not generated any SKYNET presentations yet. Return to the Create tab to synthesise new data.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="animate-fade-in relative z-10 w-full mb-24">
-      <div className="flex items-center gap-6 mb-10">
-         <h2 className="text-4xl font-headline tracking-tighter text-white uppercase border-l-4 border-primary-container pl-4">Local Storage</h2>
-         <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent"></div>
-         <span className="text-primary-container font-label text-[10px] tracking-widest font-black uppercase shadow-lg bg-primary-container/10 px-3 py-1 rounded-full border border-primary-container/20">{presentations.length} Records</span>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {presentations.map((p) => {
-           const date = new Date(p.created_at);
-           return (
-             <div key={p.id} className="glass-card p-6 rounded-2xl relative overflow-hidden group hover:border-white/20 transition-all border border-white/5 shadow-xl flex flex-col h-full bg-surface-container-low/50">
-                <div className="signature-bar bg-white/20 group-hover:bg-primary-container transition-colors"></div>
-                
-                <div className="flex justify-between items-start mb-4">
-                  <span className="font-label text-[9px] uppercase tracking-widest text-on-surface-variant bg-surface-container-high px-2 py-1 rounded-md border border-white/5 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-secondary"></span> {p.theme}</span>
-                  <span className="material-symbols-outlined text-white/20 text-sm">deployed_code</span>
-                </div>
-                
-                <h3 className="font-headline text-xl text-white font-bold leading-tight mb-6 line-clamp-3 flex-1">{p.title}</h3>
-                
-                <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
-                   <div className="flex flex-col">
-                      <span className="font-label text-[8px] uppercase tracking-widest text-on-surface-variant opacity-70">Synthesized Date</span>
-                      <span className="text-[10px] font-label text-white tracking-wider">{date.toLocaleDateString()}</span>
-                   </div>
-                   
-                   <div className="flex gap-2 relative z-10">
-                      <button 
-                        onClick={() => onDownload(p.id, p.title)}
-                        className="w-10 h-10 rounded-lg bg-primary-container/10 border border-primary-container/30 text-primary-container hover:bg-primary-container hover:text-white flex items-center justify-center transition-colors shadow-lg"
-                        title="Download .pptx"
-                      >
-                         <span className="material-symbols-outlined text-sm">get_app</span>
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(p.id)}
-                        disabled={deletingId === p.id}
-                        className="w-10 h-10 rounded-lg bg-error/5 border border-error/20 text-error hover:bg-error hover:text-white flex items-center justify-center transition-colors disabled:opacity-50"
-                        title="Delete record"
-                      >
-                         <span className={`material-symbols-outlined text-sm ${deletingId === p.id ? 'animate-spin' : ''}`}>{deletingId === p.id ? 'sync' : 'delete'}</span>
-                      </button>
-                   </div>
-                </div>
-             </div>
-           );
-        })}
-      </div>
-    </div>
-  );
+    const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const pts = new THREE.Points(pg, new THREE.PointsMaterial({color: C.cy, size: .022, transparent: true, opacity: .42, sizeAttenuation: true})); sc.add(pts);
+    const gr = new THREE.GridHelper(28, 26, 0x001530, 0x001530); 
+    if(!Array.isArray(gr.material)){ gr.material.transparent=true; gr.material.opacity=.45; }
+    gr.position.set(0, -3.8, -5); gr.rotation.x = Math.PI * .035; sc.add(gr);
+    let tx = 0, ty = 0, cx = 0, cy = 0, fr = 0;
+    const onMM = (e: MouseEvent) => { tx=((e.clientX/window.innerWidth)-.5)*.55; ty=((e.clientY/window.innerHeight)-.5)*.28; };
+    document.addEventListener('mousemove', onMM);
+    const rsz = () => { const w=window.innerWidth, h=window.innerHeight; rr.setSize(w,h); cam.aspect=w/h; cam.updateProjectionMatrix(); };
+    window.addEventListener('resize', rsz); rsz();
+    let req: number;
+    const anim = () => {
+      req = requestAnimationFrame(anim);
+      fr++; cx+=(tx-cx)*.04; cy+=(ty-cy)*.04;
+      iA.rotation.x=fr*.0024+cy*.5; iA.rotation.y=fr*.0038+cx*.5;
+      iB.rotation.x=fr*.003-cy*.3; iB.rotation.y=fr*.005-cx*.3;
+      tA.rotation.z=fr*.003+cx*.2; tB.rotation.z=-fr*.004+cx*.15;
+      pts.rotation.y=fr*.0004+cx*.08;
+      cam.position.x=cx*.35; cam.position.y=-cy*.2; cam.lookAt(sc.position);
+      rr.render(sc,cam);
+    };
+    anim();
+    return () => { window.removeEventListener('resize', rsz); document.removeEventListener('mousemove', onMM); cancelAnimationFrame(req); rr.dispose(); pg.dispose(); };
+  }, []);
+  return <canvas id="bg-c" ref={mountRef}></canvas>;
 }
 
-// ── Application Root ──────────────────────────────────────────────────────────
-
-export default function App() {
-  const [title, setTitle]       = useState('');
-  const [topics, setTopics]     = useState<string[]>([]);
-  const [topicInput, setTopicInput] = useState('');
-  const [numSlides, setNumSlides] = useState(12);
-  const [context, setContext]   = useState('');
-  const [tone, setTone]         = useState('sales');
-  const [theme]       = useState('neon');
-  
-  const [loading, setLoading]   = useState(false);
-  const [result, setResult]     = useState<GenerateResponse | null>(null);
-  const [slides, setSlides]     = useState<SlideData[]>([]);
-  const [error, setError]       = useState<string | null>(null);
-  const [exporting, setExporting] = useState(false);
-  const [isContextModalOpen, setIsContextModalOpen] = useState(false);
-  const { token, user, logout, isAuthenticated } = useAuth();
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [currentView, setCurrentView] = useState<'create' | 'dashboard'>('create');
-
-  // Custom Cursor Logic
-  const cursorOuterRef = useRef<HTMLDivElement>(null);
-  const cursorInnerRef = useRef<HTMLDivElement>(null);
+function Cursor() {
+  const co = useRef<HTMLDivElement>(null);
+  const ci = useRef<HTMLDivElement>(null);
   const mousePos = useRef({ x: 0, y: 0 });
   const outerPos = useRef({ x: 0, y: 0 });
-
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const mm = (e: MouseEvent) => {
       mousePos.current = { x: e.clientX, y: e.clientY };
-      if (cursorInnerRef.current) {
-        cursorInnerRef.current.style.left = `${e.clientX}px`;
-        cursorInnerRef.current.style.top = `${e.clientY}px`;
-      }
+      if (ci.current) { ci.current.style.left = e.clientX + 'px'; ci.current.style.top = e.clientY + 'px'; }
     };
-    window.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mousemove', mm);
+    let req: number;
+    const loop = () => {
+      outerPos.current.x += (mousePos.current.x - outerPos.current.x) * .13;
+      outerPos.current.y += (mousePos.current.y - outerPos.current.y) * .13;
+      if (co.current) { co.current.style.left = outerPos.current.x + 'px'; co.current.style.top = outerPos.current.y + 'px'; }
+      req = requestAnimationFrame(loop);
+    };
+    loop();
+    return () => { document.removeEventListener('mousemove', mm); cancelAnimationFrame(req); };
+  }, []);
+  return <><div className="cur-o" ref={co}></div><div className="cur-i" ref={ci}></div></>;
+}
 
-    let requestRef: number;
-    const animateCursor = () => {
-      outerPos.current.x += (mousePos.current.x - outerPos.current.x) * 0.14;
-      outerPos.current.y += (mousePos.current.y - outerPos.current.y) * 0.14;
-      if (cursorOuterRef.current) {
-        cursorOuterRef.current.style.left = `${outerPos.current.x}px`;
-        cursorOuterRef.current.style.top = `${outerPos.current.y}px`;
-      }
-      requestRef = requestAnimationFrame(animateCursor);
-    };
-    animateCursor();
+export default function App() {
+  const { token, user, logout, isAuthenticated } = useAuth();
+  const [authMode, setAuthMode] = useState<'login'|'signup'>('login');
+  
+  const [view, setView] = useState<'dashboard'|'create'|'preview'|'history'|'settings'>('dashboard');
+  const BC: Record<string,string> = {dashboard:'DASHBOARD',create:'CREATE_PPT',preview:'SLIDE_PREVIEW',history:'DECK_HISTORY',settings:'SETTINGS'};
 
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      cancelAnimationFrame(requestRef);
+  const [toastData, setToastData] = useState({ show: false, msg: '' });
+  const showToast = (msg: string, dur=3000) => {
+    setToastData({ show: true, msg });
+    setTimeout(() => setToastData(prev => ({ ...prev, show: false })), dur);
+  };
+
+  const [timeStr, setTimeStr] = useState('');
+  useEffect(() => {
+    const tick = () => {
+      const n = new Date();
+      const p = (v: number) => String(v).padStart(2, '0');
+      setTimeStr(`${n.getFullYear()}.${p(n.getMonth()+1)}.${p(n.getDate())} ${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())} IST`);
     };
+    tick();
+    const iv = setInterval(tick, 1000);
+    return () => clearInterval(iv);
   }, []);
 
-  // Loading Step Animation Logic
-  const [activeStep, setActiveStep] = useState(0);
+  // Creation State
+  const [title, setTitle] = useState('');
+  const [topics, setTopics] = useState<string[]>([]);
+  const [topicIn, setTopicIn] = useState('');
+  const [context, setContext] = useState('');
+  const [tone, setTone] = useState('professional');
+  const [theme, setTheme] = useState('neon');
+  const [numSlides, setNumSlides] = useState(5);
+  
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [genSteps, setGenSteps] = useState([
+    { id: 1, label: 'ANALYSING_TOPICS', status: 'pending', desc: '' },
+    { id: 2, label: 'WRITING_CONTENT', status: 'pending', desc: '' },
+    { id: 3, label: 'FETCHING_VISUALS', status: 'pending', desc: '' },
+    { id: 4, label: 'BUILDING_PPTX', status: 'pending', desc: '' }
+  ]);
+  const [result, setResult] = useState<GenerateResponse | null>(null);
+  const [slides, setSlides] = useState<SlideData[]>([]);
+
+  // Preview State
+  const [previewSecOpen, setPreviewSecOpen] = useState(true);
+
+  // Dashboard API State
+  const [savedPresentations, setSavedPresentations] = useState<SavedPresentation[]>([]);
+
   useEffect(() => {
-    let interval: any;
-    if (loading) {
-      interval = setInterval(() => {
-        setActiveStep(prev => (prev + 1) % PROGRESS_STEPS.length);
-      }, 2500); // Shift step every 2.5s
-    } else {
-      setActiveStep(0);
+    if(isAuthenticated && view === 'dashboard' && token){
+      fetch(`${API_BASE}/presentations/me`, { headers: { 'Authorization': `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(d => setSavedPresentations(d.presentations))
+        .catch(console.error);
     }
-    return () => clearInterval(interval);
-  }, [loading]);
+  }, [view, isAuthenticated, token]);
 
-  // Form Handlers
-  const addTopic = (val: string) => {
-    const trimmed = val.trim();
-    if (trimmed && !topics.includes(trimmed)) setTopics([...topics, trimmed]);
-    setTopicInput('');
+  const handleGenerate = async () => {
+    if (!title.trim()) { setErrorMsg('ERROR_001 — Presentation title is required'); return; }
+    if (!topics.length) { setErrorMsg('ERROR_002 — At least one topic is required'); return; }
+    setErrorMsg('');
+    setLoading(true);
+    setGenSteps(prev => prev.map(s => ({ ...s, status: 'pending', desc: '' })));
+    
+    // Simulate initial steps for visual effect before true API waits
+    const sDetails = [
+      'Understanding structure and topic distribution…',
+      'Generating slide content with LLM…',
+      'Sourcing images via Pollinations / Unsplash…',
+      'Assembling branded PPTX file…'
+    ];
+    
+    for(let i=0; i<4; i++){
+      setGenSteps(p => p.map((st, idx) => idx === i ? { ...st, status: 'active', desc: sDetails[i] } : st));
+      await new Promise(r => setTimeout(r, 600)); // wait a bit per step UX
+      if (i === 1) {
+         try {
+           const resp = await fetch(`${API_BASE}/generate`, {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+             body: JSON.stringify({ title, topics, num_slides: numSlides, context, tone, theme }),
+           });
+           if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
+           const data = await resp.json();
+           setResult(data);
+           setSlides(data.slides);
+         } catch(err: any) {
+           setErrorMsg(err.message || 'Generation failed');
+           setLoading(false);
+           return;
+         }
+      }
+      setGenSteps(p => p.map((st, idx) => idx === i ? { ...st, status: 'done', desc: sDetails[i] } : st));
+    }
+    
+    showToast('SUCCESS — Deck ready · Navigating to preview…', 2500);
+    setTimeout(() => {
+      setLoading(false);
+      setView('preview');
+    }, 1400);
   };
-  const removeTopic = (idx: number) => setTopics(topics.filter((_, i) => i !== idx));
 
-  const handleGenerate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true); setError(null); setResult(null); setSlides([]);
+  const handleDownload = async (dlToken?: string, filename?: string) => {
+    showToast('DOWNLOAD — Streaming PPTX...', 3000);
+    const t = dlToken || result?.token;
+    const f = filename || result?.filename || 'presentation.pptx';
+    if (!t) return;
     try {
-      const resp = await fetch(`${API_BASE}/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ title: title || 'Untitled', topics, num_slides: numSlides, context, tone, theme }),
-      });
-      if (resp.status === 401) { logout(); return; }
-      if (!resp.ok) throw new Error((await resp.json()).detail || 'Generation failed');
-      const data: GenerateResponse = await resp.json();
-      setResult(data);
-      setSlides(data.slides);
-    } catch (err: any) { setError(err.message); } 
-    finally { setLoading(false); }
+      const resp = await fetch(`${API_BASE}/download/${t}`, { headers:{ 'Authorization': `Bearer ${token}` }});
+      if(resp.ok){
+        const blob = await resp.blob();
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = f;
+        document.body.appendChild(a); a.click(); a.remove();
+      }
+    } catch(e) { console.error(e); }
   };
 
-  const handleExport = async () => {
+  const handleRebuildExport = async () => {
     if (!result) return;
-    setExporting(true);
+    showToast('REBUILD — Regenerating PPTX with latest edits...', 4000);
     try {
       const resp = await fetch(`${API_BASE}/export`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ title: result.title, slides, theme }),
       });
-      if (resp.status === 401) { logout(); return; }
-      if (!resp.ok) throw new Error('Export failed');
-      const data = await resp.json();
-      handleDownload(data.token, data.filename);
-    } catch { alert('Export failed'); } 
-    finally { setExporting(false); }
+      if (resp.ok) {
+        const data = await resp.json();
+        handleDownload(data.token, data.filename);
+      }
+    } catch(e) {}
   };
 
-  const handleDownload = async (dlToken = result?.token, filename = result?.filename) => {
-    if (!dlToken) return;
-    try {
-      const dl = await fetch(`${API_BASE}/download/${dlToken}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (dl.status === 401) { logout(); return; }
-      const blob = await dl.blob();
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename || 'presentation.pptx';
-      document.body.appendChild(a); a.click(); a.remove();
-    } catch { alert('Download failed'); }
-  };
+  if (!isAuthenticated) {
+    return authMode === 'login' 
+      ? <Login onSwitchToSignup={() => setAuthMode('signup')} /> 
+      : <Signup onSwitchToLogin={() => setAuthMode('login')} />;
+  }
+
+  const pPct = genSteps.filter(s=>s.status==='done').length * 25 + (genSteps.find(s=>s.status==='active') ? 12 : 0);
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark">
-      {/* Custom Cursor */}
-      <div ref={cursorOuterRef} className="skynet-cursor-outer" />
-      <div ref={cursorInnerRef} className="skynet-cursor-inner" />
+    <div className="skynet-app">
+      <Cursor />
+      <ThreeBackground />
+      <div className="bgo"></div>
+      <div className="scl"></div>
+      <div className="sbm"></div>
+      <div className="cr ctl"></div><div className="cr ctr"></div>
+      <div className="cr cbl"></div><div className="cr cbr"></div>
 
-      {!isAuthenticated ? (
-        authMode === 'login' ? (
-          <Login onSwitchToSignup={() => setAuthMode('signup')} />
-        ) : (
-          <Signup onSwitchToLogin={() => setAuthMode('login')} />
-        )
-      ) : (
-        <>
-          <header className="fixed top-0 w-full z-50 glass-heavy flex justify-between items-center px-8 py-4 border-b border-white/5 shadow-2xl">
-            <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.location.reload()}>
-              <span className="material-symbols-outlined text-[#F5533D] text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>deployed_code</span>
-              <h1 className="text-2xl font-[800] tracking-tighter text-[#F5533D] uppercase font-headline">SKYNET</h1>
-            </div>
-            <div className="hidden md:flex gap-8 items-center">
-              <nav className="flex gap-6">
-                <button 
-                  onClick={() => setCurrentView('create')} 
-                  className={`font-bold font-label text-sm tracking-widest uppercase pb-1 ${currentView === 'create' ? 'text-primary-container border-b-2 border-primary-container' : 'text-on-surface-variant hover:text-white transition-colors'}`}>
-                    Create
-                </button>
-                <button 
-                  onClick={() => setCurrentView('dashboard')} 
-                  className={`font-bold font-label text-sm tracking-widest uppercase pb-1 ${currentView === 'dashboard' ? 'text-primary-container border-b-2 border-primary-container' : 'text-on-surface-variant hover:text-white transition-colors'}`}>
-                    Local Storage
-                </button>
-              </nav>
-              {result && currentView === 'create' && (
-                <button onClick={handleExport} disabled={exporting} className="bg-primary-container text-white px-6 py-2.5 rounded-xl font-label font-extrabold text-[10px] uppercase tracking-widest hover:bg-[#FC5842] transition-expo flex items-center gap-2 shadow-xl border border-white/10">
-                  <span className={`material-symbols-outlined text-sm ${exporting ? 'animate-spin' : ''}`} style={{fontVariationSettings: "'FILL' 1"}}>sync</span> Download .pptx
-                </button>
-              )}
-              {user && (
-                <div className="flex items-center gap-4 pl-4 border-l border-white/10">
-                  <div className="text-right">
-                    <div className="text-[10px] font-label font-black text-white uppercase tracking-widest leading-none">{user?.full_name}</div>
-                    <div className="text-[9px] font-label text-on-surface-variant uppercase tracking-[0.2em]">{user?.email}</div>
-                  </div>
-                  <button onClick={logout} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-error/10 hover:border-error/20 hover:text-error transition-all group">
-                    <span className="material-symbols-outlined text-xl">logout</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          </header>
+      <div className={`toast ${toastData.show ? 'sh' : ''}`}>
+        <div className="sd g"></div><span>{toastData.msg}</span>
+      </div>
 
-          <DottedSurface className="opacity-80" />
-        <main className={`relative pt-32 pb-24 mx-auto min-h-screen ${result || currentView === 'dashboard' ? 'px-8 max-w-[1400px]' : 'px-6 max-w-5xl'}`}>
-        
-        {currentView === 'dashboard' && (
-           <DashboardView token={token} apiBase={API_BASE} onDownload={(id, title) => handleDownload(id, `${title.replace(/\s+/g, '_')}.pptx`)} />
-        )}
-
-        {currentView === 'create' && (
-          <>
-            {/* FORM STATE */}
-            {!result && !loading && (
-          <div className="animate-fade-in">
-            <section className="mb-16 text-center md:text-left flex flex-col md:flex-row md:items-end justify-between gap-8">
-              <div className="max-w-2xl">
-                <h2 className="font-headline text-5xl md:text-7xl font-extrabold tracking-tighter leading-[0.9] text-white mb-6 text-glow">
-                  Turn ideas into <span className="text-primary-container drop-shadow-md">[polished decks_]</span>
-                </h2>
-                <p className="text-on-surface-variant text-lg font-medium max-w-lg drop-shadow-md">
-                  SKYNET CORE uses high-performance AI to transform raw concepts into executive-ready presentations in seconds.
-                </p>
-              </div>
-              <div className="hidden lg:block">
-                <div className="glass-pill px-5 py-2.5 rounded-xl flex items-center gap-4 border border-emerald-500/20 bg-emerald-500/5 shadow-2xl">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_12px_#10B981]"></span>
-                  </span>
-                  <span className="font-label text-[10px] tracking-widest uppercase text-emerald-400 font-extrabold">AI ENGINE LIVE_</span>
-                </div>
-              </div>
-            </section>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-              <form className="lg:col-span-8 space-y-12" onSubmit={handleGenerate}>
-                <div className="relative glass-card p-10 rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
-                  <div className="signature-bar bg-primary-container"></div>
-                  <label className="font-label text-xs font-black text-primary-container tracking-[0.2em] uppercase mb-4 block opacity-70">01 / PRESENTATION TITLE</label>
-                  <input type="text" value={title} onChange={e=>setTitle(e.target.value)} required placeholder="e.g. Q4 Strategic Growth Roadmap"
-                    className="w-full bg-transparent border-0 border-b-2 border-white/20 focus:border-primary-container text-3xl font-body py-4 text-white outline-none transition-all placeholder:text-white/10" />
-                </div>
-
-                <div className="relative glass-card p-10 rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
-                  <div className="signature-bar bg-secondary"></div>
-                  <label className="font-label text-xs font-black text-secondary tracking-[0.2em] uppercase mb-6 block opacity-70">02 / CORE CONCEPTS</label>
-                  <div className="flex flex-wrap gap-3 mb-4">
-                    {topics.map((t, idx) => (
-                      <div key={idx} className="glass-pill text-secondary px-4 py-2 rounded-xl flex items-center gap-3 text-sm border border-white/10">
-                        {t} <span className="material-symbols-outlined text-xs cursor-pointer opacity-50 hover:opacity-100" onClick={()=>removeTopic(idx)}>close</span>
-                      </div>
-                    ))}
-                    <input type="text" value={topicInput} onChange={e=>setTopicInput(e.target.value)}
-                      onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault(); addTopic(topicInput);}}}
-                      className="bg-white/5 border border-white/5 focus:border-secondary px-4 py-2 rounded-xl text-sm outline-none" placeholder="+ Add Node" />
-                  </div>
-                </div>
-
-                <div className="relative glass-card p-10 rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
-                  <div className="signature-bar bg-tertiary"></div>
-                  <label className="font-label text-xs font-black text-tertiary tracking-[0.2em] uppercase mb-8 block opacity-70">03 / TONE & AUDIENCE</label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
-                    {TONES.map(t => (
-                      <button key={t.id} type="button" onClick={()=>setTone(t.id)} className={`p-5 rounded-2xl text-left border transition-all ${tone === t.id ? 'bg-tertiary/10 border-tertiary shadow-xl scale-[1.02]' : 'bg-white/5 border-transparent hover:bg-white/10'}`}>
-                        <span className="material-symbols-outlined mb-2 block text-tertiary" style={{fontVariationSettings: tone === t.id ? "'FILL' 1" : "'FILL' 0"}}>{t.icon}</span>
-                        <div className="font-bold text-sm text-white">{t.label}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="relative glass-card p-10 rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
-                  <div className="signature-bar bg-primary-container"></div>
-                  <div className="flex justify-between items-center mb-10">
-                    <label className="font-label text-xs font-black text-primary-container tracking-[0.2em] uppercase opacity-70">04 / SEQUENCE DEPTH</label>
-                    <span className="bg-primary-container text-white font-headline px-4 py-1 rounded shadow-lg">{numSlides} SLIDES</span>
-                  </div>
-                  <input type="range" min="5" max="15" value={numSlides} onChange={e=>setNumSlides(Number(e.target.value))} className="w-full h-1 bg-white/10 cursor-pointer accent-primary-container" />
-                </div>
-
-                <button type="submit" disabled={!title || topics.length === 0} className="w-full bg-gradient-to-r from-primary-container to-[#B52515] text-white py-8 rounded-2xl font-headline text-2xl tracking-[0.3em] uppercase shadow-2xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-30 disabled:grayscale">
-                  ✦ Generate presentation 
-                </button>
-              </form>
-
-              <aside className="lg:col-span-4 space-y-8">
-                <div className="glass-card p-10 rounded-3xl border border-white/5 shadow-2xl relative overflow-hidden">
-                   <div className="signature-bar bg-primary/40"></div>
-                   <h3 className="font-label text-xs font-black text-primary-container tracking-widest uppercase mb-6 drop-shadow-lg">SKYNET_INTELLIGENCE</h3>
-                   <div onClick={()=>setIsContextModalOpen(true)} className="flex items-center gap-5 p-6 glass-pill border-[#f5533d]/30 bg-[#f5533d]/5 hover:bg-[#f5533d]/10 cursor-pointer transition-all rounded-2xl group">
-                      <span className="material-symbols-outlined text-[#f5533d] group-hover:scale-110 transition-transform" style={{fontVariationSettings: "'FILL' 1"}}>auto_awesome</span>
-                      <div>
-                        <div className="text-xs font-black text-white uppercase tracking-wider mb-1">Context Injection Available</div>
-                        <div className="text-[11px] text-white/60 font-medium group-hover:text-white transition-colors leading-tight">Click to provide reference data &rarr;</div>
-                      </div>
-                   </div>
-                </div>
-              </aside>
-            </div>
-            {error && <div className="mt-8 p-6 glass-card border border-primary-container/20 rounded-2xl text-primary-container font-label text-xs tracking-widest uppercase">ERROR_LOG // {error}</div>}
+      <header className="hdr">
+        <div className="lw">
+          <div className="lc">S</div>
+          <div><div className="ln">SKY<span>NET</span></div><div className="lv">PPT_GEN v2.4.0</div></div>
+        </div>
+        <div className="hc">
+          <div className="hbc">SKYNET <span className="bcs">/</span> <span className="bca">{BC[view]}</span></div>
+        </div>
+        <div className="hr2">
+          <div className="hbdg"><div className="sd g"></div>ALL_SYSTEMS_NOMINAL</div>
+          <div className="husr" onClick={logout} title="Click to logout">
+            <div className="hav">{user?.full_name?.[0].toUpperCase() || 'U'}</div>
+            <div className="hun">{user?.full_name?.split(' ')[0] || 'User'}</div>
           </div>
-        )}
+        </div>
+      </header>
 
-        {/* LOADING STATE */}
-        {loading && (
-          <div className="flex flex-col items-center justify-center h-[60vh] animate-fade-in text-center">
-            <div className="w-32 h-32 border-4 border-primary-container border-r-transparent rounded-full animate-spin mb-10 shadow-[0_0_80px_rgba(245,83,61,0.2)]"></div>
-            <h2 className="text-4xl md:text-5xl font-headline tracking-widest text-white uppercase mb-4 animate-pulse">Compiling Intelligence...</h2>
-            <div className="mt-12 flex flex-col gap-6 w-full max-w-sm">
-               {PROGRESS_STEPS.map((s, i) => (
-                 <div key={i} className={`flex items-center gap-6 transition-expo ${i === activeStep ? 'text-primary-container' : 'opacity-40 text-on-surface-variant'}`}>
-                   <span className={`material-symbols-outlined text-3xl ${i === activeStep ? 'animate-spin' : ''}`}>
-                     {i === activeStep ? 'sync' : 'apps'}
-                   </span>
-                   <div className="text-left">
-                     <div className="font-label text-xs uppercase tracking-[0.2em] font-black">{s.label}</div>
-                     <div className="font-body text-[10px] opacity-70 mt-1 uppercase tracking-widest">{s.detail}</div>
-                   </div>
-                 </div>
-               ))}
+      <aside className="sb">
+        <div className="ns">
+          <div className="nsl">// NAVIGATION</div>
+          <div className={`ni ${view==='dashboard'?'act':''}`} onClick={()=>setView('dashboard')}>
+            <svg className="ni-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <span className="ni-lbl">DASHBOARD</span>
+          </div>
+          <div className={`ni ${view==='create'?'act':''}`} onClick={()=>setView('create')}>
+            <svg className="ni-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 5v14M5 12h14"/></svg>
+            <span className="ni-lbl">CREATE_PPT</span>
+          </div>
+          <div className={`ni ${view==='preview'?'act':''}`} onClick={()=>setView('preview')}>
+            <svg className="ni-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            <span className="ni-lbl">PREVIEW</span>
+            {slides.length > 0 && <span className="ni-b">{slides.length}</span>}
+          </div>
+        </div>
+        <div className="ndv"></div>
+        <div className="ns">
+          <div className="nsl">// SYSTEM</div>
+          <div className={`ni ${view==='history'?'act':''}`} onClick={()=>setView('history')}>
+            <svg className="ni-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <span className="ni-lbl">HISTORY</span>
+          </div>
+          <div className={`ni ${view==='settings'?'act':''}`} onClick={()=>setView('settings')}>
+            <svg className="ni-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            <span className="ni-lbl">SETTINGS</span>
+          </div>
+          <div className="ni" onClick={()=>{ showToast('LOGOUT — Session terminated...'); setTimeout(logout, 500)}}>
+            <svg className="ni-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+            <span className="ni-lbl">LOGOUT</span>
+          </div>
+        </div>
+        <div className="sbf">SKYNET_CORE v2.4.0<br/>GROQ_LLM // CONNECTED<br/>IMAGE_API // ACTIVE</div>
+      </aside>
+
+      <main className="main">
+        {/* DASHBOARD */}
+        <div className={`pg ${view==='dashboard'?'act':''}`}>
+          <div className="pey">// SYSTEM_OVERVIEW</div>
+          <div className="ptl">DASH<span className="ac">BOARD</span></div>
+          <div className="psub">// Real-time metrics · Presentation artifacts context node</div>
+
+          <div className="sgd">
+            <div className="scard">
+              <div className="sclbl">TOTAL_HOURS_TRACKED</div>
+              <div className="scval cy">10,634</div>
+              <div className="scsub">This month · all trainers</div>
+              <div className="scbar2" style={{background:'linear-gradient(90deg,var(--cy),#0060ff)', width:'94%'}}></div>
+            </div>
+            <div className="scard">
+              <div className="sclbl">TASKS_COMPLETED</div>
+              <div className="scval gn">4,058</div>
+              <div className="scsub">95.1% completion rate</div>
+              <div className="scbar2" style={{background:'var(--gn)', width:'95%'}}></div>
+            </div>
+            <div className="scard">
+              <div className="sclbl">PPT_DECKS_GENERATED</div>
+              <div className="scval am">{savedPresentations.length} Local</div>
+              <div className="scsub">Saved in personal node</div>
+              <div className="scbar2" style={{background:'var(--am)', width:'42%'}}></div>
+            </div>
+            <div className="scard">
+              <div className="sclbl">LLM_MODEL</div>
+              <div className="scval" style={{fontSize:13, color:'var(--pu)', marginTop:4}}>LLaMA 3.3</div>
+              <div className="scsub">Groq · 70B-versatile</div>
+              <div className="scbar2" style={{background:'var(--pu)', width:'100%'}}></div>
             </div>
           </div>
-        )}
 
-        {/* RESULTS STATE */}
-        {result && !loading && (
-          <div className="animate-fade-in px-4">
-            {/* Metric Strip */}
-            <section className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-20">
-              <div className="bg-surface-container p-6 rounded-xl relative overflow-hidden group hover:bg-surface-container-high transition-expo border border-outline-variant/10">
-                <div className="flex flex-col">
-                  <span className="text-on-surface-variant text-xs font-label uppercase tracking-widest mb-1">Session Data Transferred</span>
-                  <h3 className="text-3xl font-headline text-on-surface text-primary-container">1,402 kb</h3>
-                </div>
-                <div className="absolute bottom-0 left-0 h-1 bg-primary-container w-2/3"></div>
-              </div>
-              <div className="bg-surface-container p-6 rounded-xl relative overflow-hidden group hover:bg-surface-container-high transition-expo border border-outline-variant/10">
-                <div className="flex flex-col">
-                  <span className="text-on-surface-variant text-xs font-label uppercase tracking-widest mb-1">Bullet Points Extracted</span>
-                  <h3 className="text-3xl font-headline text-on-surface text-tertiary">{slides.reduce((acc, curr) => acc + curr.content.length, 0)}</h3>
-                </div>
-                <div className="absolute bottom-0 left-0 h-1 bg-tertiary w-full"></div>
-              </div>
-              <div className="bg-surface-container p-6 rounded-xl relative overflow-hidden group hover:bg-surface-container-high transition-expo border border-outline-variant/10">
-                <div className="flex flex-col">
-                  <span className="text-on-surface-variant text-xs font-label uppercase tracking-widest mb-1">Slides Generated</span>
-                  <h3 className="text-3xl font-headline text-on-surface text-[#8B5CF6]">{slides.length}</h3>
-                </div>
-                <div className="absolute bottom-0 left-0 h-1 bg-[#8B5CF6] w-[100%]"></div>
-              </div>
-              <div className="bg-surface-container p-6 rounded-xl relative overflow-hidden group hover:bg-surface-container-high transition-expo border border-outline-variant/10">
-                <div className="flex flex-col">
-                  <span className="text-on-surface-variant text-xs font-label uppercase tracking-widest mb-1">Visual Theme Paradigm</span>
-                  <h3 className="text-3xl font-headline text-on-surface text-secondary truncate">{THEMES.find(t=>t.id===result?.theme)?.label || 'Neon Noir'}</h3>
-                </div>
-                <div className="absolute bottom-0 left-0 h-1 bg-secondary w-1/2"></div>
-              </div>
-            </section>
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:20}}>
+            <div className="card" style={{padding:22}}>
+              <div className="cc tl"></div><div className="cc tr"></div><div className="cc bl"></div><div className="cc br"></div>
+              <div className="fl mb8">// QUICK_START</div>
+              <div className="ptl" style={{fontSize:15, marginBottom:8}}>Generate a <span className="ac">new deck</span></div>
+              <div style={{fontFamily:'var(--fm)', fontSize:10, color:'var(--t2)', lineHeight:1.75, letterSpacing:'.04em', marginBottom:18}}>Describe your topic, pick a tone, and let SKYNET build a branded PowerPoint in seconds using Groq LLaMA 3.3.</div>
+              <button className="btn bp shim" onClick={()=>setView('create')}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg> CREATE_PRESENTATION
+              </button>
+            </div>
+            
+            <div className="card" style={{padding:22}}>
+              <div className="cc tl"></div><div className="cc tr"></div><div className="cc bl"></div><div className="cc br"></div>
+              <div className="fl mb8">// LAST_SESSION</div>
+              {savedPresentations.length > 0 ? (() => {
+                 const p = savedPresentations[0];
+                 return (
+                   <>
+                    <div className="ptl" style={{fontSize:15, marginBottom:8, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{p.title}</div>
+                    <div style={{fontFamily:'var(--fm)', fontSize:10, color:'var(--t2)', lineHeight:1.75, letterSpacing:'.04em', marginBottom:18}}>Saved node · {p.theme} theme · Generated on {new Date(p.created_at).toLocaleDateString()}</div>
+                    <div className="fx gap8">
+                      <button className="btn bs bsm" style={{borderColor:'var(--gn)', color:'var(--gn)'}} onClick={()=>handleDownload(p.id, p.title+'.pptx')}>DOWNLOAD_PPTX</button>
+                    </div>
+                   </>
+                 );
+              })() : (
+                 <div style={{fontFamily:'var(--fm)', fontSize:10, color:'var(--t3)', marginTop: 20}}>NO PREVIOUS SESSION FOUND. INITIATE NEW DECK.</div>
+              )}
+            </div>
+          </div>
+        </div>
 
-            {/* DOWNLOAD UI */}
-            <section className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-20 px-4">
-               <div>
-                  <h2 className="text-6xl font-headline tracking-tighter text-white mb-3">Ready</h2>
-                  <p className="text-on-surface-variant font-label text-sm uppercase tracking-widest">Presentation architecture complete. Direct download available now.</p>
-               </div>
-               <div className="flex gap-4">
-                  <button onClick={() => handleDownload()} className="px-10 py-5 bg-surface-container-high text-on-surface font-label text-[10px] tracking-[0.3em] uppercase hover:bg-surface-container-highest transition-expo rounded-2xl shadow-2xl border border-white/5 flex items-center gap-3">
-                    <span className="material-symbols-outlined text-xl">download</span> File
-                  </button>
-                  <button onClick={handleExport} disabled={exporting} className="px-10 py-5 bg-primary-container text-white font-headline text-xs tracking-[0.3em] uppercase hover:bg-[#FC5842] transition-expo rounded-2xl shadow-[0_20px_40px_rgba(245,83,61,0.2)] disabled:opacity-50 flex items-center gap-3">
-                    <span className={`material-symbols-outlined text-xl ${exporting ? 'animate-spin' : ''}`} style={{fontVariationSettings: "'FILL' 1"}}>sync</span> Sync & Save
-                  </button>
-               </div>
-            </section>
+        {/* CREATE */}
+        <div className={`pg ${view==='create'?'act':''}`}>
+          <div className="pey">// GENERATION_ENGINE</div>
+          <div className="ptl">CREATE <span className="ac">PRESENTATION</span></div>
+          <div className="psub">// Configure deck parameters — AI will handle content, structure and visuals</div>
 
-            {/* EDIT SECTION */}
-            <section className="mb-40">
-               <div className="flex items-center gap-6 mb-16 px-4">
-                  <h2 className="text-3xl font-headline tracking-tighter text-white uppercase px-4 border-l-4 border-primary-container">Data Manipulation Layer</h2>
-                  <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent"></div>
-               </div>
-               <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                  {slides.map((slide, i) => (
-                    <SlideCard key={i} slide={slide} index={i}
-                      onUpdate={newS => setSlides(prev => prev.map((s, idx)=>idx===i?newS:s))}
-                      onRegenSlide={async () => {
-                        const r = await fetch(`${API_BASE}/regenerate-slide`, {
-                          method:'POST',
-                          headers:{
-                            'Content-Type':'application/json',
-                            'Authorization': `Bearer ${token}`
-                          },
-                          body:JSON.stringify({ title: result.title, context, tone, existing_titles: slides.map(s=>s.title) })
-                        });
-                        if (r.status === 401) { logout(); return; }
-                        if (r.ok){ const n = await r.json(); setSlides(p=>p.map((s, idx)=>idx===i?n:s)); }
-                      }}
-                      onRegenImage={async () => {
-                        const r = await fetch(`${API_BASE}/regenerate-image`, {
-                          method:'POST',
-                          headers:{
-                            'Content-Type':'application/json',
-                            'Authorization': `Bearer ${token}`
-                          },
-                          body:JSON.stringify({ query: slide.image_query || slide.title })
-                        });
-                        if (r.status === 401) { logout(); return; }
-                        if(r.ok){ const {image_base64} = await r.json(); setSlides(p=>p.map((s, idx)=>idx===i?{...s, image_base64}:s)); }
-                      }}
-                    />
+          <div className={`errbx mb16 ${errorMsg ? 'sh' : ''}`}><div className="erri">!</div><span>{errorMsg}</span></div>
+
+          <div className="fgrid">
+            <div className="fcol">
+              <div className="fg">
+                <div className="fl"><span className="fn">01 //</span> PRESENTATION_TITLE</div>
+                <div className="fb2">
+                  <svg className="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <input className="finp" value={title} onChange={e=>setTitle(e.target.value)} disabled={loading} placeholder="e.g. Programming in C#"/>
+                </div>
+              </div>
+              <div className="fg">
+                <div className="fl"><span className="fn">02 //</span> KEY_TOPICS <span style={{color:'var(--t3)',fontSize:8,marginLeft:4}}>Enter or comma to add</span></div>
+                <div className="ta" onClick={()=>document.getElementById('ti_id')?.focus()}>
+                  {topics.map((t, idx) => (
+                    <span key={idx} className="tc">{t} <button className="tx" onClick={()=>setTopics(prev=>prev.filter((_,i)=>i!==idx))}>×</button></span>
                   ))}
-               </div>
-            </section>
+                  <input id="ti_id" className="tii" value={topicIn} disabled={loading} placeholder="Type a topic…" 
+                    onChange={e=>setTopicIn(e.target.value)} 
+                    onBlur={()=>{if(topicIn.trim() && !topics.includes(topicIn.trim())) { setTopics([...topics, topicIn.trim()]); setTopicIn(''); }}}
+                    onKeyDown={e=>{
+                      if((e.key==='Enter' || e.key===',') && topicIn.trim()){ e.preventDefault(); if(!topics.includes(topicIn.trim())) setTopics([...topics, topicIn.trim()]); setTopicIn(''); }
+                      else if(e.key==='Backspace' && !topicIn && topics.length){ setTopics(prev=>prev.slice(0,-1)); }
+                    }} 
+                  />
+                </div>
+              </div>
+              <div className="fg">
+                <div className="fl"><span className="fn">03 //</span> CONTEXT_GROUNDING</div>
+                <div className="tcsm">
+                  <div className="fb2 fta" style={{height:100}}><textarea className="finp" value={context} onChange={e=>setContext(e.target.value)} disabled={loading} placeholder="Describe your audience, goals, domain…" style={{height:78,resize:'none'}}></textarea></div>
+                  <div className="upbx" onClick={()=>showToast('FILE_UPLOAD — Context injection module coming soon')}><div className="upi">📁</div><div className="upl">Upload <strong>PDF</strong> or <strong>DOCX</strong> for AI context</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="fcol">
+              <div className="fg">
+                <div className="fl"><span className="fn">04 //</span> TONE_AUDIENCE</div>
+                <div className="tg">
+                  <div className={`tcard ${tone==='professional'?'act':''}`} onClick={()=>{if(!loading)setTone('professional')}}><div className="tem">💼</div><div className="tnm">PROFESSIONAL</div><div className="tds">Corporate</div></div>
+                  <div className={`tcard ${tone==='executive'?'act':''}`} onClick={()=>{if(!loading)setTone('executive')}}><div className="tem">🏢</div><div className="tnm">EXECUTIVE</div><div className="tds">C-suite</div></div>
+                  <div className={`tcard ${tone==='technical'?'act':''}`} onClick={()=>{if(!loading)setTone('technical')}}><div className="tem">⚙️</div><div className="tnm">TECHNICAL</div><div className="tds">Devs</div></div>
+                  <div className={`tcard ${tone==='academic'?'act':''}`} onClick={()=>{if(!loading)setTone('academic')}}><div className="tem">🎓</div><div className="tnm">ACADEMIC</div><div className="tds">Research</div></div>
+                  <div className={`tcard ${tone==='sales'?'act':''}`} onClick={()=>{if(!loading)setTone('sales')}}><div className="tem">🚀</div><div className="tnm">SALES</div><div className="tds">Persuasive</div></div>
+                  <div className={`tcard ${tone==='simple'?'act':''}`} onClick={()=>{if(!loading)setTone('simple')}}><div className="tem">💬</div><div className="tnm">SIMPLE</div><div className="tds">Beginner</div></div>
+                </div>
+              </div>
+              <div className="fg">
+                <div className="fl"><span className="fn">05 //</span> VISUAL_THEME</div>
+                <div className="thr">
+                  <div className={`tpill ${theme==='neon'?'act':''}`} onClick={()=>{if(!loading)setTheme('neon')}}><div className="tdot" style={{background:'#00f0ff'}}></div>NEON</div>
+                  <div className={`tpill ${theme==='ocean'?'act':''}`} onClick={()=>{if(!loading)setTheme('ocean')}}><div className="tdot" style={{background:'#3b82f6'}}></div>OCEAN</div>
+                  <div className={`tpill ${theme==='emerald'?'act':''}`} onClick={()=>{if(!loading)setTheme('emerald')}}><div className="tdot" style={{background:'#00ff9d'}}></div>EMERALD</div>
+                  <div className={`tpill ${theme==='royal'?'act':''}`} onClick={()=>{if(!loading)setTheme('royal')}}><div className="tdot" style={{background:'#a855f7'}}></div>ROYAL</div>
+                  <div className={`tpill ${theme==='light'?'act':''}`} onClick={()=>{if(!loading)setTheme('light')}}><div className="tdot" style={{background:'#e8f4ff',border:'1px solid rgba(255,255,255,.2)'}}></div>LIGHT</div>
+                </div>
+              </div>
+              <div className="fg">
+                <div className="fl jcb">
+                  <span><span className="fn">06 //</span> SLIDE_COUNT</span>
+                  <span style={{fontFamily:'var(--fd)',fontSize:12,fontWeight:700,color:'var(--cy)',background:'rgba(0,240,255,.08)',border:'1px solid rgba(0,240,255,.2)',padding:'2px 10px',borderRadius:3}}>{numSlides}</span>
+                </div>
+                <div className="slw">
+                  <span className="slb">2</span>
+                  <div className="sltr">
+                    <div className="slf" style={{width: `${((numSlides-2)/13)*100}%`}}></div>
+                    <div className="slth" style={{left: `${((numSlides-2)/13)*100}%`}}></div>
+                    <input type="range" className="slrng" disabled={loading} min="2" max="15" value={numSlides} step="1" onChange={e=>setNumSlides(parseInt(e.target.value))}/>
+                  </div>
+                  <span className="slb">15</span>
+                </div>
+                <div className="prow">
+                  {[3,5,7,10,12,15].map(v => (
+                    <div key={v} className={`pc ${numSlides===v?'act':''}`} onClick={()=>{if(!loading)setNumSlides(v)}}>{v}</div>
+                  ))}
+                </div>
+              </div>
+              
+              <button disabled={loading} className="btn bp shim bfw" onClick={handleGenerate} style={{height:50, marginTop:4}}>
+                {loading && <div className="spn" style={{borderColor:'rgba(255,255,255,.2)', borderTopColor:'#fff'}}></div>}
+                <span>✦ {loading ? 'GENERATING...' : 'GENERATE_PRESENTATION'}</span>
+              </button>
+              
+              {loading && (
+                <div className="pgw">
+                  <div className="pgt"><div className="pgf" style={{width:`${pPct}%`}}></div></div>
+                  <div className="pgs">
+                    {genSteps.map(s => (
+                      <div key={s.id} className={`pgstp ${s.status==='done'?'dn':s.status==='active'?'ac':''}`}>
+                        <div className="pgdw">
+                           {s.status === 'done' ? '✓' : s.status === 'active' ? <div className="spn" style={{borderColor:'rgba(0,240,255,.2)', borderTopColor:'var(--cy)'}}></div> : '◎'}
+                        </div>
+                        <div>
+                          <div className="pgl">{s.label}</div>
+                          <div className="pgd">{s.desc}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        )}
-          </>
-        )}
+        </div>
+
+        {/* PREVIEW */}
+        <div className={`pg ${view==='preview'?'act':''}`}>
+          <div className="pey">// SLIDE_PREVIEW_ENGINE</div>
+          <div className="ptl">SLIDE <span className="ac">PREVIEW</span></div>
+          <div className="psub">// {slides.length} slides · {result?.title || 'Untitled'} · {tone} tone</div>
+
+          {result ? (
+            <>
+              <div className="pvhdr">
+                <div><div className="pvtl">{result.title}</div><div className="pvmt">{slides.length} slides · {tone} · Generated just now</div></div>
+                <div className="pvac">
+                  <button className="btn bs bsm" onClick={()=>showToast('PDF_EXPORT — Coming soon')}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> PDF
+                  </button>
+                  <button className="btn bs bsm" onClick={()=>handleDownload()}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> DOWNLOAD
+                  </button>
+                  <button className="btn bp shim bsm" onClick={handleRebuildExport}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg> REBUILD_EXPORT
+                  </button>
+                </div>
+              </div>
+
+              <div className="tstrip">
+                {slides.map((s, idx) => {
+                  const isActive = false; // Could wire this to scroll state
+                  return (
+                    <div key={idx} className={`th ${isActive?'act':''}`} onClick={()=>document.getElementById(`slide-card-${idx}`)?.scrollIntoView({behavior:'smooth', block:'center'})}>
+                      <div className="thi">
+                        <div className="th2c">
+                          <div className="thls" style={{flex:1}}>
+                            <div className="thl" style={{background:['var(--cy)','var(--or)','#0d9488','#d97706'][idx%4]}}></div>
+                            <div className="thline" style={{width:'100%'}}></div><div className="thline" style={{width:'80%'}}></div>
+                          </div>
+                          {s.image_query && <div className="thimg" style={s.image_base64 ? {backgroundImage:`url(${s.image_base64})`,backgroundSize:'cover'} : {}}></div>}
+                        </div>
+                      </div>
+                      <div className="thnum">{idx+1}</div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="stog" onClick={()=>setPreviewSecOpen(!previewSecOpen)}>
+                <span className={`stch ${previewSecOpen ? 'op' : 'cl'}`}>▼</span>
+                <span style={{fontSize:13}}>📝</span>
+                <span className="sttl">EDIT_SLIDE_CONTENT</span>
+                <span className="stct">{slides.length} CONTENT_SLIDES</span>
+              </div>
+
+              <div className="sbody" style={{display: previewSecOpen ? 'block' : 'none'}}>
+                <div className="sgrid">
+                  {slides.map((slide, idx) => {
+                    const color = ['#00f0ff','#ff6b35','#0d9488','#d97706'][idx%4];
+                    const bg = [`rgba(0,240,255,.1)`,`rgba(255,107,53,.1)`,`rgba(13,148,136,.1)`,`rgba(217,119,6,.1)`][idx%4];
+
+                    const handleTitleChange = (val: string) => {
+                      const newSlides = [...slides];
+                      newSlides[idx].title = val;
+                      setSlides(newSlides);
+                    };
+
+                    const handleBulletChange = (bIdx: number, val: string) => {
+                      const newSlides = [...slides];
+                      newSlides[idx].content[bIdx] = val;
+                      setSlides(newSlides);
+                    };
+
+                    return (
+                      <div key={idx} id={`slide-card-${idx}`} className="sc">
+                        <div className="sch">
+                          <div className="scbar" style={{background:color}}></div>
+                          <div className="scn" style={{background:bg,color:color,border:`1px solid ${color}40`}}>{String(idx+1).padStart(2,'0')}</div>
+                          <input className="sct" value={slide.title} onChange={e=>handleTitleChange(e.target.value)} />
+                        </div>
+                        <div className="scb">
+                          <div className="scbuls">
+                            {slide.content.map((pt, bIdx) => (
+                              <div key={bIdx} className="scbul">
+                                <div className="scdot" style={{background:color}}></div>
+                                <textarea className="sctxt" value={pt} onChange={e=>handleBulletChange(bIdx, e.target.value)} />
+                              </div>
+                            ))}
+                          </div>
+                          <div>
+                            <div className="sciph">
+                              {slide.image_base64 ? (
+                                <img src={slide.image_base64} style={{position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.6}} />
+                              ) : (
+                                <><div className="scii">🖼</div><div className="scil">NO_IMAGE</div></>
+                              )}
+                            </div>
+                            <button className="rgn" onClick={async ()=>{
+                              showToast(`REGEN — Fetching image for slide ${idx+1}...`);
+                              try {
+                                const r = await fetch(`${API_BASE}/regenerate-image`, {
+                                  method:'POST',
+                                  headers:{'Content-Type':'application/json','Authorization': `Bearer ${token}`},
+                                  body:JSON.stringify({ query: slide.image_query || slide.title })
+                                });
+                                if(r.ok){ const {image_base64} = await r.json(); const ns=[...slides]; ns[idx].image_base64=image_base64; setSlides(ns); }
+                              } catch(e){}
+                            }}>✦ REGEN_IMAGE</button>
+                            <button className="rgn" style={{marginTop:4}} onClick={async ()=>{
+                              showToast(`REGEN — Rewriting slide content...`);
+                              try {
+                                const r = await fetch(`${API_BASE}/regenerate-slide`, {
+                                  method:'POST',
+                                  headers:{'Content-Type':'application/json','Authorization': `Bearer ${token}`},
+                                  body:JSON.stringify({ title: result.title, context, tone, existing_titles: slides.map(s=>s.title) })
+                                });
+                                if (r.ok){ const n = await r.json(); const ns=[...slides]; ns[idx]=n; setSlides(ns); }
+                              } catch(e){}
+                            }}>✦ REGEN_TEXT</button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ) : (
+             <div style={{display:'flex', alignItems:'center', justifyContent:'center', minHeight:'50vh', flexDirection:'column', gap:10}}>
+                <div style={{fontFamily:'var(--fd)', fontSize:24, color:'var(--t3)'}}>NO DECK LOADED</div>
+                <button className="btn bs" onClick={()=>setView('create')}>GO TO CREATION FLIGHT DECK</button>
+             </div>
+          )}
+        </div>
+
+        {/* HISTORY */}
+        <div className={`pg ${view==='history'?'act':''}`}>
+          <div className="pey">// GENERATION_LOG</div>
+          <div className="ptl">DECK <span className="ac">HISTORY</span></div>
+          <div className="psub">// All previously generated presentations</div>
+          
+          <div className="card" style={{overflow:'x-auto'}}>
+            <div className="cc tl"></div><div className="cc tr"></div>
+            <table className="htbl">
+              <thead><tr><th>DECK_TITLE</th><th>THEME</th><th>GENERATED</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+              <tbody>
+                {savedPresentations.length === 0 ? (
+                  <tr><td colSpan={5} style={{textAlign:'center', padding:40, color:'var(--t3)'}}>NO RECORDS.</td></tr>
+                ) : savedPresentations.map((p) => (
+                  <tr key={p.id}>
+                    <td className="cy">{p.title}</td>
+                    <td>{p.theme}</td>
+                    <td>{new Date(p.created_at).toLocaleString()}</td>
+                    <td><span className="hbdg dn">SAVED_DISK</span></td>
+                    <td><button className="btn bs bsm" onClick={()=>handleDownload(p.id, p.title+'.pptx')}>DOWNLOAD</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* SETTINGS */}
+        <div className={`pg ${view==='settings'?'act':''}`}>
+          <div className="pey">// SYSTEM_CONFIGURATION</div>
+          <div className="ptl">SYSTEM <span className="ac">SETTINGS</span></div>
+          <div className="psub">// API configuration & rendering parameters</div>
+          <div className="setgrid">
+            <div className="card" style={{padding:22}}>
+              <div className="cc tl"></div><div className="cc tr"></div>
+              <div className="fl mb12">// USER_PROFILE</div>
+              <div className="fg mb16">
+                <div className="fl"><span className="fn">01 //</span> FULL_NAME</div>
+                <div className="fb2"><input className="finp" type="text" readOnly value={user?.full_name || ''} /></div>
+              </div>
+              <div className="fg mb16">
+                <div className="fl"><span className="fn">02 //</span> EMAIL_ADDRESS</div>
+                <div className="fb2"><input className="finp" type="text" readOnly value={user?.email || ''} /></div>
+              </div>
+            </div>
+            <div className="card" style={{padding:22}}>
+              <div className="cc tl"></div><div className="cc tr"></div>
+              <div className="fl mb12">// GENERATION_PREFS</div>
+              <div className="setr"><div><div className="setlbl">IMAGE_GENERATION</div><div className="setdsc">Fetch images per slide</div></div><div className="tsw on"><div className="tknob"></div></div></div>
+              <div className="setr"><div><div className="setlbl">SPEAKER_NOTES</div><div className="setdsc">Auto-generate presenter notes</div></div><div className="tsw on"><div className="tknob"></div></div></div>
+              <div className="setr" style={{borderBottom:'none'}}><div><div className="setlbl">DEFAULT_MODEL</div><div className="setdsc">LLM model selection</div></div>
+                <select className="seld"><option>llama-3.3-70b-versatile</option></select>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
 
-      {isContextModalOpen && (
-        <ContextModal 
-          isOpen={isContextModalOpen} 
-          currentValue={context} 
-          onClose={()=>setIsContextModalOpen(false)} 
-          onSave={v=>{setContext(v); setIsContextModalOpen(false);}} 
-        />
-      )}
-
-          {/* PAGE FOOTER */}
-          <footer className="relative w-full h-[40px] glass-heavy flex items-center justify-between px-8 border-t border-white/5 animate-footer-scan">
-              <div className="flex items-center gap-6 text-[#c24535] font-label text-[11px] tracking-[0.3em] uppercase font-black">
-                <div className="flex items-center gap-2"><span className="animate-pulse">●</span> SKYNET_CORE_OK</div>
-                <div className="flex items-center gap-2 opacity-80 outline-none">● MODEL: LLAMA 3.3 70B</div>
-                <div className="flex items-center gap-2 opacity-60">● SKYNET_V4.3</div>
-              </div>
-              <div className="text-white/60 font-label text-[11px] tracking-[0.3em] uppercase">SYSTEM_TIME // <span className="text-white font-bold">LIVE</span></div>
-          </footer>
-        </>
-      )}
-    </ThemeProvider>
-  );
-}
-
-function ContextModal({ isOpen, currentValue, onClose, onSave }: { isOpen: boolean; currentValue: string; onClose:()=>void; onSave:(v:string)=>void; }) {
-  const [text, setText] = useState(currentValue);
-  const [uploading, setUploading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleUpload = async (file: File) => {
-    setUploading(true);
-    const fd = new FormData(); fd.append('file', file);
-    try {
-      const r = await fetch(`${API_BASE}/upload-context`, {
-        method:'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
-        body:fd
-      });
-      if (r.status === 401) { window.location.reload(); return; }
-      const d = await r.json();
-      setText(p => (p ? p + "\n" + d.text : d.text));
-    } catch { alert("Extraction failed"); } 
-    finally { setUploading(false); }
-  };
-
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-fade-in">
-      <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={onClose} />
-      <div className="relative w-full max-w-2xl glass-card rounded-[40px] overflow-hidden animate-zoom-in border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.8)]">
-        <div className="signature-bar bg-primary-container h-full w-[6px]"></div>
-        <div className="p-12">
-           <div className="flex justify-between items-center mb-10">
-              <div>
-                <h2 className="text-3xl font-headline tracking-tighter text-white uppercase mb-1">Knowledge Injection</h2>
-                <p className="text-on-surface-variant font-label text-[10px] uppercase tracking-widest opacity-60">Architect Ground Truth vectors</p>
-              </div>
-              <button onClick={onClose} className="w-12 h-12 rounded-full hover:bg-white/10 flex items-center justify-center transition-all"><span className="material-symbols-outlined text-white/30">close</span></button>
-           </div>
-           
-           <div className="space-y-8">
-              <textarea value={text} onChange={e=>setText(e.target.value)} placeholder="Paste raw intel here..." className="w-full h-64 bg-white/5 rounded-2xl p-8 text-white font-body text-sm outline-none border border-white/5 focus:border-primary-container transition-all resize-none shadow-inner" />
-              
-              <div onClick={()=>inputRef.current?.click()} className="group border-2 border-dashed border-white/10 rounded-2xl p-10 flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all">
-                 <input type="file" ref={inputRef} className="hidden" accept=".txt,.pdf,.docx" onChange={e=>e.target.files?.[0] && handleUpload(e.target.files[0])} />
-                 <span className={`material-symbols-outlined text-5xl ${uploading ? 'animate-spin text-emerald-400' : 'text-white/20 group-hover:text-emerald-400'}`}>{uploading ? 'sync' : 'cloud_upload'}</span>
-                 <div className="text-center"><p className="text-xs font-black text-white uppercase tracking-widest group-hover:text-emerald-400">Upload Knowledge Source</p></div>
-              </div>
-
-              <div className="flex gap-4 pt-4">
-                 <button onClick={onClose} className="flex-1 py-5 bg-white/5 hover:bg-white/10 text-white font-label text-[10px] uppercase tracking-widest rounded-2xl transition-all border border-white/5">Abort</button>
-                 <button onClick={()=>onSave(text)} className="flex-1 py-5 bg-primary-container text-white font-headline text-lg uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">Inject Intel_</button>
-              </div>
-           </div>
-        </div>
+      {/* STATUS BAR */}
+      <div className="sbar">
+        <div className="si"><div className="sd g"></div>CORE_ONLINE</div>
+        <div className="si"><div className="sd c"></div>LLM_CONNECTED</div>
+        <div className="si"><div className="sd a"></div>IMAGE_API_ACTIVE</div>
+        <div className="sclk">{timeStr}</div>
       </div>
     </div>
   );

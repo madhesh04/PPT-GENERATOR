@@ -92,8 +92,10 @@ const SkynetBackground: React.FC = () => {
 
     // OBJECT 6: Grid floor plane
     const gridHelper = new THREE.GridHelper(30, 28, 0x001828, 0x001828);
-    gridHelper.material.transparent = true;
-    gridHelper.material.opacity = 0.5;
+    if (!Array.isArray(gridHelper.material)) {
+      gridHelper.material.transparent = true;
+      gridHelper.material.opacity = 0.5;
+    }
     gridHelper.position.set(0, -3.5, -4);
     gridHelper.rotation.x = Math.PI * 0.04;
     scene.add(gridHelper);

@@ -2,7 +2,7 @@
 @import "tailwindcss";
 
 /* ══════════════════════════════════════════
-   SKYNET DESIGN TOKENS (NEW APP)
+   SKYNET DESIGN TOKENS
 ══════════════════════════════════════════ */
 :root{
   --bg0:#020408;--bg1:#040810;--bg2:#060d1a;
@@ -342,54 +342,3 @@ body:has(button:hover) .cur-o,body:has(input:focus) .cur-o,body:has(textarea:foc
 .fx{display:flex}.fxc{flex-direction:column}.aic{align-items:center}.jcb{justify-content:space-between}
 .cy{color:var(--cy)}.gn{color:var(--gn)}.rd{color:var(--rd)}.am{color:var(--am)}
 .dvd{height:1px;background:linear-gradient(90deg,transparent,var(--cyb),transparent);margin:12px 0}
-
-
-/* ══════════════════════════════════════════
-   LEGACY SKYNET COMPONENT TOKENS
-   These were missing causing the login layout to render black
-══════════════════════════════════════════ */
-.skynet-bg-overlay {
-  position: fixed; inset: 0; z-index: 1; pointer-events: none;
-  background:
-    radial-gradient(ellipse 70% 60% at 80% 50%, rgba(0, 30, 60, 0.55) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 50% at 20% 80%, rgba(0, 15, 35, 0.7) 0%, transparent 60%),
-    radial-gradient(ellipse 100% 100% at 50% 50%, transparent 40%, rgba(2, 4, 8, 0.85) 100%);
-}
-
-.skynet-scanlines {
-  position: fixed; inset: 0; z-index: 2; pointer-events: none;
-  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 240, 255, 0.012) 2px, rgba(0, 240, 255, 0.012) 4px);
-  animation: scanlineShift 8s linear infinite;
-}
-
-.skynet-scan-beam {
-  position: fixed; left: 0; right: 0; height: 3px; z-index: 3; pointer-events: none;
-  background: linear-gradient(90deg, transparent 0%, rgba(0, 240, 255, 0.5) 30%, rgba(0, 240, 255, 0.9) 50%, rgba(0, 240, 255, 0.5) 70%, transparent 100%);
-  filter: blur(1px); animation: beamScan 7s linear infinite;
-}
-
-.skynet-corner { position: fixed; width: 40px; height: 40px; z-index: 4; pointer-events: none; }
-.skynet-corner--tl { top: 20px; left: 20px; border-top: 1.5px solid var(--skynet-cyan); border-left: 1.5px solid var(--skynet-cyan); }
-.skynet-corner--tr { top: 20px; right: 20px; border-top: 1.5px solid var(--skynet-cyan); border-right: 1.5px solid var(--skynet-cyan); }
-.skynet-corner--bl { bottom: 20px; left: 20px; border-bottom: 1.5px solid var(--skynet-cyan); border-left: 1.5px solid var(--skynet-cyan); }
-.skynet-corner--br { bottom: 20px; right: 20px; border-bottom: 1.5px solid var(--skynet-cyan); border-right: 1.5px solid var(--skynet-cyan); }
-
-@keyframes beamScan { 0% { top: -4px; opacity: 0.8; } 5% { opacity: 1; } 95% { opacity: 0.8; } 100% { top: 100vh; opacity: 0; } }
-@keyframes scanlineShift { 0% { background-position: 0 0; } 100% { background-position: 0 100px; } }
-@keyframes dotPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.7); } }
-@keyframes panelReveal { to { opacity: 1; transform: translateY(0); } }
-@keyframes borderRotate {
-  0%   { background: linear-gradient(0deg, rgba(0,240,255,0.4), transparent 40%, transparent 60%, rgba(0,255,157,0.2)); }
-  25%  { background: linear-gradient(90deg, rgba(0,240,255,0.4), transparent 40%, transparent 60%, rgba(0,255,157,0.2)); }
-  50%  { background: linear-gradient(180deg, rgba(0,240,255,0.4), transparent 40%, transparent 60%, rgba(0,255,157,0.2)); }
-  75%  { background: linear-gradient(270deg, rgba(0,240,255,0.4), transparent 40%, transparent 60%, rgba(0,255,157,0.2)); }
-  100% { background: linear-gradient(360deg, rgba(0,240,255,0.4), transparent 40%, transparent 60%, rgba(0,255,157,0.2)); }
-}
-@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-.animate-fade-up { animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-@keyframes fadeDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
-.animate-fade-down { animation: fadeDown 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-@keyframes cursorBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-.animate-fade-in { animation: fadeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }

@@ -32,9 +32,9 @@ from pathlib import Path
 env_path = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
-from backend.generator import create_presentation
-from backend.llm_client import generate_slide_content, GROQ_MODEL
-from backend.image_client import fetch_slide_image
+from generator import create_presentation
+from llm_client import generate_slide_content, GROQ_MODEL
+from image_client import fetch_slide_image
 
 # ── Auth & Database Config ───────────────────────────────────────────────────
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
