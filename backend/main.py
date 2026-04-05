@@ -136,9 +136,9 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # For production, set FRONTEND_URL in your environment variables.
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
 if "," in frontend_url:
-    origins = [o.strip() for o in frontend_url.split(",") if o.strip()]
+    origins = [o.strip().rstrip("/") for o in frontend_url.split(",") if o.strip()]
 else:
-    origins = [frontend_url] if frontend_url != "http://localhost:5173" else ["http://localhost:5173", "http://127.0.0.1:5173"]
+    origins = [frontend_url.rstrip("/")] if frontend_url.rstrip("/") != "http://localhost:5173" else ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 app.add_middleware(
     CORSMiddleware,
