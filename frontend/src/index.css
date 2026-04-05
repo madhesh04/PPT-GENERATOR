@@ -14,8 +14,9 @@
   --t1:#e8f4ff;--t2:#6a8aaa;--t3:#2a4060;--tt:#00f0ff;
   --fd:'Orbitron',monospace;--fm:'Share Tech Mono',monospace;--fb:'Rajdhani',sans-serif;
   --r1:4px;--r2:8px;--r3:14px;
-  --sw:220px;--hh:56px;--sh:30px;
+  --sw:220px;--sw-c:74px;--hh:56px;--sh:30px;
 }
+.skynet-app[data-collapsed="true"] { --sw: var(--sw-c); }
 *,*::before,*::after{box-sizing:border-box;}
 body{width:100%;height:100%;background:var(--bg0);font-family:var(--fb);color:var(--t1);}
 
@@ -58,9 +59,8 @@ body:has(button:hover) .cur-o,body:has(input:focus) .cur-o,body:has(textarea:foc
 
 /* HEADER */
 .hdr{position:fixed;top:0;left:0;right:0;height:var(--hh);background:rgba(2,6,14,.97);border-bottom:1px solid var(--cyb);display:flex;align-items:center;padding:0 20px 0 0;z-index:90;backdrop-filter:blur(16px)}
-.lw{width:var(--sw);display:flex;align-items:center;gap:10px;padding:0 20px;border-right:1px solid var(--cyb);height:100%;flex-shrink:0}
+.lw{width:var(--sw);display:flex;align-items:center;gap:10px;padding:0 20px;border-right:1px solid var(--cyb);height:100%;flex-shrink:0;transition:width .3s cubic-bezier(0.4, 0, 0.2, 1)}
 .lc{width:32px;height:32px;background:linear-gradient(135deg,#00f0ff,#0060ff);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-weight:900;font-size:13px;color:#000;position:relative;box-shadow:0 0 18px rgba(0,240,255,.4),inset 0 1px 0 rgba(255,255,255,.3)}
-.lc::after{content:'';position:absolute;right:-3px;bottom:-3px;width:32px;height:32px;background:#002540;border-radius:8px;z-index:-1}
 .ln{font-family:var(--fd);font-size:12px;font-weight:700;color:var(--t1);letter-spacing:.1em}
 .ln span{color:var(--cy)}
 .lv{font-family:var(--fm);font-size:8px;color:var(--t3);letter-spacing:.1em;margin-top:1px}
@@ -75,7 +75,18 @@ body:has(button:hover) .cur-o,body:has(input:focus) .cur-o,body:has(textarea:foc
 .hun{font-family:var(--fm);font-size:10px;color:var(--t1);letter-spacing:.05em}
 
 /* SIDEBAR */
-.sb{position:fixed;top:var(--hh);left:0;bottom:var(--sh);width:var(--sw);background:var(--bgs);border-right:1px solid var(--cyb);z-index:80;display:flex;flex-direction:column;padding:16px 0}
+.sb{position:fixed;top:var(--hh);left:0;bottom:var(--sh);width:var(--sw);background:var(--bgs);border-right:1px solid var(--cyb);z-index:80;display:flex;flex-direction:column;padding:16px 0;transition:width .3s cubic-bezier(0.4, 0, 0.2, 1)}
+.skynet-app[data-collapsed="true"] .ln,
+.skynet-app[data-collapsed="true"] .lv,
+.skynet-app[data-collapsed="true"] .nsl,
+.skynet-app[data-collapsed="true"] .ni-lbl,
+.skynet-app[data-collapsed="true"] .ni-b,
+.skynet-app[data-collapsed="true"] .sbf { display:none; }
+.skynet-app[data-collapsed="true"] .ni { justify-content:center; padding:12px 0; }
+.skynet-app[data-collapsed="true"] .ns { padding:0 8px; }
+.skynet-app[data-collapsed="true"] .lw { padding:0; justify-content:center; gap:0; }
+.skynet-app[data-collapsed="true"] .lc { transform: scale(0.85); box-shadow: 0 0 12px rgba(0,240,255,0.3); }
+
 .ns{padding:0 12px;margin-bottom:6px}
 .nsl{font-family:var(--fm);font-size:8px;color:var(--t3);letter-spacing:.18em;padding:0 8px;margin-bottom:4px}
 .ni{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r1);cursor:pointer;transition:background .15s,border-color .15s;border:1px solid transparent;margin-bottom:2px}
@@ -91,7 +102,7 @@ body:has(button:hover) .cur-o,body:has(input:focus) .cur-o,body:has(textarea:foc
 .sbf{margin-top:auto;padding:12px;text-align:center;font-family:var(--fm);font-size:8px;color:var(--t3);letter-spacing:.1em;line-height:1.9}
 
 /* MAIN */
-.main{position:fixed;top:var(--hh);left:var(--sw);right:0;bottom:var(--sh);overflow-y:auto;overflow-x:hidden;z-index:10; font-family:var(--fb);}
+.main{position:fixed;top:var(--hh);left:var(--sw);right:0;bottom:var(--sh);overflow-y:auto;overflow-x:hidden;z-index:10; font-family:var(--fb);transition:left .3s cubic-bezier(0.4, 0, 0.2, 1)}
 .pg{display:none;min-height:100%;padding:26px 26px 40px}
 .pg.act{display:block;animation:pgi .3s ease}
 @keyframes pgi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}

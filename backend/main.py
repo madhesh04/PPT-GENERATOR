@@ -737,7 +737,7 @@ async def admin_delete_user(user_id: str, admin_user: Annotated[dict, Depends(re
     except:
         raise HTTPException(status_code=400, detail="Invalid user ID")
         
-    if str(admin_user["_id"]) == user_id:
+    if admin_user["user_id"] == user_id:
         raise HTTPException(status_code=400, detail="Cannot delete your own admin account")
         
     # Delete user's presentations first
@@ -761,7 +761,7 @@ async def admin_create_user(body: AdminCreateUser, admin_user: Annotated[dict, D
     role = body.role if body.role in ["user", "admin"] else "user"
     # Admin-created users with role=user are immediately active
     # Admin-created admins still need master approval unless creator IS the master
-    if role == "admin" and admin_user.get("email") != MASTER_EMAIL:
+    if role == "admin" and admin_user.get("sub") != MASTER_EMAIL:
         status = "pending"
     else:
         status = "active"
@@ -860,10 +860,15 @@ async def download_ppt(presentation_id: str, current_user: Annotated[dict, Depen
     except:
         raise HTTPException(status_code=400, detail="Invalid presentation ID format")
         
-    presentation = await presentations_collection.find_one({
-        "_id": obj_id,
-        "user_id": ObjectId(current_user["user_id"])
-    })
+    # Admins can download any presentation; regular users only their own
+    user_role = current_user.get("role", "user").upper()
+    if user_role in ("ADMIN", "MASTER"):
+        presentation = await presentations_collection.find_one({"_id": obj_id})
+    else:
+        presentation = await presentations_collection.find_one({
+            "_id": obj_id,
+            "user_id": ObjectId(current_user["user_id"])
+        })
     
     if not presentation:
         raise HTTPException(status_code=404, detail="Presentation not found or unauthorized.")

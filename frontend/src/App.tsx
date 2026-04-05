@@ -147,6 +147,7 @@ export default function App() {
   const [theme, setTheme] = useState('neon');
   const [numSlides, setNumSlides] = useState(5);
   const [forceProvider, setForceProvider] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -168,6 +169,15 @@ export default function App() {
 
   // Preview State
   const [previewSecOpen, setPreviewSecOpen] = useState(true);
+  const [profileDropdown, setProfileDropdown] = useState(false);
+
+  // Close profile dropdown on outside click
+  useEffect(() => {
+    if (!profileDropdown) return;
+    const close = () => setProfileDropdown(false);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [profileDropdown]);
 
   // Dashboard API State
   const [savedPresentations, setSavedPresentations] = useState<SavedPresentation[]>([]);
@@ -442,7 +452,7 @@ export default function App() {
   const pPct = genSteps.filter(s=>s.status==='done').length * 25 + (genSteps.find(s=>s.status==='active') ? 12 : 0);
 
   return (
-    <div className="skynet-app">
+    <div className="skynet-app" data-collapsed={String(sidebarCollapsed)}>
       <Cursor />
       <ThreeBackground />
       <div className="bgo"></div>
@@ -456,9 +466,36 @@ export default function App() {
       </div>
 
       <header className="hdr">
-        <div className="lw">
-          <div className="lc">S</div>
-          <div><div className="ln">SKY<span>NET</span></div><div className="lv">PPT_GEN v2.4.0</div></div>
+        <div className="lw" style={{position:'relative'}}>
+          <div className="lc" style={{transition:'transform .3s ease'}}>S</div>
+          {!sidebarCollapsed && (
+            <div style={{transition:'opacity .2s'}}><div className="ln">SKY<span>NET</span></div><div className="lv">PPT_GEN v2.4.0</div></div>
+          )}
+          <div 
+            onClick={(e) => { e.stopPropagation(); setSidebarCollapsed(!sidebarCollapsed); }} 
+            className="tgl-btn"
+            style={{
+              position: sidebarCollapsed ? 'absolute' : 'relative',
+              right: sidebarCollapsed ? '-10px' : '0',
+              marginLeft: sidebarCollapsed ? '0' : 'auto',
+              width: 20, height: 20,
+              background: 'var(--bg0)',
+              border: '1px solid var(--cyb)',
+              borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+              zIndex: 100,
+              boxShadow: '0 0 10px rgba(0,240,255,0.1)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              opacity: sidebarCollapsed ? 1 : 0.4
+            }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.borderColor = 'var(--cy)'; e.currentTarget.style.boxShadow = '0 0 15px rgba(0,240,255,0.3)'; }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = sidebarCollapsed ? '1' : '0.4'; e.currentTarget.style.borderColor = 'var(--cyb)'; e.currentTarget.style.boxShadow = '0 0 10px rgba(0,240,255,0.1)'; }}
+          >
+            <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3">
+               {sidebarCollapsed ? <path d="M9 18l6-6-6-6"/> : <path d="M15 18l-6-6 6-6"/>}
+            </svg>
+          </div>
         </div>
         <div className="hc">
           <div className="hbc">SKYNET <span className="bcs">/</span> <span className="bca">{BC[view]}</span></div>
@@ -471,12 +508,51 @@ export default function App() {
               {pendingUsers.length} PENDING
             </div>
           )}
-          <div className="husr" onClick={logout} title="Click to logout">
+          <div className="husr" id="profile-trigger" onClick={(e) => { e.stopPropagation(); setProfileDropdown(!profileDropdown); }} style={{position:'relative',cursor:'pointer'}}>
             <div className="hav">{user?.full_name?.[0].toUpperCase() || 'U'}</div>
             <div className="hun">{user?.full_name?.split(' ')[0] || 'User'}</div>
+            <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" style={{marginLeft:4,opacity:.5,transition:'transform .2s',transform:profileDropdown?'rotate(180deg)':'rotate(0)'}}><path d="M6 9l6 6 6-6"/></svg>
           </div>
         </div>
       </header>
+
+      {/* Profile Dropdown — rendered outside header to avoid stacking context issues */}
+      {profileDropdown && (
+        <div style={{
+          position: 'fixed',
+          top: 62,
+          right: 20,
+          minWidth: 230,
+          background: 'rgba(4, 10, 24, 0.98)',
+          border: '1px solid var(--cy)',
+          borderRadius: 10,
+          padding: '4px 0',
+          zIndex: 99999,
+          boxShadow: '0 0 30px rgba(0, 240, 255, 0.15), 0 20px 40px rgba(0,0,0,0.8)',
+          animation: 'pgi .25s cubic-bezier(0.22, 1, 0.36, 1)',
+          backdropFilter: 'blur(20px)'
+        }} onClick={e => e.stopPropagation()}>
+          <div style={{ padding: '16px', borderBottom: '1px solid rgba(0, 240, 255, 0.1)' }}>
+            <div style={{ fontFamily: 'var(--fm)', fontSize: 8, color: 'var(--cy)', opacity: 0.6, letterSpacing: '.18em', marginBottom: 10 }}>// SESSION_USER</div>
+            <div style={{ fontFamily: 'var(--fd)', fontSize: 14, fontWeight: 700, color: '#fff', letterSpacing: '.04em', marginBottom: 4 }}>{user?.full_name?.toUpperCase()}</div>
+            <div style={{ fontFamily: 'var(--fm)', fontSize: 10, color: 'var(--t2)', letterSpacing: '.04em', wordBreak: 'break-all' }}>{user?.email}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10 }}>
+               <span style={{ height: 6, width: 6, borderRadius: '50%', background: 'var(--gn)', boxShadow: '0 0 6px var(--gn)' }}></span>
+               <span style={{ fontFamily: 'var(--fm)', fontSize: 9, color: 'var(--gn)', letterSpacing: '.08em', textTransform: 'uppercase' }}>{user?.role} // AUTHORIZED</span>
+            </div>
+          </div>
+          <div style={{ padding: '6px 0' }}>
+            <div onClick={() => { setProfileDropdown(false); setView('settings'); }} style={{ padding: '12px 16px', fontFamily: 'var(--fm)', fontSize: 10, color: 'var(--t1)', letterSpacing: '.06em', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: 'all .2s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0, 240, 255, 0.1)'; e.currentTarget.style.color = 'var(--cy)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--t1)'; }}>
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              ACCOUNT_SETTINGS
+            </div>
+            <div onClick={() => { setProfileDropdown(false); showToast('LOGOUT_SEQUENCE — Terminating active session...'); setTimeout(logout, 800); }} style={{ padding: '12px 16px', fontFamily: 'var(--fm)', fontSize: 10, color: '#ff2d55', letterSpacing: '.06em', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: 'all .2s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255, 45, 85, 0.1)'; e.currentTarget.style.boxShadow = 'inset 4px 0 0 #ff2d55'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.boxShadow = 'none'; }}>
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+              LOGOUT_TERMINATE
+            </div>
+          </div>
+        </div>
+      )}
 
       <aside className="sb">
         <div className="ns">
@@ -505,10 +581,6 @@ export default function App() {
           <div className={`ni ${view==='settings'?'act':''}`} onClick={()=>setView('settings')}>
             <svg className="ni-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
             <span className="ni-lbl">SETTINGS</span>
-          </div>
-          <div className="ni" onClick={()=>{ showToast('LOGOUT — Session terminated...'); setTimeout(logout, 500)}}>
-            <svg className="ni-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-            <span className="ni-lbl">LOGOUT</span>
           </div>
         </div>
         {isAdminRole && (
@@ -989,9 +1061,9 @@ export default function App() {
                   <div className="fg">
                     <div className="fl"><span className="fn">04 //</span> ROLE</div>
                     <div className="fb2">
-                      <select className="seld" style={{width:'100%',background:'rgba(0,240,255,.03)'}} value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value})}>
-                        <option value="USER">USER</option>
-                        <option value="ADMIN">ADMIN</option>
+                      <select className="seld" style={{width:'100%', background:'var(--bg2)', color:'var(--t1)'}} value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value})}>
+                        <option value="user" style={{background:'var(--bg2)', color:'var(--t1)'}}>USER</option>
+                        <option value="admin" style={{background:'var(--bg2)', color:'var(--t1)'}}>ADMIN</option>
                       </select>
                     </div>
                   </div>
@@ -1127,7 +1199,8 @@ export default function App() {
                           <td>
                             <span className="hbdg" style={{color:'var(--gn)',borderColor:'rgba(0,255,157,.3)'}}>{p.status}</span>
                           </td>
-                          <td>
+                          <td style={{display:'flex', gap:6}}>
+                            <button className="btn bs bsm" onClick={()=>handleDownload(p.id, p.title+'.pptx')}>DOWNLOAD</button>
                             <button className="btn bs bsm" style={{color:'var(--rd)', borderColor:'rgba(255,45,85,.3)'}} onClick={() => handleDeleteGlobalPpt(p.id)}>DELETE</button>
                           </td>
                         </tr>
