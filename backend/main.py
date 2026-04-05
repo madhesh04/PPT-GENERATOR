@@ -27,6 +27,11 @@ from datetime import datetime, timedelta
 from pypdf import PdfReader
 from docx import Document
 
+import sys
+import os
+# Ensure the backend directory is in the path for module discovery when run from root
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 # IMPORTANT: load env vars FIRST before importing local modules
 from pathlib import Path
 env_path = Path(__file__).parent / ".env"
