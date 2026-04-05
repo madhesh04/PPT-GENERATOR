@@ -20,6 +20,9 @@ interface GenerateResponse {
   theme: string;
   token: string;
   filename: string;
+  model_used?: string;
+  provider?: string;
+  is_technical?: boolean;
 }
 
 interface SavedPresentation {
@@ -141,6 +144,7 @@ export default function App() {
   const [tone, setTone] = useState('professional');
   const [theme, setTheme] = useState('neon');
   const [numSlides, setNumSlides] = useState(5);
+  const [forceProvider, setForceProvider] = useState<string | null>(null);
   
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -313,6 +317,22 @@ export default function App() {
     }
   }, [view, isAuthenticated, token]);
 
+  // Reset create form when navigating to the create page
+  useEffect(() => {
+    if (view === 'create') {
+      setTitle('');
+      setTopics([]);
+      setTopicIn('');
+      setContext('');
+      setTone('professional');
+      setTheme('neon');
+      setNumSlides(5);
+      setForceProvider(null);
+      setErrorMsg('');
+      setGenSteps(prev => prev.map(s => ({ ...s, status: 'pending', desc: '' })));
+    }
+  }, [view]);
+
   const handleGenerate = async () => {
     if (!title.trim()) { setErrorMsg('ERROR_001 — Presentation title is required'); return; }
     if (!topics.length) { setErrorMsg('ERROR_002 — At least one topic is required'); return; }
@@ -336,7 +356,7 @@ export default function App() {
            const resp = await fetch(`${API_BASE}/generate`, {
              method: 'POST',
              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-             body: JSON.stringify({ title, topics, num_slides: numSlides, context, tone, theme }),
+             body: JSON.stringify({ title, topics, num_slides: numSlides, context, tone, theme, force_provider: forceProvider }),
            });
            if (!resp.ok) throw new Error((await resp.json()).detail || 'Failed');
            const data = await resp.json();
@@ -499,7 +519,7 @@ export default function App() {
             </div>
           </>
         )}
-        <div className="sbf">SKYNET_CORE v2.4.0<br/>GROQ_LLM // CONNECTED<br/>IMAGE_API // ACTIVE</div>
+        <div className="sbf">SKYNET_CORE v2.4.0<br/>GROQ_LLM // CONNECTED<br/>NVIDIA_NIM // STANDBY<br/>IMAGE_API // ACTIVE</div>
       </aside>
 
       <main className="main">
@@ -652,6 +672,15 @@ export default function App() {
                   ))}
                 </div>
               </div>
+              <div className="fg">
+                <div className="fl"><span className="fn">07 //</span> LLM_MODEL</div>
+                <div className="thr">
+                  <div className={`tpill ${forceProvider===null?'act':''}`} onClick={()=>{if(!loading)setForceProvider(null)}}><div className="tdot" style={{background:'var(--cy)'}}></div>AUTO</div>
+                  <div className={`tpill ${forceProvider==='nvidia'?'act':''}`} onClick={()=>{if(!loading)setForceProvider('nvidia')}}><div className="tdot" style={{background:'#76b900'}}></div>NVIDIA NIM</div>
+                  <div className={`tpill ${forceProvider==='groq'?'act':''}`} onClick={()=>{if(!loading)setForceProvider('groq')}}><div className="tdot" style={{background:'#f55a3c'}}></div>GROQ</div>
+                </div>
+                <div style={{fontFamily:'var(--fm)',fontSize:9,color:'var(--t3)',marginTop:6,letterSpacing:'.04em'}}>{forceProvider === null ? '⚡ Auto-routes technical topics to NVIDIA NIM, general topics to Groq' : forceProvider === 'nvidia' ? '⚡ Forces NVIDIA NIM (Kimi K2.5) for all generations' : '🟢 Forces Groq (LLaMA 3.3-70b) for all generations'}</div>
+              </div>
               
               <button disabled={loading} className="btn bp shim bfw" onClick={handleGenerate} style={{height:50, marginTop:4}}>
                 {loading && <div className="spn" style={{borderColor:'rgba(255,255,255,.2)', borderTopColor:'#fff'}}></div>}
@@ -689,7 +718,7 @@ export default function App() {
           {result ? (
             <>
               <div className="pvhdr">
-                <div><div className="pvtl">{result.title}</div><div className="pvmt">{slides.length} slides · {tone} · Generated just now</div></div>
+                <div><div className="pvtl">{result.title}</div><div className="pvmt">{slides.length} slides · {tone} · Generated just now {result.provider && <span className="prov-badge" style={{marginLeft:8,display:'inline-block',padding:'2px 8px',borderRadius:3,fontSize:9,fontWeight:700,letterSpacing:'.06em',background: result.provider === 'nvidia_nim' ? 'rgba(118,185,0,.12)' : 'rgba(0,240,255,.1)',border: result.provider === 'nvidia_nim' ? '1px solid rgba(118,185,0,.35)' : '1px solid rgba(0,240,255,.25)',color: result.provider === 'nvidia_nim' ? '#76b900' : 'var(--cy)',fontFamily:'var(--fm)'}}>{result.provider === 'nvidia_nim' ? '⚡ NVIDIA NIM' : '🟢 GROQ'} · {result.model_used}</span>}</div></div>
                 <div className="pvac">
                   <button className="btn bs bsm" onClick={()=>showToast('PDF_EXPORT — Coming soon')}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> PDF

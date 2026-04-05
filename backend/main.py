@@ -33,7 +33,7 @@ env_path = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 from generator import create_presentation
-from llm_client import generate_slide_content, GROQ_MODEL
+from llm_client import generate_slide_content, GROQ_MODEL, is_technical_topic, NVIDIA_MODEL, nvidia_client
 from image_client import fetch_slide_image
 
 # ── Auth & Database Config ───────────────────────────────────────────────────
@@ -148,6 +148,7 @@ class PresentationRequest(BaseModel):
     context:   str        = Field(default="", max_length=5000) # Increased for doc text
     tone:      str        = Field(default="professional")
     theme:     str        = Field(default="neon")
+    force_provider: str | None = Field(default=None)  # "nvidia" | "groq" | None (auto)
 
     @field_validator("topics")
     @classmethod
@@ -254,7 +255,14 @@ def extract_text_from_file(file_bytes: bytes, filename: str) -> str:
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "model": GROQ_MODEL}
+    return {
+        "status": "ok",
+        "model": GROQ_MODEL,
+        "nvidia_nim": {
+            "available": nvidia_client is not None,
+            "model": NVIDIA_MODEL if nvidia_client else None,
+        },
+    }
 
 @app.post("/auth/register")
 async def register(user_data: UserRegister):
@@ -396,7 +404,10 @@ async def generate_ppt(request: Request, body: PresentationRequest, current_user
 
         # 3. Cache Miss - Full Generation Pipeline
         logger.info("Cache Miss. Initiating LLM synthesis for %r", body.title)
-        presentation_data = await generate_slide_content(body.title, body.topics, body.num_slides, body.context, body.tone)
+        presentation_data, model_used, provider = await generate_slide_content(
+            body.title, body.topics, body.num_slides, body.context, body.tone,
+            force_provider=body.force_provider,
+        )
         if not presentation_data:
             raise HTTPException(status_code=500, detail="Failed to generate slide content from AI.")
 
@@ -440,7 +451,10 @@ async def generate_ppt(request: Request, body: PresentationRequest, current_user
             "slides": presentation_data,
             "theme": body.theme,
             "token": str(res.inserted_id),
-            "filename": f"{body.title.replace(' ', '_')}.pptx"
+            "filename": f"{body.title.replace(' ', '_')}.pptx",
+            "model_used": model_used,
+            "provider": provider,
+            "is_technical": is_technical_topic(body.title, body.topics),
         }
     except Exception as e:
         logger.exception("Error generating presentation: %s", e)
@@ -453,7 +467,7 @@ async def regenerate_slide(body: RegenerateSlideRequest, current_user: Annotated
     try:
         # We use num_slides=1 but tell the LLM to avoid existing_titles
         prompt_suffix = f"\nAvoid creating slides with these exact titles: {', '.join(body.existing_titles)}"
-        new_slide_list = await generate_slide_content(
+        new_slide_list, _, _ = await generate_slide_content(
             body.title, ["New Insight"], 1, body.context + prompt_suffix, body.tone
         )
         if not new_slide_list:

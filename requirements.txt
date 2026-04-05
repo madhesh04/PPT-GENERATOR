@@ -10,3 +10,4 @@ httpx
 pypdf
 python-docx
 Pillow
+openai>=1.0.0
