@@ -38,6 +38,7 @@ env_path = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 from generator import create_presentation
+from pdf_generator import create_pdf_presentation
 from llm_client import generate_slide_content, GROQ_MODEL, is_technical_topic, NVIDIA_MODEL, nvidia_client
 from image_client import fetch_slide_image
 
@@ -134,7 +135,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # For production, set FRONTEND_URL in your environment variables.
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
-origins = [frontend_url] if frontend_url != "http://localhost:5173" else ["http://localhost:5173", "http://127.0.0.1:5173"]
+if "," in frontend_url:
+    origins = [o.strip() for o in frontend_url.split(",") if o.strip()]
+else:
+    origins = [frontend_url] if frontend_url != "http://localhost:5173" else ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -523,7 +527,23 @@ async def upload_context(file: UploadFile = File(...), current_user: Annotated[d
     return {"text": text, "filename": file.filename}
 
 
-@app.post("/export")
+@app.post("/export-pdf")
+async def export_pdf(req: ExportRequest, user: Annotated[dict, Depends(get_current_user)]):
+    try:
+        pdf_io = create_pdf_presentation(req.title, [s.model_dump() for s in req.slides], req.theme)
+        # Unique timestamped filename
+        fn = f"{req.title.replace(' ', '_')}_{int(time.time())}.pdf"
+        return StreamingResponse(
+            pdf_io,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={fn}"}
+        )
+    except Exception as e:
+        logger.error("PDF Export failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"PDF_EXPORT_FAILED: {str(e)}")
+
+
+@app.post("/export-pptx")
 async def export_ppt(body: ExportRequest, current_user: Annotated[dict, Depends(get_current_user)]):
     """Save user edits as a new presentation branch in DB and return the download token."""
     try:

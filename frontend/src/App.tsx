@@ -262,9 +262,30 @@ export default function App() {
       } else {
         showToast("Deletion failed");
       }
-    } catch (e) {
-      showToast("Deletion error");
-    }
+    } catch (e) { showToast('PPTX_EXPORT_FAILED'); }
+  };
+
+  const handleExportPdf = async () => {
+    if (!result) return;
+    showToast('GENERATING_PDF_DECK...');
+    try {
+      const r = await fetch(`${API_BASE}/export-pdf`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization': `Bearer ${token}`},
+        body: JSON.stringify({ title: result.title, slides, theme })
+      });
+      if (r.ok) {
+        const b = await r.blob();
+        const u = window.URL.createObjectURL(b);
+        const a = document.createElement('a');
+        a.href = u;
+        a.download = `${result.title.replace(/\s+/g,'_')}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        showToast('PDF_EXPORT_SUCCESS');
+      } else { showToast('PDF_EXPORT_FAILED'); }
+    } catch (e) { showToast('PDF_EXPORT_NETWORK_ERR'); }
   };
 
   const handleCreateUser = async () => {
@@ -811,7 +832,7 @@ export default function App() {
               <div className="pvhdr">
                 <div><div className="pvtl">{result.title}</div><div className="pvmt">{slides.length} slides · {tone} · Generated just now {result.provider && <span className="prov-badge" style={{marginLeft:8,display:'inline-block',padding:'2px 8px',borderRadius:3,fontSize:9,fontWeight:700,letterSpacing:'.06em',background: result.provider === 'nvidia_nim' ? 'rgba(118,185,0,.12)' : 'rgba(0,240,255,.1)',border: result.provider === 'nvidia_nim' ? '1px solid rgba(118,185,0,.35)' : '1px solid rgba(0,240,255,.25)',color: result.provider === 'nvidia_nim' ? '#76b900' : 'var(--cy)',fontFamily:'var(--fm)'}}>{result.provider === 'nvidia_nim' ? '⚡ NVIDIA NIM' : '🟢 GROQ'} · {result.model_used}</span>}</div></div>
                 <div className="pvac">
-                  <button className="btn bs bsm" onClick={()=>showToast('PDF_EXPORT — Coming soon')}>
+                  <button className="btn bs bsm" onClick={handleExportPdf}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> PDF
                   </button>
                   <button className="btn bs bsm" onClick={()=>handleDownload()}>
