@@ -1,73 +1,30 @@
-# React + TypeScript + Vite
+# 🏺 Kinetic Curator — Frontend (Vanish UI)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The frontend of **Kinetic Curator** is a high-performance React application built with TypeScript and Vite. It implements the **Vanish Design System**, a custom-engineered UI framework focused on glassmorphism, high-speed CSS transitions, and Three.js visual effects.
 
-Currently, two official plugins are available:
+## 🧬 Core Features
+- **Vanish Layout**: Dynamic, hardware-accelerated collapsible sidebar and flexible main content area.
+- **Three.js Particle Field**: A custom `DottedSurface` rendering engine for ambient background animations.
+- **Identity-Based Isolation**: Native state management ensures that presentation previews are cleared and isolated when switching users.
+- **JWT Authentication**: Secure role-based access control (RBAC) with support for User, Admin, and Master roles.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🛠️ Internal Architecture
+- **State Orchestration**: Managed primarily in `App.tsx` for core business logic and presentation generation.
+- **Design Tokens**: Centralized in `index.css` using CSS variables for colors, spacing, and glass effects.
+- **Responsive Logic**: Optimized for desktop-first professional use with fluid scaling.
 
-## React Compiler
+## 🚀 Build Instructions
+To build the application for production:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+# Install dependencies
+npm install
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Production build
+npm run build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The output will be generated in the `dist/` directory, ready to be served by any static host (Vercel, Netlify, etc.).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
+© 2026 iamneo | **Kinetic Curator**

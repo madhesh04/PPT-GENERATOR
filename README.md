@@ -7,18 +7,20 @@
 ## ✨ Features
 
 ### 🧠 Intelligence Architecture
-- **Multi-Agent Pipeline**: A sophisticated sequential flow: `System Check` → `LLM Agent` → `Image Engine`.
-- **Factual Density**: Strictly avoids "fluff" and meta-templates; generates specific, high-value corporate and academic insights.
+- **NVIDIA NIM Integration**: Primary generation via **Kimi K2.5** for high-speed, factually dense technical content.
+- **Failover Logic**: Automatic fallback to **Groq Llama 3.3 70B** to ensure 100% uptime.
+- **Technical Code-Slides**: Detects code snippets and automatically interleaves dedicated, high-contrast slides (Consolas font) for maximum readability.
+- **5-Bullet Standard**: Enforces a strict 5-bullet density per content slide for optimal information retention.
 - **Precision Mapping**: Maps content directly onto native PowerPoint placeholders, maintaining 100% template integrity.
-- **Dynamic Agenda Layout**: Automatically transitions to a balanced two-column design for long lists (7+ items) to maintain readability and avoid footer overlap.
-- **Visual Intelligence**: Integrated with **Unsplash** and **Freepik** for automated, context-aware stock photo injection.
+- **Visual Intelligence**: Integrated with **Freepik** for automated, context-aware stock photo injection.
 
 
 
 ### 🎨 Visual & UX Excellence
-- **Neon Noir Design**: A premium glassmorphism UI with high-performance **Three.js** particle field animations (`DottedSurface`).
-- **Live System Monitoring**: A high-tech "Live" scanning footer tracking system status in real-time.
-- **Real-Time Slide Controls**: Interactive progress tracking with micro-animations and status indicators (`#F5533D`).
+- **Vanish Design System**: A premium glassmorphism UI with high-performance **Three.js** particle animations.
+- **Collapsible Navigation**: High-tech, icon-only navigation mode for maximized workspace.
+- **Skynet Admin Suite**: Comprehensive management of users, global generations, and system stats.
+- **Data Isolation**: Built-in preview clearing and identity-based state isolation to prevent cross-user data leakage.
 - **Auto-Speaker Notes**: Every slide includes professional-grade delivery scripts and extra factual context in the notes section.
 
 ---
@@ -28,11 +30,12 @@
 | Layer | Technology |
 | :--- | :--- |
 | **Frontend** | React + TypeScript (Vite) |
-| **Visual Library** | Three.js (Particle Wave Field) |
+| **Visuals** | Three.js + Vanilla CSS (Vanish System) |
 | **Backend** | FastAPI (Python) |
-| **AI Model** | Groq API (`llama-3.3-70b-versatile`) |
+| **Database** | MongoDB (Persistence & Caching) |
+| **Main LLM** | **NVIDIA NIM** (Kimi K2.5) |
+| **Failover** | Groq API (Llama 3.3 70B) |
 | **PPT Engine** | `python-pptx` (Strict Native Injection) |
-| **Styling** | Vanilla CSS + Tailwind CSS (Glassmorphism) |
 
 ---
 
@@ -63,9 +66,10 @@ PPT-GENERATOR/
 ## 🚀 Quick Start
 
 ### 1. Prerequisites
-- Python 3.9+
-- Node.js 18+
+- Python 3.9+ | Node.js 18+
+- [NVIDIA NIM API Key](https://build.nvidia.com/)
 - [Groq API Key](https://console.groq.com/)
+- MongoDB Instance (Local or Atlas)
 
 ### 2. Physical Setup
 ```bash
@@ -78,9 +82,8 @@ cd frontend && npm install
 
 ### 3. Environment Config
 Copy the example files and set your keys:
-- `backend/.env` (Set `GROQ_API_KEY`, `UNSPLASH_ACCESS_KEY`, `FREEPIK_API_KEY`)
-
-- `frontend/.env` (Set `VITE_API_BASE=http://localhost:8000`)
+- `backend/.env`: `NVIDIA_API_KEY`, `GROQ_API_KEY`, `MONGODB_URI`
+- `frontend/.env`: `VITE_API_BASE=http://localhost:8000`
 
 ### 4. Launch Development
 ```bash
