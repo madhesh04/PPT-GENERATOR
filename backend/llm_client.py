@@ -178,9 +178,20 @@ NARRATIVE ARC:
 
 SLIDE TITLES: Must be specific and descriptive. Not "Introduction" — instead use "Why [Topic] Is Reshaping [Domain]" or "How [Concept] Works: Core Mechanism Explained".
 
-BULLET COUNT: Exactly 5 per slide. You MUST generate exactly 5 bullets for every single slide. Quality over quantity, but meet the count.
+BULLET COUNT: Exactly 5 per slide. Every content slide MUST have exactly 5 bullet points. Quality and substance in every bullet.
 
 TOPIC DISTRIBUTION: Intelligently group and expand topics. If given 3 topics for 8 slides, go deeper into each with sub-concepts — don't pad with repetition.
+
+═══════════════════════════
+CODE BLOCKS
+═══════════════════════════
+For technical or programming topics, some slides SHOULD include a code example.
+- Put code in the "code" field as a clean, runnable snippet (3–12 lines max).
+- Set "language" to the programming language name (e.g. "python", "csharp", "javascript").
+- Code must be properly formatted with line breaks (use \n), indentation, and comments.
+- Do NOT embed code inline within bullet text — always use the separate "code" field.
+- For non-code slides, set both "code" and "language" to null.
+- Aim for 2–4 slides with code in a technical deck; 0 for non-technical topics.
 
 ═══════════════════════════
 SPEAKER NOTES
@@ -188,21 +199,26 @@ SPEAKER NOTES
 Add a "notes" field per slide: 2–4 sentences the presenter speaks aloud.
 Notes should: expand on what's on the slide, add one more example or data point not in the bullets, and guide the presenter's delivery (e.g. "Pause here and ask the audience...").
 
+═══════════════════════════
+IMAGE SELECTION (SELECTIVE)
+═══════════════════════════
+NOT every slide needs an image. Only assign an image_query to slides where a visual genuinely enhances understanding.
+Typically 2–3 slides per deck should have images — usually introductory, conceptual, or architecture slides.
+Slides that are code-heavy, bullet-dense, or summary slides should set image_query to null.
+
+When you DO provide an image_query, make it 3–6 specific visual words:
+  GOOD: "data scientist analyzing dashboard", "cloud server room blue", "team meeting whiteboard"
+  BAD: "concept", "idea", "abstract" (too vague)
+
 OUTPUT FORMAT: Return ONLY a valid raw JSON array. No markdown, no code fences, no explanation — just the JSON array starting with [ and ending with ].
 
 Each object MUST have exactly these fields:
 - "title": specific descriptive slide title
-- "content": exactly 5 bullets (20-45 words each)
+- "content": list of exactly 5 bullets (20-45 words each)
+- "code": a code snippet string with \n line breaks, or null if no code for this slide
+- "language": programming language name, or null if no code
 - "notes": 2-4 sentences for the presenter
-- "image_query": a 3-6 word search phrase for a stock photo that visually
-  represents this slide's concept. Be concrete and visual.
-  
-  GOOD examples: "data scientist analyzing dashboard", "cloud server room blue",
-  "team meeting whiteboard collaboration", "supply chain logistics warehouse",
-  "doctor reviewing patient records", "student studying laptop library"
-  
-  BAD examples: "concept", "idea", "abstract", "technology" (too vague)
-  NEVER use just one word. Always 3-6 specific descriptive words."""
+- "image_query": a 3-6 word image search phrase OR null if this slide should not have an image"""
 
     user_prompt = f"""Create the COMPLETE, FACTUAL FINAL CONTENT for a slide deck titled "{title}".
 {context_block}
@@ -217,12 +233,17 @@ CRITICAL INSTRUCTIONS FOR CONTENT:
 - Every bullet must be a rich, factual, complete sentence of 20–45 words.
 - At least 2 out of every 5 bullets across the whole deck must include a specific real-world example, analogy, statistic, or case study.
 - Do NOT write vague statements. Every bullet must convey a concrete, learnable insight.
+- Every slide MUST have exactly 5 bullet points. No exceptions.
+- For technical topics: put code in the "code" field (not inline in bullets). Use proper formatting with \n line breaks.
+- Only give image_query to 2–3 slides that genuinely benefit from a visual. Set it to null for the rest.
 
 Return a JSON array of exactly {num_slides} objects. Each object MUST have:
 - "title": A specific, descriptive slide title
 - "content": A list of exactly 5 bullets (each 20–45 words, packed with actual facts and examples)
-- "notes": 2–4 sentences for the presenter — add one more example or fact not covered in the bullets, and include a delivery cue
-- "image_query": a 3-6 word search phrase for a stock photo that visually represents this slide's concept
+- "code": A code snippet string (3–12 lines, with \n for line breaks) or null
+- "language": Language name ("python", "csharp", etc.) or null
+- "notes": 2–4 sentences for the presenter
+- "image_query": 3–6 word image search phrase or null (only for 2–3 slides per deck)
 
 JSON only. Start immediately with ["""
 
@@ -241,12 +262,33 @@ def _parse_and_validate(raw: str) -> list:
     validated = []
     for item in data:
         if isinstance(item, dict) and "title" in item and "content" in item:
+            # image_query: keep null/None if LLM set it to null (selective images)
+            img_q = item.get("image_query")
+            if img_q and str(img_q).lower() not in ("null", "none", ""):
+                img_q = str(img_q)
+            else:
+                img_q = None
+
+            # code: preserve as-is if present
+            code_val = item.get("code")
+            if code_val and str(code_val).lower() not in ("null", "none", ""):
+                code_val = str(code_val)
+            else:
+                code_val = None
+
+            lang_val = item.get("language")
+            if lang_val and str(lang_val).lower() not in ("null", "none", ""):
+                lang_val = str(lang_val)
+            else:
+                lang_val = None
+
             validated.append({
                 "title":       str(item["title"]),
                 "content":     [str(c) for c in item["content"] if c],
+                "code":        code_val,
+                "language":    lang_val,
                 "notes":       str(item.get("notes", "")),
-                "image_query": str(item.get("image_query", item["title"])),
-                # ↑ Falls back to the slide title if the LLM forgets to include it
+                "image_query": img_q,
             })
     return validated
 

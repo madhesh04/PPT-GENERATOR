@@ -167,8 +167,10 @@ class PresentationRequest(BaseModel):
 class SlideData(BaseModel):
     title: str
     content: List[str]
+    code: Optional[str] = None
+    language: Optional[str] = None
     notes: Optional[str] = ""
-    image_query: Optional[str] = ""
+    image_query: Optional[str] = None
     image_base64: Optional[str] = None
 
 class ExportRequest(BaseModel):
@@ -411,8 +413,14 @@ async def generate_ppt(request: Request, body: PresentationRequest, current_user
         if not presentation_data:
             raise HTTPException(status_code=500, detail="Failed to generate slide content from AI.")
 
-        # 4. Fetch images in parallel
-        image_tasks = [fetch_slide_image(slide.get("image_query", slide.get("title", ""))) for slide in presentation_data]
+        # 4. Fetch images in parallel (only for slides that have an image_query)
+        async def _maybe_fetch_image(slide):
+            query = slide.get("image_query")
+            if query:
+                return await fetch_slide_image(query)
+            return None
+
+        image_tasks = [_maybe_fetch_image(slide) for slide in presentation_data]
         image_bytes_list = await asyncio.gather(*image_tasks, return_exceptions=True)
         image_bytes_list = [img if isinstance(img, bytes) else None for img in image_bytes_list]
 

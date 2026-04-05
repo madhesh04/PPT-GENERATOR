@@ -161,46 +161,89 @@ def _decorate_title_slide(slide, title: str, theme: Theme):
 
 def _decorate_content_slide(slide, slide_title: str, content: list,
                              slide_num: int, theme: Theme, image_bytes: bytes | None = None):
+    """Renders a standard content slide with 5 bullets and optional image. No code."""
     has_image = image_bytes is not None
 
-    # Slide Title (full width regardless of image)
+    # Slide Title (full width)
     _add_text_box(slide, slide_title,
                   Inches(1.0), Inches(0.4), Inches(18.0), Inches(1.0),
                   font_size=36, bold=True, color=theme.text)
 
-    # Bullet width: left 55% if image present, full width if no image
+    # Bullet width: narrower if image present
     bullet_text_width = Inches(9.0) if has_image else Inches(17.0)
     bullet_font_size  = 22 if has_image else 24
 
-    # Bullet Points
+    # Bullet Points (up to 5)
     for i, point in enumerate(content[:5]):
         y = 1.8 + (i * 1.5)
-        # Bullet marker
         _add_text_box(slide, "•",
                       Inches(1.0), Inches(y - 0.05), Inches(0.5), Inches(1.0),
                       font_size=28, color=theme.main)
-        # Bullet text (narrower when image is present)
         _add_text_box(slide, point,
                       Inches(1.5), Inches(y), bullet_text_width, Inches(1.4),
                       font_size=bullet_font_size, color=theme.slate)
 
-    # Image — right half of the slide
+    # Image — right half
     if has_image:
         try:
             img_stream = io.BytesIO(image_bytes)
             slide.shapes.add_picture(
                 img_stream,
-                left=Inches(11.0),
-                top=Inches(1.6),
-                width=Inches(8.0),
-                height=Inches(8.2)
+                left=Inches(11.0), top=Inches(1.6),
+                width=Inches(8.0), height=Inches(8.2)
             )
         except Exception as e:
-            # If image injection fails, slide still renders correctly (just no image)
             import logging
             logging.getLogger(__name__).warning(
                 "Failed to add image to slide %d: %s", slide_num, e
             )
+
+
+def _decorate_code_slide(slide, parent_title: str, code: str,
+                          language: str | None, theme: Theme):
+    """Renders a full dedicated code slide with light background and dark text."""
+    # Title
+    display_title = f"Code — {parent_title}"
+    _add_text_box(slide, display_title,
+                  Inches(1.0), Inches(0.4), Inches(16.0), Inches(0.9),
+                  font_size=30, bold=True, color=theme.text)
+
+    # Language badge (top-right)
+    if language:
+        _add_text_box(slide, language.upper(),
+                      Inches(17.0), Inches(0.5), Inches(2.0), Inches(0.4),
+                      font_size=12, bold=True,
+                      color=theme.main, align=PP_ALIGN.RIGHT)
+
+    # Light code background box (nearly full slide)
+    code_bg = slide.shapes.add_shape(
+        1, Inches(1.0), Inches(1.5), Inches(18.0), Inches(8.5)
+    )
+    code_bg.fill.solid()
+    code_bg.fill.fore_color.rgb = RGBColor(0xF5, 0xF5, 0xF5)
+    code_bg.line.color.rgb = RGBColor(0xE0, 0xE0, 0xE0)
+    code_bg.line.width = Pt(1)
+
+    # Code text — black Consolas on light background
+    code_box = slide.shapes.add_textbox(
+        Inches(1.5), Inches(1.8), Inches(17.0), Inches(7.8)
+    )
+    tf = code_box.text_frame
+    tf.word_wrap = True
+
+    code_lines = code.replace("\\n", "\n").split("\n")
+    for line_idx, line in enumerate(code_lines):
+        if line_idx == 0:
+            p = tf.paragraphs[0]
+        else:
+            p = tf.add_paragraph()
+        p.alignment = PP_ALIGN.LEFT
+        run = p.add_run()
+        run.text = line
+        run.font.size = Pt(16)
+        run.font.name = "Consolas"
+        run.font.color.rgb = RGBColor(0x1A, 0x1A, 0x2E)
+        run.font.bold = False
 
 
 # ── Main entry point ───────────────────────────────────────────────────────────
@@ -211,6 +254,7 @@ def create_presentation(title: str, slide_data: list,
                         ) -> tuple[io.BytesIO, str]:
     """
     Generate a PPTX in memory. Returns (BytesIO, filename).
+    Code slides are rendered as separate full slides right after their parent.
     """
     theme = THEMES.get(theme_name.lower(), DEFAULT_THEME)
 
@@ -218,41 +262,62 @@ def create_presentation(title: str, slide_data: list,
         prs = Presentation(TEMPLATE_PATH)
         n = len(slide_data)
 
-        # We need: Title (1) + Agenda (1) + Content (n) + Closing (1) = n+3 slides
+        # Count code slides — each gets a dedicated full slide
+        code_slide_count = sum(
+            1 for sc in slide_data
+            if sc.get("code") and str(sc["code"]).strip()
+            and str(sc.get("code", "")).lower() not in ("null", "none")
+        )
+        total_content_slots = n + code_slide_count
+
+        # We need: Title (1) + Agenda (1) + Content (total_content_slots) + Closing (1)
         # Standard template has 2 slides: [Title, Content]
-        
-        # 1. Create Agenda slot (duplicate slide 1 — content layout)
-        _duplicate_slide_within(prs, 1) # slide 2 now
-        
-        # 2. Create Content slots (n-1) extra after original slide 1
-        for _ in range(max(0, n - 1)):
+
+        # 1. Create Agenda slot
+        _duplicate_slide_within(prs, 1)
+
+        # 2. Create Content + Code slots
+        for _ in range(max(0, total_content_slots - 1)):
             _duplicate_slide_within(prs, 1)
-            
-        # 3. Create Closing slot (duplicate slide 0 — title layout for high impact)
-        # We ensure it's the absolute last slide.
+
+        # 3. Create Closing slot
         _duplicate_slide_within(prs, 0)
         closing_slide_idx = len(prs.slides) - 1
 
         # Decorate
-        # Slide 0: Title
         _decorate_title_slide(prs.slides[0], title, theme)
-        
-        # Slide 1: Agenda
+
         titles = [s.get("title", f"Slide {i+1}") for i, s in enumerate(slide_data)]
         _decorate_agenda_slide(prs.slides[1], titles, theme)
-        
-        # Slides 2 to n+1: Content
+
+        # Slides 2+: Content (and code slides interleaved)
+        prs_idx = 2
         for i, sc in enumerate(slide_data):
             img = image_bytes_list[i] if image_bytes_list and i < len(image_bytes_list) else None
+
+            # Content slide (bullets + optional image, NO code)
             _decorate_content_slide(
-                prs.slides[i + 2],
+                prs.slides[prs_idx],
                 slide_title=sc.get("title", f"Slide {i+1}"),
                 content=sc.get("content", []),
                 slide_num=i + 1,
                 theme=theme,
                 image_bytes=img,
             )
-            
+            prs_idx += 1
+
+            # Dedicated code slide right after, if present
+            code_val = sc.get("code")
+            if code_val and str(code_val).strip() and str(code_val).lower() not in ("null", "none"):
+                _decorate_code_slide(
+                    prs.slides[prs_idx],
+                    parent_title=sc.get("title", f"Slide {i+1}"),
+                    code=str(code_val),
+                    language=sc.get("language"),
+                    theme=theme,
+                )
+                prs_idx += 1
+
         # Last Slide: Closing
         _decorate_closing_slide(prs.slides[closing_slide_idx], title, theme)
     else:

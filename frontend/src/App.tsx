@@ -9,8 +9,10 @@ import Signup from './components/Signup';
 interface SlideData {
   title: string;
   content: string[];
+  code?: string | null;
+  language?: string | null;
   notes?: string;
-  image_query?: string;
+  image_query?: string | null;
   image_base64?: string | null;
 }
 
@@ -156,6 +158,13 @@ export default function App() {
   ]);
   const [result, setResult] = useState<GenerateResponse | null>(null);
   const [slides, setSlides] = useState<SlideData[]>([]);
+
+  // Clear preview state when user changes (prevents cross-user preview bleed)
+  useEffect(() => {
+    setResult(null);
+    setSlides([]);
+    setView('dashboard');
+  }, [user?.email]);
 
   // Preview State
   const [previewSecOpen, setPreviewSecOpen] = useState(true);
@@ -382,6 +391,7 @@ export default function App() {
     showToast('DOWNLOAD — Streaming PPTX...', 3000);
     const t = dlToken || result?.token;
     const f = filename || result?.filename || 'presentation.pptx';
+    const isFromPreview = !dlToken; // If no explicit token passed, it's from the preview page
     if (!t) return;
     try {
       const resp = await fetch(`${API_BASE}/download/${t}`, { headers:{ 'Authorization': `Bearer ${token}` }});
@@ -389,6 +399,15 @@ export default function App() {
         const blob = await resp.blob();
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = f;
         document.body.appendChild(a); a.click(); a.remove();
+        // Clear preview after download from preview page
+        if (isFromPreview) {
+          setTimeout(() => {
+            setResult(null);
+            setSlides([]);
+            setView('dashboard');
+            showToast('SUCCESS — PPTX downloaded · Preview cleared', 2500);
+          }, 800);
+        }
       }
     } catch(e) { console.error(e); }
   };
@@ -793,14 +812,22 @@ export default function App() {
                               </div>
                             ))}
                           </div>
-                          <div>
-                            <div className="sciph">
-                              {slide.image_base64 ? (
-                                <img src={slide.image_base64} style={{position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.6}} />
-                              ) : (
-                                <><div className="scii">🖼</div><div className="scil">NO_IMAGE</div></>
-                              )}
+                          {slide.code && (
+                            <div style={{background:'#1e1e2e',borderRadius:6,padding:'10px 14px',marginBottom:10,border:'1px solid rgba(255,255,255,.06)',position:'relative'}}>
+                              {slide.language && <div style={{position:'absolute',top:6,right:10,fontSize:9,fontFamily:'var(--fm)',color:'#6c7186',letterSpacing:'.06em',fontWeight:700}}>{slide.language.toUpperCase()}</div>}
+                              <pre style={{margin:0,fontFamily:'Consolas, monospace',fontSize:12,color:'#cbd6f6',lineHeight:1.6,whiteSpace:'pre-wrap',overflowX:'auto'}}>{slide.code.replace(/\\n/g, '\n')}</pre>
                             </div>
+                          )}
+                          <div>
+                            {slide.image_base64 ? (
+                              <div className="sciph">
+                                <img src={slide.image_base64} style={{position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.6}} />
+                              </div>
+                            ) : !slide.image_query ? (
+                              <div style={{fontFamily:'var(--fm)',fontSize:9,color:'var(--t3)',padding:'8px 0',letterSpacing:'.04em'}}>// NO_IMAGE — this slide is text/code only</div>
+                            ) : (
+                              <div className="sciph"><div className="scii">🖼</div><div className="scil">NO_IMAGE</div></div>
+                            )}
                             <button className="rgn" onClick={async ()=>{
                               showToast(`REGEN — Fetching image for slide ${idx+1}...`);
                               try {
