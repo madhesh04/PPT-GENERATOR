@@ -125,32 +125,32 @@ const Signup: React.FC<SignupProps> = ({ onSwitchToLogin }) => {
               )}
               
               <div className="flex flex-col gap-[3px]">
-                <label className="font-['Share_Tech_Mono'] text-[8px] tracking-[0.14em] text-[#4a6a8a] flex items-center gap-[5px]">
+                <label htmlFor="signup_full_name" className="font-['Share_Tech_Mono'] text-[8px] tracking-[0.14em] text-[#4a6a8a] flex items-center gap-[5px] cursor-pointer">
                   <span className="text-[rgba(0,240,255,0.4)]">01 //</span>
                   LEGAL_NAME
                 </label>
                 <div className="relative flex items-center h-[40px] border-b border-[rgba(0,240,255,0.2)] transition-all focus-within:border-[#00ff9d]">
-                  <input type="text" className="flex-1 bg-transparent !border-none !outline-none !ring-0 font-['Share_Tech_Mono'] text-[12px] text-[#e8f4ff] tracking-[0.04em] placeholder:text-[#2a4060]" placeholder="JOHN_DOE" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                  <input id="signup_full_name" name="full_name" type="text" autoComplete="name" className="flex-1 bg-transparent !border-none !outline-none !ring-0 font-['Share_Tech_Mono'] text-[12px] text-[#e8f4ff] tracking-[0.04em] placeholder:text-[#2a4060]" placeholder="JOHN_DOE" value={fullName} onChange={(e) => setFullName(e.target.value)} />
                 </div>
               </div>
 
               <div className="flex flex-col gap-[3px]">
-                <label className="font-['Share_Tech_Mono'] text-[8px] tracking-[0.14em] text-[#4a6a8a] flex items-center gap-[5px]">
+                <label htmlFor="signup_email" className="font-['Share_Tech_Mono'] text-[8px] tracking-[0.14em] text-[#4a6a8a] flex items-center gap-[5px] cursor-pointer">
                   <span className="text-[rgba(0,240,255,0.4)]">02 //</span>
                   COMM_CHANNEL (EMAIL)
                 </label>
                 <div className="relative flex items-center h-[40px] border-b border-[rgba(0,240,255,0.2)] transition-all focus-within:border-[#00ff9d]">
-                  <input type="email" className="flex-1 bg-transparent !border-none !outline-none !ring-0 font-['Share_Tech_Mono'] text-[12px] text-[#e8f4ff] tracking-[0.04em] placeholder:text-[#2a4060]" placeholder="USER@SKYNET.AI" value={email} onChange={(e) => setEmail(e.target.value)} />
+                  <input id="signup_email" name="email" type="email" autoComplete="email" className="flex-1 bg-transparent !border-none !outline-none !ring-0 font-['Share_Tech_Mono'] text-[12px] text-[#e8f4ff] tracking-[0.04em] placeholder:text-[#2a4060]" placeholder="USER@SKYNET.AI" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
               </div>
 
               <div className="flex flex-col gap-[3px]">
-                <label className="font-['Share_Tech_Mono'] text-[8px] tracking-[0.14em] text-[#4a6a8a] flex items-center gap-[5px]">
+                <label htmlFor="signup_password" className="font-['Share_Tech_Mono'] text-[8px] tracking-[0.14em] text-[#4a6a8a] flex items-center gap-[5px] cursor-pointer">
                   <span className="text-[rgba(0,240,255,0.4)]">03 //</span>
                   ENCRYPTION_KEY
                 </label>
                 <div className="relative flex items-center h-[40px] border-b border-[rgba(0,240,255,0.2)] transition-all focus-within:border-[#00ff9d]">
-                  <input type="password" className="flex-1 bg-transparent !border-none !outline-none !ring-0 font-['Share_Tech_Mono'] text-[12px] text-[#e8f4ff] tracking-[0.04em] placeholder:text-[#2a4060]" placeholder="••••••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+                  <input id="signup_password" name="password" type="password" autoComplete="new-password" className="flex-1 bg-transparent !border-none !outline-none !ring-0 font-['Share_Tech_Mono'] text-[12px] text-[#e8f4ff] tracking-[0.04em] placeholder:text-[#2a4060]" placeholder="••••••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
                 </div>
               </div>
 

@@ -114,7 +114,7 @@ function Cursor() {
 }
 
 export default function App() {
-  const { token, user, logout, isAuthenticated } = useAuth();
+  const { token, user, logout, isAuthenticated, loading: authLoading } = useAuth();
   const [authMode, setAuthMode] = useState<'login'|'signup'>('login');
   
   const [view, setView] = useState<'dashboard'|'create'|'preview'|'history'|'settings'|'admin_panel'|'user_mgmt'|'pending'|'global_gen'>('dashboard');
@@ -458,6 +458,17 @@ export default function App() {
       }
     } catch(e) {}
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#020408] flex items-center justify-center font-['Share_Tech_Mono'] text-[#00f0ff] uppercase tracking-widest">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-2 border-[rgba(0,240,255,0.1)] border-t-[#00f0ff] rounded-full animate-spin"></div>
+          <div className="animate-pulse">Initializing_Skynet_Core...</div>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     const handleLoginSuccess = (mode: 'employee' | 'admin') => {

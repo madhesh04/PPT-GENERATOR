@@ -171,14 +171,17 @@ const Login: React.FC<LoginProps> = ({ onSwitchToSignup, onLoginSuccess }) => {
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-[14px] animate-fade-up" style={{ animationDelay: '1s', animationFillMode: 'forwards', opacity: 0 }}>
             <div className="flex flex-col gap-[4px]">
-              <label className="font-['Share_Tech_Mono'] text-[8px] tracking-[0.14em] text-[#4a6a8a] flex items-center gap-[5px]">
+              <label htmlFor="login_email" className="font-['Share_Tech_Mono'] text-[8px] tracking-[0.14em] text-[#4a6a8a] flex items-center gap-[5px] cursor-pointer">
                 <span className="text-[rgba(0,240,255,0.4)]">01 //</span>
                 {loginMode === 'admin' ? 'ADMIN_CREDENTIALS' : 'CREDENTIALS'}
               </label>
               <div className="relative flex items-center h-[46px] bg-[rgba(0,240,255,0.02)] border border-[rgba(0,240,255,0.15)] rounded-[4px] px-[12px] gap-[8px] transition-all focus-within:border-[#00f0ff] focus-within:bg-[rgba(0,240,255,0.04)]">
                 <svg viewBox="0 0 24 24" className="w-[13px] h-[13px] text-[rgba(0,240,255,0.4)]" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 <input
+                  id="login_email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   className="flex-1 bg-transparent !border-none !outline-none !ring-0 font-['Share_Tech_Mono'] text-[12px] text-[#e8f4ff] tracking-[0.04em] placeholder:text-[#2a4060]"
                   placeholder={loginMode === 'admin' ? 'admin@skynet.ai' : 'user@skynet.ai'}
                   value={email}
@@ -188,14 +191,17 @@ const Login: React.FC<LoginProps> = ({ onSwitchToSignup, onLoginSuccess }) => {
             </div>
 
             <div className="flex flex-col gap-[4px]">
-              <label className="font-['Share_Tech_Mono'] text-[8px] tracking-[0.14em] text-[#4a6a8a] flex items-center gap-[5px]">
+              <label htmlFor="login_password" className="font-['Share_Tech_Mono'] text-[8px] tracking-[0.14em] text-[#4a6a8a] flex items-center gap-[5px] cursor-pointer">
                 <span className="text-[rgba(0,240,255,0.4)]">02 //</span>
                 ENCRYPTION_KEY
               </label>
               <div className="relative flex items-center h-[46px] bg-[rgba(0,240,255,0.02)] border border-[rgba(0,240,255,0.15)] rounded-[4px] px-[12px] gap-[8px] transition-all focus-within:border-[#00f0ff] focus-within:bg-[rgba(0,240,255,0.04)]">
                 <svg viewBox="0 0 24 24" className="w-[13px] h-[13px] text-[rgba(0,240,255,0.4)]" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
                 <input
+                  id="login_password"
+                  name="password"
                   type={pwdVisible ? 'text' : 'password'}
+                  autoComplete="current-password"
                   className="flex-1 bg-transparent !border-none !outline-none !ring-0 font-['Share_Tech_Mono'] text-[12px] text-[#e8f4ff] tracking-[0.04em] placeholder:text-[#2a4060]"
                   placeholder="••••••••••••"
                   value={password}
