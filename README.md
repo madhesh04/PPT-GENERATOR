@@ -1,4 +1,4 @@
-# 🧬 Kinetic Curator — AI Presentation Platform
+# 🧬 SkyNet — AI Presentation Platform
 
 **Kinetic Curator** is a high-performance, production-ready AI PowerPoint engine designed for the **iamneo** ecosystem. It blends a "Neon Noir" aesthetic with deep LLM intelligence and precision PPTX mapping to turn raw topics into stunning, ready-to-present slide decks in seconds.
 
@@ -105,4 +105,5 @@ This repository is pre-configured for **Vercel** (Frontend) and **Render** (Back
 
 ---
 
-© 2026 iamneo | **Kinetic Curator**
+© 2026 iamneo | **SkyNet**
+
