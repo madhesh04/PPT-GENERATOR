@@ -1,4 +1,4 @@
-# 🧬 Kinetic Curator — Backend (FastAPI)
+# 🧬 SkyNet — Backend (FastAPI)
 
 The backend of **Kinetic Curator** is a production-hardened API powered by **FastAPI** and **Motor** (Asynchronous MongoDB driver). It manages the sequential generation pipeline, user authentication, and the administrative suite.
 
@@ -29,4 +29,4 @@ Ensure `requirements.txt` is installed and the `.env` is configured with:
 The server is pre-configured with a `Procfile` for one-click deployment to **Render** or **Heroku**.
 
 ---
-© 2026 iamneo | **Kinetic Curator**
+© 2026 iamneo | **SkyNet**
