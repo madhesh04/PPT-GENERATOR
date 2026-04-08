@@ -53,6 +53,7 @@ db = client.get_database("skynet_db")
 users_collection = db.get_collection("users")
 presentations_collection = db.get_collection("presentations")
 generation_logs_collection = db.get_collection("generation_logs")
+settings_collection = db.get_collection("settings")
 
 def verify_password(plain_password: str, hashed_password: str):
     return bcrypt.checkpw(
@@ -120,7 +121,26 @@ async def lifespan(app: FastAPI):
                 {"status": {"$exists": False}},
                 {"$set": {"status": "active"}}
             )
-            logger.info("MongoDB connected — indexes ensured.")
+            # Initialize global settings if they don't exist
+            global_settings = await settings_collection.find_one({"id": "global_config"})
+            if not global_settings:
+                # Defaults: Groq as model, both images and notes ON
+                await settings_collection.insert_one({
+                    "id": "global_config",
+                    "image_generation_enabled": True,
+                    "speaker_notes_enabled": True,
+                    "default_model": "groq"
+                })
+            else:
+                # Backfill missing fields for existing configurations
+                updates = {}
+                if "speaker_notes_enabled" not in global_settings:
+                    updates["speaker_notes_enabled"] = True
+                if "default_model" not in global_settings:
+                    updates["default_model"] = "groq"
+                if updates:
+                    await settings_collection.update_one({"id": "global_config"}, {"$set": updates})
+            logger.info("MongoDB connected — indexes/settings ensured.")
         except Exception as e:
             logger.warning("MongoDB index creation deferred: %s", e)
     asyncio.create_task(_ensure_indexes())
@@ -413,17 +433,29 @@ async def generate_ppt(request: Request, body: PresentationRequest, current_user
                 "filename": f"{cached_presentation['title'].replace(' ', '_')}.pptx"
             }
 
+        # 4. Fetch images in parallel (only for slides that have an image_query)
+        # Check global system settings (images, notes, model)
+        global_config = await settings_collection.find_one({"id": "global_config"})
+        if not global_config:
+            global_config = {"image_generation_enabled": True, "speaker_notes_enabled": True, "default_model": "groq"}
+
+        images_enabled = global_config.get("image_generation_enabled", True)
+        notes_enabled = global_config.get("speaker_notes_enabled", True)
+        default_model_choice = global_config.get("default_model", "groq")
+
         # 3. Cache Miss - Full Generation Pipeline
         logger.info("Cache Miss. Initiating LLM synthesis for %r", body.title)
         presentation_data, model_used, provider = await generate_slide_content(
             body.title, body.topics, body.num_slides, body.context, body.tone,
-            force_provider=body.force_provider,
+            force_provider=body.force_provider or default_model_choice,
+            include_notes=notes_enabled
         )
         if not presentation_data:
             raise HTTPException(status_code=500, detail="Failed to generate slide content from AI.")
 
-        # 4. Fetch images in parallel (only for slides that have an image_query)
         async def _maybe_fetch_image(slide):
+            if not images_enabled:
+                return None
             query = slide.get("image_query")
             if query:
                 return await fetch_slide_image(query)
@@ -508,6 +540,11 @@ async def regenerate_slide(body: RegenerateSlideRequest, current_user: Annotated
 @app.post("/regenerate-image")
 async def regenerate_image(body: RegenerateImageRequest, current_user: Annotated[dict, Depends(get_current_user)]):
     """Fetch a new image for a specific query."""
+    # Check global image generation setting
+    global_config = await settings_collection.find_one({"id": "global_config"})
+    if global_config and not global_config.get("image_generation_enabled", True):
+        raise HTTPException(status_code=403, detail="IMAGE_GENERATION_DISABLED_GLOBALLY")
+
     img_bytes = await fetch_slide_image(body.query)
     if not img_bytes:
         raise HTTPException(status_code=404, detail="Could not find a new image.")
@@ -933,11 +970,42 @@ async def download_ppt(presentation_id: str, current_user: Annotated[dict, Depen
     # Safe filename
     safe_filename = filename.replace(" ", "_").replace("/", "-")
 
-    return StreamingResponse(
-        buf,
-        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        headers={"Content-Disposition": f'attachment; filename="{safe_filename}"'},
+@app.get("/admin/settings")
+async def admin_get_settings(admin_user: Annotated[dict, Depends(require_admin)]):
+    """Fetch global application settings."""
+    config = await settings_collection.find_one({"id": "global_config"})
+    if not config:
+        return {
+            "image_generation_enabled": True,
+            "speaker_notes_enabled": True,
+            "default_model": "groq"
+        }
+    return {
+        "image_generation_enabled": config.get("image_generation_enabled", True),
+        "speaker_notes_enabled": config.get("speaker_notes_enabled", True),
+        "default_model": config.get("default_model", "groq")
+    }
+
+@app.patch("/admin/settings")
+async def admin_update_settings(payload: dict, admin_user: Annotated[dict, Depends(require_admin)]):
+    """Update global application settings."""
+    updates = {}
+    if "image_generation_enabled" in payload:
+        updates["image_generation_enabled"] = payload["image_generation_enabled"]
+    if "speaker_notes_enabled" in payload:
+        updates["speaker_notes_enabled"] = payload["speaker_notes_enabled"]
+    if "default_model" in payload:
+        updates["default_model"] = payload["default_model"]
+        
+    if not updates:
+        raise HTTPException(status_code=400, detail="No valid settings to update")
+        
+    await settings_collection.update_one(
+        {"id": "global_config"},
+        {"$set": updates},
+        upsert=True
     )
+    return {"status": "success", "settings": updates}
 
 
 if __name__ == "__main__":

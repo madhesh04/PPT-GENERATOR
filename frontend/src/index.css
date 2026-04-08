@@ -318,8 +318,9 @@ body:has(button:hover) .cur-o,body:has(input:focus) .cur-o,body:has(textarea:foc
 .tsw.on{background:rgba(0,240,255,.25);border-color:var(--cy)}
 .tknob{position:absolute;top:2px;left:2px;width:14px;height:14px;background:var(--t2);border-radius:50%;transition:transform .2s,background .2s}
 .tsw.on .tknob{transform:translateX(18px);background:var(--cy);box-shadow:0 0 6px var(--cy)}
-.seld{background:var(--bgf);border:1px solid var(--cyb);border-radius:var(--r1);padding:6px 10px;font-family:var(--fm);font-size:10px;color:var(--t1);letter-spacing:.05em;outline:none}
+.seld{background:var(--bgf);border:1px solid var(--cyb);border-radius:var(--r1);padding:6px 10px;font-family:var(--fm);font-size:10px;color:var(--t1);letter-spacing:.05em;outline:none;cursor:pointer;}
 .seld:focus{border-color:var(--cy)}
+.seld option{background:var(--bg1);color:var(--t1);padding:8px;}
 
 /* ERROR */
 .errbx{display:none;align-items:center;gap:8px;background:rgba(255,45,85,.06);border:1px solid rgba(255,45,85,.2);border-radius:var(--r1);padding:10px 14px;font-family:var(--fm);font-size:10px;color:var(--rd);letter-spacing:.07em;animation:pgi .3s ease}

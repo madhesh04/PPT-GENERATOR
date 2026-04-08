@@ -34,7 +34,7 @@ interface SavedPresentation {
   created_at: string;
 }
 
-const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? 'http://localhost:8000';
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? 'http://localhost:8001';
 
 function ThreeBackground() {
   const mountRef = useRef<HTMLCanvasElement>(null);
@@ -191,6 +191,9 @@ export default function App() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newUser, setNewUser] = useState({ full_name: '', email: '', password: '', role: 'user' });
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [globalImageGen, setGlobalImageGen] = useState(true);
+  const [globalSpeakerNotes, setGlobalSpeakerNotes] = useState(true);
+  const [globalDefaultModel, setGlobalDefaultModel] = useState('groq');
   const isMaster = user?.email === 'admin@skynet.ai';
   const isAdminRole = user?.role?.toUpperCase() === 'ADMIN' || user?.role?.toUpperCase() === 'MASTER';
 
@@ -200,6 +203,23 @@ export default function App() {
       if (view === 'admin_panel') {
         const statsRes = await fetch(`${API_BASE}/admin/stats`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (statsRes.ok) setAdminStats(await statsRes.json());
+        
+        const settingsRes = await fetch(`${API_BASE}/admin/settings`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (settingsRes.ok) {
+          const sData = await settingsRes.json();
+          setGlobalImageGen(sData.image_generation_enabled);
+          setGlobalSpeakerNotes(sData.speaker_notes_enabled);
+          setGlobalDefaultModel(sData.default_model);
+        }
+      }
+      if (view === 'settings') {
+        const settingsRes = await fetch(`${API_BASE}/admin/settings`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (settingsRes.ok) {
+          const sData = await settingsRes.json();
+          setGlobalImageGen(sData.image_generation_enabled);
+          setGlobalSpeakerNotes(sData.speaker_notes_enabled);
+          setGlobalDefaultModel(sData.default_model);
+        }
       }
       if (view === 'global_gen') {
         const url = selectedUser ? `${API_BASE}/admin/users/${selectedUser.id}/ppts` : `${API_BASE}/admin/generations`;
@@ -345,6 +365,52 @@ export default function App() {
       }
     } catch (e) {
       showToast('Rejection failed');
+    }
+  };
+
+  const handleToggleGlobalImageGen = async () => {
+    const newVal = !globalImageGen;
+    showToast(`${newVal ? 'ENABLING' : 'DISABLING'} GLOBAL_IMAGE_GENERATION...`);
+    try {
+      const res = await fetch(`${API_BASE}/admin/settings`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_generation_enabled: newVal })
+      });
+      if (res.ok) {
+        setGlobalImageGen(newVal);
+        showToast(`SUCCESS — Global image generation is now ${newVal ? 'ON' : 'OFF'}`);
+      } else {
+        showToast('Failed to update global settings');
+      }
+    } catch (e) {
+      showToast('Setting update failed');
+    }
+  };
+
+  const handleUpdateGlobalSettings = async (field: string, value: any) => {
+    if (!isAdminRole) {
+      showToast('UNAUTHORIZED — ADMIN PRIVILEGES REQUIRED');
+      return;
+    }
+    
+    showToast(`UPDATING SYSTEM_SETTING: ${field.toUpperCase()}...`);
+    try {
+      const res = await fetch(`${API_BASE}/admin/settings`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value })
+      });
+      if (res.ok) {
+        if (field === 'image_generation_enabled') setGlobalImageGen(value);
+        if (field === 'speaker_notes_enabled') setGlobalSpeakerNotes(value);
+        if (field === 'default_model') setGlobalDefaultModel(value);
+        showToast(`SUCCESS — System settings updated.`);
+      } else {
+        showToast('Failed to update system settings');
+      }
+    } catch (e) {
+      showToast('Setting update failed');
     }
   };
 
@@ -1018,10 +1084,37 @@ export default function App() {
             <div className="card" style={{padding:22}}>
               <div className="cc tl"></div><div className="cc tr"></div>
               <div className="fl mb12">// GENERATION_PREFS</div>
-              <div className="setr"><div><div className="setlbl">IMAGE_GENERATION</div><div className="setdsc">Fetch images per slide</div></div><div className="tsw on"><div className="tknob"></div></div></div>
-              <div className="setr"><div><div className="setlbl">SPEAKER_NOTES</div><div className="setdsc">Auto-generate presenter notes</div></div><div className="tsw on"><div className="tknob"></div></div></div>
-              <div className="setr" style={{borderBottom:'none'}}><div><div className="setlbl">DEFAULT_MODEL</div><div className="setdsc">LLM model selection</div></div>
-                <select className="seld"><option>llama-3.3-70b-versatile</option></select>
+              <div className="setr">
+                <div><div className="setlbl">IMAGE_GENERATION</div><div className="setdsc">Fetch images per slide</div></div>
+                <div 
+                  className={`tsw ${globalImageGen ? 'on' : ''}`} 
+                  onClick={() => handleUpdateGlobalSettings('image_generation_enabled', !globalImageGen)}
+                  style={{cursor: isAdminRole ? 'pointer' : 'not-allowed'}}
+                >
+                  <div className="tknob"></div>
+                </div>
+              </div>
+              <div className="setr">
+                <div><div className="setlbl">SPEAKER_NOTES</div><div className="setdsc">Auto-generate presenter notes</div></div>
+                <div 
+                  className={`tsw ${globalSpeakerNotes ? 'on' : ''}`} 
+                  onClick={() => handleUpdateGlobalSettings('speaker_notes_enabled', !globalSpeakerNotes)}
+                  style={{cursor: isAdminRole ? 'pointer' : 'not-allowed'}}
+                >
+                  <div className="tknob"></div>
+                </div>
+              </div>
+              <div className="setr" style={{borderBottom:'none'}}>
+                <div><div className="setlbl">DEFAULT_MODEL</div><div className="setdsc">LLM model selection</div></div>
+                <select 
+                  className="seld" 
+                  value={globalDefaultModel} 
+                  onChange={(e) => handleUpdateGlobalSettings('default_model', e.target.value)}
+                  disabled={!isAdminRole}
+                >
+                  <option value="groq">llama-3.3-70b-versatile (Groq)</option>
+                  <option value="nvidia">moonshotai/kimi-k2-instruct (NVIDIA)</option>
+                </select>
               </div>
             </div>
           </div>
@@ -1054,6 +1147,26 @@ export default function App() {
                 <div className="sclbl" style={{marginBottom:8}}>ACTIVE_TODAY</div>
                 <div className="scval gn" style={{fontSize:28}}>{adminStats?.active_today || 0}</div>
                 <div className="scsub" style={{marginTop:8}}>last 24h</div>
+              </div>
+            </div>
+
+            <div className="card" style={{padding:22, border: '1px solid rgba(0,240,255,0.2)'}}>
+              <div className="cc tl"></div><div className="cc tr"></div><div className="cc bl"></div><div className="cc br"></div>
+              <div className="fl mb16">// GLOBAL_SYSTEM_SETTINGS</div>
+              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                <div>
+                  <div className="ptl" style={{fontSize:16, marginBottom:4}}>IMAGE_GENERATION</div>
+                  <div style={{fontFamily:'var(--fm)', fontSize:10, color:'var(--t2)', letterSpacing:'.04em'}}>
+                    Toggle image fetching for all users globally. Currently {globalImageGen ? 'ENABLED' : 'DISABLED'}.
+                  </div>
+                </div>
+                <div 
+                  className={`tsw ${globalImageGen ? 'on' : ''}`} 
+                  onClick={handleToggleGlobalImageGen}
+                  style={{cursor:'pointer', transform: 'scale(1.2)'}}
+                >
+                  <div className="tknob"></div>
+                </div>
               </div>
             </div>
           </div>
