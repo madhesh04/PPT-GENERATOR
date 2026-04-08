@@ -1435,7 +1435,7 @@ export default function App() {
             </div>
           </div>
           
-          <div className="mt16" style={{ fontDefined: 'var(--fm)', fontSize: 8, color: 'var(--t3)', textAlign: 'center' }}>
+          <div className="mt16" style={{ fontFamily: 'var(--fm)', fontSize: 8, color: 'var(--t3)', textAlign: 'center' }}>
             * SECURITY_WARNING: UNREVERSIBLE_ACTION_LOGGED_BY_SKYNET
           </div>
         </div>
