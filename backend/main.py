@@ -473,14 +473,20 @@ async def generate_ppt(request: Request, body: PresentationRequest, current_user
             else:
                 slide["image_base64"] = None
 
-        # 6. Save Blueprint to MongoDB
+        # 6. Save Blueprint to MongoDB (Strip images to save space)
+        db_slides = []
+        for s in presentation_data:
+            s_copy = s.copy()
+            s_copy["image_base64"] = None
+            db_slides.append(s_copy)
+
         new_presentation_doc = {
             "user_id": ObjectId(current_user.get("user_id")) if current_user.get("user_id") else None,
             "username": current_user.get("username", "Unknown"),
             "title": body.title,
             "topics": body.topics,
             "content_hash": content_hash,
-            "slides": presentation_data,
+            "slides": db_slides,
             "created_at": datetime.utcnow(),
             "theme": body.theme
         }
@@ -591,12 +597,19 @@ async def export_ppt(body: ExportRequest, current_user: Annotated[dict, Depends(
         normalized_str = f"edited-{body.title.lower().strip()}-{time.time()}"
         content_hash = hashlib.sha256(normalized_str.encode('utf-8')).hexdigest()
 
+        # Strip images before saving edited blueprint to DB
+        db_slides = []
+        for s in body.slides:
+            s_dict = s.model_dump()
+            s_dict["image_base64"] = None
+            db_slides.append(s_dict)
+
         new_presentation_doc = {
             "user_id": user_id,
             "title": body.title,
             "topics": ["Edited Format"],
             "content_hash": content_hash,
-            "slides": [s.model_dump() for s in body.slides],
+            "slides": db_slides,
             "created_at": datetime.utcnow(),
             "theme": body.theme
         }
