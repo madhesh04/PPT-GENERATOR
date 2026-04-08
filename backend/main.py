@@ -1028,6 +1028,12 @@ async def download_ppt(presentation_id: str, current_user: Annotated[dict, Depen
     # Safe filename
     safe_filename = filename.replace(" ", "_").replace("/", "-")
 
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        headers={"Content-Disposition": f"attachment; filename={safe_filename}"}
+    )
+
 @app.get("/admin/settings")
 async def admin_get_settings(admin_user: Annotated[dict, Depends(require_admin)]):
     """Fetch global application settings."""
