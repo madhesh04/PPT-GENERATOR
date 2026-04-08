@@ -148,6 +148,11 @@ export default function App() {
   const [numSlides, setNumSlides] = useState(5);
   const [forceProvider, setForceProvider] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Admin Modal States
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetTarget, setResetTarget] = useState<{ id: string, email: string } | null>(null);
+  const [resetPassword, setResetPassword] = useState('');
   
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -366,6 +371,38 @@ export default function App() {
     } catch (e) {
       showToast('Rejection failed');
     }
+  };
+
+  const handleUpdateUserPassword = (userId: string, email: string) => {
+    setResetTarget({ id: userId, email });
+    setResetPassword('');
+    setShowResetModal(true);
+  };
+
+  const handleConfirmPasswordReset = async () => {
+    if (!resetTarget || !resetPassword) return;
+    if (resetPassword.length < 6) {
+      showToast('ERROR_003 — Password too short');
+      return;
+    }
+
+    showToast('UPDATING_ENCRYPTION_KEY...');
+    try {
+      const res = await fetch(`${API_BASE}/admin/users/${resetTarget.id}/password`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: resetPassword })
+      });
+      if (res.ok) {
+        showToast('SUCCESS — Encryption key updated');
+        setShowResetModal(false);
+        setResetTarget(null);
+        setResetPassword('');
+      } else {
+        const d = await res.json();
+        showToast(`FAILED: ${d.detail || 'Access Denied'}`);
+      }
+    } catch (e) { showToast('Update failed'); }
   };
 
   const handleToggleGlobalImageGen = async () => {
@@ -1249,6 +1286,7 @@ export default function App() {
                           <td style={{fontFamily:'var(--fd)',textAlign:'center'}}>{u.ppt_count || 0}</td>
                           <td style={{display:'flex',gap:6}}>
                             <button className="btn bs bsm" onClick={() => { setSelectedUser(u); setView('global_gen'); }}>VIEW_PPTS</button>
+                            <button className="btn bs bsm" style={{color:'#ffb800', borderColor:'rgba(255,184,0,.3)'}} onClick={() => handleUpdateUserPassword(u.id, u.email)}>RESET_PWD</button>
                             <button className="btn bs bsm" style={{color:'var(--rd)', borderColor:'rgba(255,45,85,.3)'}} onClick={() => handleDeleteUser(u.id)}>DELETE</button>
                           </td>
                         </tr>
@@ -1363,6 +1401,46 @@ export default function App() {
       </main>
 
       {/* STATUS BAR */}
+      {/* ═══ PASSWORD RESET MODAL ═══ */}
+      <div className={`mover ${showResetModal ? 'op' : ''}`}>
+        <div className="modal" style={{ width: 400 }}>
+          <div className="mcc tl"></div><div className="mcc tr"></div><div className="mcc bl"></div><div className="mcc br"></div>
+          <button className="mclose" onClick={() => setShowResetModal(false)}>&times;</button>
+          
+          <div className="mtl">CREDENTIAL_RECONSTRUCTION</div>
+          <div className="msb">// Reset encryption key for: <span className="cy">{resetTarget?.email}</span></div>
+          
+          <div className="card" style={{ padding: 20, background: 'rgba(0,0,0,0.2)' }}>
+            <div className="fg mb16">
+              <div className="fl"><span className="fn">01 //</span> NEW_PASSWORD</div>
+              <div className="fb2">
+                <input 
+                  className="finp" 
+                  type="text" 
+                  placeholder="MIN_6_CHARS" 
+                  value={resetPassword} 
+                  onChange={e => setResetPassword(e.target.value)} 
+                  autoFocus
+                />
+              </div>
+            </div>
+            
+            <div className="fx gap8">
+              <button className="btn bp shim" style={{ flex: 1 }} onClick={handleConfirmPasswordReset}>
+                COMMIT_CHANGES
+              </button>
+              <button className="btn bs" style={{ flex: 1 }} onClick={() => setShowResetModal(false)}>
+                ABORT
+              </button>
+            </div>
+          </div>
+          
+          <div className="mt16" style={{ fontDefined: 'var(--fm)', fontSize: 8, color: 'var(--t3)', textAlign: 'center' }}>
+            * SECURITY_WARNING: UNREVERSIBLE_ACTION_LOGGED_BY_SKYNET
+          </div>
+        </div>
+      </div>
+
       <div className="sbar">
         <div className="si"><div className="sd g"></div>CORE_ONLINE</div>
         <div className="si"><div className="sd c"></div>LLM_CONNECTED</div>

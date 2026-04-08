@@ -9,6 +9,7 @@ const Signup: React.FC<SignupProps> = ({ onSwitchToLogin }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<'user' | 'admin'>('user');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -42,7 +43,7 @@ const Signup: React.FC<SignupProps> = ({ onSwitchToLogin }) => {
       const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ full_name: fullName, email, password }),
+        body: JSON.stringify({ full_name: fullName, email, password, role }),
       });
 
       if (!response.ok) {
@@ -112,8 +113,12 @@ const Signup: React.FC<SignupProps> = ({ onSwitchToLogin }) => {
                <div className="w-[60px] h-[60px] mx-auto bg-[rgba(0,255,157,0.05)] border border-[rgba(0,255,157,0.2)] rounded-full flex items-center justify-center mb-[16px]">
                  <svg viewBox="0 0 24 24" className="w-[30px] h-[30px] text-[#00ff9d]" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
                </div>
-               <h3 className="font-['Orbitron'] text-[20px] text-[#00ff9d] mb-[8px]">ACCEPTED</h3>
-               <p className="font-['Share_Tech_Mono'] text-[10px] text-[#6a8aaa]">REDIRECTING...</p>
+               <h3 className="font-['Orbitron'] text-[20px] text-[#00ff9d] mb-[8px]">
+                 {role === 'admin' ? 'REQUEST_SUBMITTED' : 'ACCEPTED'}
+               </h3>
+               <p className="font-['Share_Tech_Mono'] text-[10px] text-[#6a8aaa]">
+                 {role === 'admin' ? 'AWAITING_MASTER_APPROVAL...' : 'REDIRECTING...'}
+               </p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-[14px] animate-fade-up" style={{ animationDelay: '1s', animationFillMode: 'forwards', opacity: 0 }}>
@@ -152,6 +157,44 @@ const Signup: React.FC<SignupProps> = ({ onSwitchToLogin }) => {
                 <div className="relative flex items-center h-[40px] border-b border-[rgba(0,240,255,0.2)] transition-all focus-within:border-[#00ff9d]">
                   <input id="signup_password" name="password" type="password" autoComplete="new-password" className="flex-1 bg-transparent !border-none !outline-none !ring-0 font-['Share_Tech_Mono'] text-[12px] text-[#e8f4ff] tracking-[0.04em] placeholder:text-[#2a4060]" placeholder="••••••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
                 </div>
+              </div>
+
+              {/* ═══ ROLE SELECTOR ═══ */}
+              <div className="flex flex-col gap-[8px] mt-[4px]">
+                <label className="font-['Share_Tech_Mono'] text-[8px] tracking-[0.14em] text-[#4a6a8a] flex items-center gap-[5px]">
+                  <span className="text-[rgba(0,240,255,0.4)]">04 //</span>
+                  ACCESS_PROTOCOL_LEVEL
+                </label>
+                <div className="flex border border-[rgba(0,240,255,0.15)] rounded-[4px] overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setRole('user')}
+                    className={`flex-1 py-[8px] font-['Orbitron'] text-[9px] font-bold tracking-[0.12em] transition-all duration-300 ${
+                      role === 'user'
+                        ? 'bg-[rgba(0,255,157,0.1)] text-[#00ff9d] shadow-[inset_0_-2px_0_#00ff9d]'
+                        : 'bg-transparent text-[#4a6a8a] hover:text-[#6a8aaa]'
+                    }`}
+                  >
+                    EMPLOYEE
+                  </button>
+                  <div className="w-[1px] bg-[rgba(0,240,255,0.15)]"></div>
+                  <button
+                    type="button"
+                    onClick={() => setRole('admin')}
+                    className={`flex-1 py-[8px] font-['Orbitron'] text-[9px] font-bold tracking-[0.12em] transition-all duration-300 ${
+                      role === 'admin'
+                        ? 'bg-[rgba(255,184,0,0.1)] text-[#ffb800] shadow-[inset_0_-2px_0_#ffb800]'
+                        : 'bg-transparent text-[#4a6a8a] hover:text-[#6a8aaa]'
+                    }`}
+                  >
+                    ADMINISTRATOR
+                  </button>
+                </div>
+                {role === 'admin' && (
+                  <div className="font-['Share_Tech_Mono'] text-[7px] text-[#ffb800] tracking-[0.05em] px-[4px] animate-pulse">
+                    * REQUIRES_MASTER_APPROVAL_BY_COUNCIL
+                  </div>
+                )}
               </div>
 
               <button type="submit" disabled={loading} className="w-full h-[44px] bg-gradient-to-r from-[#00c060] to-[#00ff9d] rounded-[4px] font-['Orbitron'] text-[11px] font-bold tracking-[0.2em] text-[#000] shadow-[0_0_20px_rgba(0,255,157,0.25)] hover:translate-y-[-1px] transition-all disabled:opacity-50 mt-[8px]">

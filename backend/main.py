@@ -329,7 +329,8 @@ async def login(credentials: UserLogin):
         raise HTTPException(status_code=401, detail="AUTHENTICATION_FAILED — Invalid credentials")
     
     if not verify_password(credentials.password, user["password"]):
-        logger.warning("Login failed: Incorrect password for %s", credentials.email)
+        logger.warning("Login failed: Incorrect password for %s. (Hash starts with: %s)", 
+                       credentials.email, user["password"][:10] if user.get("password") else "N/A")
         raise HTTPException(status_code=401, detail="AUTHENTICATION_FAILED — Invalid credentials")
     
     # 1. Normalize and compare DB role against claimed role
@@ -804,6 +805,50 @@ async def admin_update_user_status(user_id: str, payload: dict, admin_user: Anno
         raise HTTPException(status_code=404, detail="User not found")
         
     return {"status": "success", "user_status": status}
+
+@app.patch("/admin/users/{user_id}/password")
+async def admin_reset_password(user_id: str, payload: dict, admin_user: Annotated[dict, Depends(require_admin)]):
+    """Admin-initiated password reset for a user."""
+    new_password = payload.get("password")
+    if not new_password or len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="INVALID_PASSWORD — Password must be at least 6 characters.")
+        
+    try:
+        obj_id = ObjectId(user_id)
+    except:
+        logger.error("Admin Reset: Invalid user_id format: %s", user_id)
+        raise HTTPException(status_code=400, detail="Invalid user ID format")
+        
+    # Find the user first to log their email
+    target_user = await users_collection.find_one({"_id": obj_id})
+    if not target_user:
+        logger.error("Admin Reset: No user found for ID %s", user_id)
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    hashed_pwd = get_password_hash(new_password)
+    # Perform the update
+    result = await users_collection.update_one(
+        {"_id": obj_id}, 
+        {"$set": {"password": hashed_pwd}}
+    )
+
+    # Immediately verify the change
+    updated_user = await users_collection.find_one({"_id": obj_id})
+    verify_match = (updated_user["password"] == hashed_pwd) if updated_user else False
+
+    logger.info("Admin %s reset password for %s. DB_Result: matched=%d, modified=%d. Verify_Match: %s", 
+                admin_user["sub"], target_user["email"], result.matched_count, result.modified_count, verify_match)
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found during update")
+        
+    return {
+        "status": "success", 
+        "message": f"Password for {target_user['email']} updated successfully",
+        "email": target_user["email"],
+        "modified": result.modified_count,
+        "verified": verify_match
+    }
 
 @app.delete("/admin/users/{user_id}")
 async def admin_delete_user(user_id: str, admin_user: Annotated[dict, Depends(require_admin)]):

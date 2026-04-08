@@ -220,7 +220,7 @@ const Login: React.FC<LoginProps> = ({ onSwitchToSignup, onLoginSuccess }) => {
             </div>
 
             <div className="flex justify-end mt-[-4px]">
-              <a href="#" className="font-['Share_Tech_Mono'] text-[8px] text-[#4a6a8a] hover:text-[#00f0ff] transition-colors">FORGOT_PASSWORD →</a>
+              {/* FORGOT_PASSWORD REMOVED PER ADMINISTRATIVE POLICY */}
             </div>
 
             <button
