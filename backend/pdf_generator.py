@@ -3,14 +3,26 @@ import base64
 from fpdf import FPDF
 from typing import List, Optional
 
+from shared.themes import THEME_DATA
+
 # ── Themes ─────────────────────────────────────────────────────────────────────
 THEMES = {
-    "neon": {"bg": (15, 23, 42), "text": (232, 244, 255), "accent": (0, 240, 255), "muted": (106, 138, 170)},
-    "ocean": {"bg": (15, 23, 42), "text": (232, 244, 255), "accent": (59, 130, 246), "muted": (71, 85, 105)},
-    "emerald": {"bg": (6, 78, 59), "text": (232, 244, 255), "accent": (16, 185, 129), "muted": (52, 211, 153)},
-    "royal": {"bg": (30, 27, 75), "text": (232, 244, 255), "accent": (99, 102, 241), "muted": (168, 85, 247)},
-    "dark": {"bg": (15, 23, 42), "text": (232, 244, 255), "accent": (245, 83, 61), "muted": (148, 163, 184)},
+    k: {
+        "bg": v["white"] if k == "dark" else v["text"], # Swapped logic from original for consistency
+        "text": v["white"],
+        "accent": v["main"],
+        "muted": v["slate"]
+    } for k, v in THEME_DATA.items()
 }
+
+# Fix specific mappings for PDF generator which has its own logic
+for k in THEMES:
+    if k == "dark":
+        THEMES[k]["bg"] = THEME_DATA[k]["white"] # (15, 23, 42)
+        THEMES[k]["text"] = THEME_DATA[k]["text"] # (248, 250, 252)
+    else:
+        THEMES[k]["bg"] = THEME_DATA[k]["text"]
+        THEMES[k]["text"] = THEME_DATA[k]["white"]
 
 class SkynetPDF(FPDF):
     def __init__(self, theme_name="neon"):

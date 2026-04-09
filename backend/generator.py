@@ -9,23 +9,24 @@ from pptx.enum.text import PP_ALIGN
 # ── Template path ──────────────────────────────────────────────────────────────
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "template.pptx")
 
+from shared.themes import THEME_DATA
+
 # ── Themes ─────────────────────────────────────────────────────────────────────
 class Theme:
-    def __init__(self, name, main_h, accent_h, text_h, slate_h, white_h, surface_h):
+    def __init__(self, name, main, accent, text, slate, white, surface):
         self.name = name
-        self.main = RGBColor.from_string(main_h.replace("#", ""))
-        self.accent = RGBColor.from_string(accent_h.replace("#", ""))
-        self.text = RGBColor.from_string(text_h.replace("#", ""))
-        self.slate = RGBColor.from_string(slate_h.replace("#", ""))
-        self.white = RGBColor.from_string(white_h.replace("#", ""))
-        self.surface = RGBColor.from_string(surface_h.replace("#", ""))
+        self.main = RGBColor(*main)
+        self.accent = RGBColor(*accent)
+        self.text = RGBColor(*text)
+        self.slate = RGBColor(*slate)
+        self.white = RGBColor(*white)
+        self.surface = RGBColor(*surface)
 
 THEMES = {
-    "neon": Theme("Neon", "#F5533D", "#FF6B35", "#0F172A", "#475569", "#FFFFFF", "#F8FAFC"),
-    "ocean": Theme("Ocean", "#3B82F6", "#06B6D4", "#0F172A", "#475569", "#FFFFFF", "#F8FAFC"),
-    "emerald": Theme("Emerald", "#10B981", "#34D399", "#064E3B", "#374151", "#FFFFFF", "#F9FAFB"),
-    "royal": Theme("Royal", "#6366F1", "#A855F7", "#1E1B4B", "#475569", "#FFFFFF", "#F8FAFC"),
-    "dark": Theme("Dark", "#F5533D", "#FF6B35", "#F8FAFC", "#94A3B8", "#0F172A", "#1E293B"),
+    k: Theme(
+        v["name"], v["main"], v["accent"], v["text"], 
+        v["slate"], v["white"], v["surface"]
+    ) for k, v in THEME_DATA.items()
 }
 
 DEFAULT_THEME = THEMES["neon"]
