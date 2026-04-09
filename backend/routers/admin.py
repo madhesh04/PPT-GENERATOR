@@ -11,10 +11,11 @@ from db.client import (
 )
 from models.requests import (
     AdminCreateUser, UpdateRoleRequest, 
-    UpdateStatusRequest
+    UpdateStatusRequest, UpdatePasswordRequest
 )
 from core.security import get_password_hash
 from core.config import settings
+from core.converters import serialize_mongo_doc
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 logger = logging.getLogger(__name__)
@@ -34,6 +35,9 @@ async def admin_get_stats(admin_user: Annotated[dict, Depends(require_admin)]):
         {"$group": {"_id": "$user_id"}},
         {"$count": "active_users"}
     ]).to_list(length=1)
+    
+    # Sanitize just in case
+    active_today = serialize_mongo_doc(active_today)
     active_count = active_today[0]["active_users"] if active_today else 0
     
     return {
@@ -51,34 +55,33 @@ async def admin_get_all_presentations(
 ):
     presentations_coll = get_presentations_collection()
     cursor = presentations_coll.aggregate([
-        {
-            "$project": {
-                "_id": 1, 
-                "title": 1, 
-                "theme": 1, 
-                "created_at": 1,
-                "username": {"$ifNull": ["$username", "Unknown"]},
-                "slides_count": {"$size": {"$ifNull": ["$slides", []]}}
-            }
-        },
         {"$sort": {"created_at": -1}},
         {"$skip": skip},
-        {"$limit": limit}
+        {"$limit": limit},
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "user_id",
+                "foreignField": "_id",
+                "as": "user_info"
+            }
+        },
+        {
+            "$project": {
+                "_id": 0,
+                "id": {"$toString": "$_id"},
+                "title": 1,
+                "theme": 1,
+                "created_at": 1,
+                "model_used": {"$ifNull": ["$model_used", "Groq"]},
+                "generated_by": {"$ifNull": [{"$arrayElemAt": ["$user_info.full_name", 0]}, "Unknown"]},
+                "slides": {"$size": {"$ifNull": ["$slides", []]}}
+            }
+        }
     ])
     
     presentations = await cursor.to_list(length=limit)
-    serialized = []
-    for p in presentations:
-        p["id"] = str(p.pop("_id"))
-        p["generated_by"] = p.pop("username")
-        p["slides"] = p.pop("slides_count")
-        p["tone"] = "Professional"
-        p["status"] = "COMPLETE"
-        if "created_at" in p:
-            p["created_at"] = p["created_at"].isoformat()
-        serialized.append(p)
-        
-    return {"presentations": serialized}
+    return {"presentations": presentations}
 
 @router.delete("/generations/{presentation_id}")
 async def admin_delete_presentation(presentation_id: str, admin_user: Annotated[dict, Depends(require_admin)]):
@@ -151,7 +154,7 @@ async def admin_update_user_role(user_id: str, payload: UpdateRoleRequest, admin
         
     return {"status": "success", "role": payload.role}
 
-@router.patch("/admin/users/{user_id}/status")
+@router.patch("/users/{user_id}/status")
 async def admin_update_user_status(user_id: str, payload: UpdateStatusRequest, admin_user: Annotated[dict, Depends(require_admin)]):
     users_coll = get_users_collection()
     try:
@@ -164,6 +167,58 @@ async def admin_update_user_status(user_id: str, payload: UpdateStatusRequest, a
         raise HTTPException(status_code=404, detail="User not found")
         
     return {"status": "success", "user_status": payload.status}
+
+@router.patch("/users/{user_id}/password")
+async def admin_update_user_password(user_id: str, payload: UpdatePasswordRequest, admin_user: Annotated[dict, Depends(require_admin)]):
+    users_coll = get_users_collection()
+    try:
+        obj_id = ObjectId(user_id)
+    except:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+        
+    hashed_password = get_password_hash(payload.password)
+    result = await users_coll.update_one({"_id": obj_id}, {"$set": {"password": hashed_password}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    logger.info("Admin %s reset password for user %s", admin_user.get("sub"), obj_id)
+    return {"status": "success", "message": "Password updated successfully"}
+
+@router.get("/users/{user_id}/ppts")
+async def admin_get_user_presentations(user_id: str, admin_user: Annotated[dict, Depends(require_admin)]):
+    presentations_coll = get_presentations_collection()
+    try:
+        obj_id = ObjectId(user_id)
+    except:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+        
+    cursor = presentations_coll.aggregate([
+        {"$match": {"user_id": obj_id}},
+        {"$sort": {"created_at": -1}},
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "user_id",
+                "foreignField": "_id",
+                "as": "user_info"
+            }
+        },
+        {
+            "$project": {
+                "_id": 0,
+                "id": {"$toString": "$_id"},
+                "title": 1,
+                "theme": 1,
+                "created_at": 1,
+                "model_used": {"$ifNull": ["$model_used", "Groq"]},
+                "generated_by": {"$ifNull": [{"$arrayElemAt": ["$user_info.full_name", 0]}, "Unknown"]},
+                "slides": {"$size": {"$ifNull": ["$slides", []]}}
+            }
+        }
+    ])
+    
+    ppts = await cursor.to_list(length=100)
+    return {"presentations": ppts}
 
 @router.delete("/users/{user_id}")
 async def admin_delete_user(user_id: str, admin_user: Annotated[dict, Depends(require_admin)]):

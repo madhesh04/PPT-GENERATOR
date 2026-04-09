@@ -68,5 +68,8 @@ class AdminCreateUser(BaseModel):
 class UpdateRoleRequest(BaseModel):
     role: str # Literal["user", "admin"] would be better
 
+class UpdatePasswordRequest(BaseModel):
+    password: str
+
 class UpdateStatusRequest(BaseModel):
     status: str # Literal["active", "suspended", "pending"]

@@ -47,6 +47,8 @@ export default function App() {
         
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminView />} />
+        <Route path="/admin/users" element={<AdminView />} />
+        <Route path="/admin/generations" element={<AdminView />} />
       </Route>
 
       {/* Fallback */}

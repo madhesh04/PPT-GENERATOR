@@ -6,6 +6,7 @@ import base64
 from groq import Groq
 from openai import OpenAI
 from typing import Optional
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -15,10 +16,9 @@ NVIDIA_MODEL = "moonshotai/kimi-k2-instruct" # Kimi K2.5 or similar high-quality
 NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
 # NVIDIA client setup
-NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
 nvidia_client = None
-if NVIDIA_API_KEY and NVIDIA_API_KEY.strip() != "your_nvidia_api_key_here":
-    nvidia_client = OpenAI(base_url=NVIDIA_BASE_URL, api_key=NVIDIA_API_KEY)
+if settings.nvidia_api_key and settings.nvidia_api_key.strip() != "your_nvidia_api_key_here":
+    nvidia_client = OpenAI(base_url=NVIDIA_BASE_URL, api_key=settings.nvidia_api_key)
 
 # Tone Configurations
 TONE_CONFIG = {
@@ -183,8 +183,7 @@ def _parse_and_validate(raw: str) -> list:
 
 def _call_groq(title: str, topics: list, num_slides: int = 5, context: str = "", tone: str = "professional", include_notes: bool = True) -> list:
     """Synchronous Groq call with retry on JSON failure."""
-    GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-    client = Groq(api_key=GROQ_API_KEY)
+    client = Groq(api_key=settings.groq_api_key)
     
     tone_cfg = TONE_CONFIG.get(tone.lower(), TONE_CONFIG["professional"])
     system_prompt, user_prompt = _build_prompt(title, topics, num_slides, context, tone_cfg["instruction"], include_notes=include_notes)

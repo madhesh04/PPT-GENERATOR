@@ -1,13 +1,15 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePresentationStore } from '../store/usePresentationStore';
 import { useAppStore } from '../store/useAppStore';
 import { presentationApi } from '../api/presentation';
 import apiClient from '../api/apiClient';
 
 export default function PreviewView() {
-  const { result, slides, setSlides, theme } = usePresentationStore();
+  const { result, slides, setSlides, theme, resetCreation } = usePresentationStore();
   const { showToast } = useAppStore();
   const [previewSecOpen, setPreviewSecOpen] = useState(true);
+  const navigate = useNavigate();
 
   if (!result || slides.length === 0) {
     return (
@@ -34,6 +36,12 @@ export default function PreviewView() {
       document.body.appendChild(a);
       a.click();
       a.remove();
+      
+      // Post-download cleanup
+      setTimeout(() => {
+        resetCreation();
+        navigate('/dashboard');
+      }, 800);
     } catch (err) {
       showToast('DOWNLOAD_FAILED');
     }
@@ -51,6 +59,12 @@ export default function PreviewView() {
       a.click();
       a.remove();
       showToast('PDF_EXPORT_SUCCESS');
+      
+      // Optionally redirect for PDF as well
+      setTimeout(() => {
+        resetCreation();
+        navigate('/dashboard');
+      }, 800);
     } catch (err) {
       showToast('PDF_EXPORT_FAILED');
     }
@@ -61,6 +75,7 @@ export default function PreviewView() {
     try {
       const data = await presentationApi.exportPresentation({ title: result.title, slides, theme });
       handleDownload(data.token, data.filename);
+      // handleDownload will handle the redirect
     } catch (err) {
       showToast('REBUILD_FAILED');
     }

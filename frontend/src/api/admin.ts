@@ -36,6 +36,16 @@ export const adminApi = {
     return response.data;
   },
 
+  updateUserStatus: async (id: string, status: string) => {
+    const response = await apiClient.patch(`/admin/users/${id}/status`, { status });
+    return response.data;
+  },
+
+  updateUserRole: async (id: string, role: string) => {
+    const response = await apiClient.patch(`/admin/users/${id}/role`, { role });
+    return response.data;
+  },
+
   createUser: async (userData: any) => {
     const response = await apiClient.post('/admin/users/create', userData);
     return response.data;
@@ -49,6 +59,11 @@ export const adminApi = {
 
   deleteGeneration: async (id: string) => {
     const response = await apiClient.delete(`/admin/generations/${id}`);
+    return response.data;
+  },
+  
+  getPublicSettings: async () => {
+    const response = await apiClient.get('/admin/public/settings');
     return response.data;
   }
 };

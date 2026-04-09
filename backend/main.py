@@ -9,7 +9,13 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 # Import core and routers
+from bson import ObjectId
+from fastapi.encoders import ENCODERS_BY_TYPE
 from core.config import settings
+
+# Global MongoDB Serialization Fix
+ENCODERS_BY_TYPE[ObjectId] = str
+
 from db.client import get_users_collection, get_presentations_collection, get_settings_collection
 from routers import auth, generate, admin
 

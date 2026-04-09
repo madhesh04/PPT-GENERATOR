@@ -7,6 +7,7 @@ import logging
 from bson import ObjectId
 from datetime import datetime
 from core.dependencies import get_current_user
+from core.converters import serialize_mongo_doc
 from models.requests import (
     PresentationRequest, RegenerateSlideRequest, 
     RegenerateImageRequest, ExportRequest
@@ -114,16 +115,11 @@ async def get_my_presentations(current_user: Annotated[dict, Depends(get_current
     ).sort("created_at", -1)
     
     presentations = await cursor.to_list(length=100)
-    serialized = []
-    for p in presentations:
-        p["id"] = str(p.pop("_id"))
-        p["created_at"] = p["created_at"].isoformat()
-        serialized.append(p)
-        
+    return {"presentations": presentations}
 
 @router.post("/upload-context")
 async def upload_context(file: UploadFile = File(...), current_user: Annotated[dict, Depends(get_current_user)] = None):
-    from file_extractor import extract_text_from_file
+    from services.file_extractor import extract_text_from_file
     content = await file.read()
     text = extract_text_from_file(content, file.filename)
     return {"text": text, "filename": file.filename}
@@ -143,7 +139,7 @@ async def export_pdf(req: ExportRequest, user: Annotated[dict, Depends(get_curre
         logger.error("PDF Export failed: %s", e)
         raise HTTPException(status_code=500, detail=f"PDF_EXPORT_FAILED: {str(e)}")
 
-@router.post("/export-pptx")
+@router.post("/export")
 async def export_ppt(body: ExportRequest, current_user: Annotated[dict, Depends(get_current_user)]):
     from generator import create_presentation
     from services.storage_service import StorageService
@@ -186,16 +182,52 @@ async def export_ppt(body: ExportRequest, current_user: Annotated[dict, Depends(
 
 @router.get("/download/{file_id}")
 async def download_ppt(file_id: str):
-    # No auth for direct download link usually if it's a random token, 
-    # but the implementation plan can decide. For now, following GridFS retrieval.
     from services.storage_service import StorageService
+    from generator import create_presentation
     
+    # 1. Try to fetch from GridFS directly
     stream = await StorageService.get_file_stream(file_id)
+    
+    # 2. If not in GridFS, try to generate on-the-fly from presentation_id
     if not stream:
-        raise HTTPException(status_code=404, detail="File not found or expired.")
+        logger.info(f"File {file_id} not found in GridFS. Attempting on-the-fly generation from presentation_id.")
+        presentations_collection = get_presentations_collection()
+        try:
+            obj_id = ObjectId(file_id)
+        except:
+            raise HTTPException(status_code=400, detail="INVALID_IDENTIFIER")
+            
+        presentation = await presentations_collection.find_one({"_id": obj_id})
+        if not presentation:
+            raise HTTPException(status_code=404, detail="FILE_OR_PRESENTATION_NOT_FOUND")
+            
+        # Found the presentation metadata, now generate the binary
+        slides = presentation.get("slides", [])
+        title = presentation.get("title", "Presentation")
+        theme = presentation.get("theme", "standard")
+        
+        # In history mode, we might not have base64 images readily available in the doc if they were external links
+        # but create_presentation handles lists of bytes. We'll pass None for images for now or try to extract them.
+        image_bytes_list = []
+        for s in slides:
+            b64 = s.get("image_base64")
+            if b64 and "," in b64:
+                try:
+                    image_bytes_list.append(base64.b64decode(b64.split(",")[1]))
+                except: image_bytes_list.append(None)
+            else:
+                image_bytes_list.append(None)
+        
+        ppt_io, filename = create_presentation(title, slides, image_bytes_list, theme_name=theme)
+        ppt_io.seek(0)
+        
+        return StreamingResponse(
+            ppt_io,
+            media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
     
     filename = getattr(stream, 'filename', 'presentation.pptx')
-    
     return StreamingResponse(
         stream,
         media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",

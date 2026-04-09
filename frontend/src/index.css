@@ -114,7 +114,7 @@ body{width:100%;height:100%;background:var(--bg0);font-family:var(--fb);color:va
 .ni-lbl{font-family:var(--fm);font-size:10px;color:var(--t2);letter-spacing:.07em}
 .ni.act .ni-lbl{color:var(--cy)}
 .ni-b{margin-left:auto;font-size:8px;background:rgba(0,240,255,.1);color:var(--cy);border-radius:3px;padding:1px 5px;font-family:var(--fm)}
-.ndv{height:1px;background:rgba(0,240,255,.1);margin:16px 12px}
+.ndv{height:1px;background:rgba(0, 240, 255, 0.16);margin:20px 12px;flex-shrink:0}
 .sbf{margin-top:auto;padding:24px 12px;text-align:center;font-family:var(--fm);font-size:8px;color:var(--t3);letter-spacing:.1em;line-height:2.2;opacity:.7}
 
 /* MAIN */

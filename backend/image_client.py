@@ -1,12 +1,12 @@
-import os
 import httpx
 import logging
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 
-UNSPLASH_KEY = os.getenv("UNSPLASH_ACCESS_KEY")
-POLLINATIONS_KEY = os.getenv("POLLINATIONS_API_KEY")
-FREEPIK_KEY      = os.getenv("FREEPIK_API_KEY")
+UNSPLASH_KEY = settings.unsplash_access_key
+POLLINATIONS_KEY = settings.pollinations_api_key
+FREEPIK_KEY      = settings.freepik_api_key
 
 
 

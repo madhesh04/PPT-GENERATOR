@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import { useAppStore } from '../store/useAppStore';
 import { adminApi } from '../api/admin';
@@ -8,7 +9,8 @@ import apiClient from '../api/apiClient';
 export default function AdminView() {
   const { user } = useAuthStore();
   const { showToast } = useAppStore();
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'pending' | 'generations'>('overview');
+  const location = useLocation();
+  const navigate = useNavigate();
   
   // States
   const [stats, setStats] = useState<any>(null);
@@ -17,6 +19,15 @@ export default function AdminView() {
   const [generations, setGenerations] = useState<any[]>([]);
   const [globalSettings, setGlobalSettings] = useState({ image_gen: true, speaker_notes: true, model: 'groq' });
   
+  // Resolve active tab from URL
+  const activeTab = location.pathname.includes('/users') ? 'users' : 
+                   location.pathname.includes('/generations') ? 'generations' :
+                   location.pathname.includes('/pending') ? 'pending' : 'overview';
+
+  // Parse userId from query params
+  const queryParams = new URLSearchParams(location.search);
+  const queryUserId = queryParams.get('userId');
+
   // Form states
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newUser, setNewUser] = useState({ full_name: '', email: '', password: '', role: 'user' });
@@ -47,7 +58,9 @@ export default function AdminView() {
         const data = await adminApi.getPendingUsers();
         setPending(data.pending || []);
       } else if (activeTab === 'generations') {
-        const data = await adminApi.getGenerations(selectedUser?.id);
+        // If we have a query parameter, use that as priority
+        const targetUserId = queryUserId || selectedUser?.id;
+        const data = await adminApi.getGenerations(targetUserId);
         setGenerations(data.presentations || []);
       }
     } catch (err: any) {
@@ -72,7 +85,7 @@ export default function AdminView() {
 
   useEffect(() => {
     fetchData();
-  }, [activeTab, selectedUser]);
+  }, [activeTab, location.search, selectedUser]);
 
   const handleCreateUser = async () => {
     try {
@@ -123,6 +136,24 @@ export default function AdminView() {
     } catch (err) { showToast('Update failed'); }
   };
 
+  const handleToggleStatus = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'disabled' : 'active';
+    try {
+      await adminApi.updateUserStatus(id, newStatus);
+      showToast(`USER_STATUS_UPDATED: ${newStatus.toUpperCase()}`);
+      fetchData();
+    } catch (err) { showToast('Update failed'); }
+  };
+
+  const handleToggleRole = async (id: string, currentRole: string) => {
+    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+    try {
+      await adminApi.updateUserRole(id, newRole);
+      showToast(`USER_ROLE_UPDATED: ${newRole.toUpperCase()}`);
+      fetchData();
+    } catch (err) { showToast('Update failed'); }
+  };
+
   const handleDeletePpt = async (id: string) => {
     if (!window.confirm('Delete this presentation?')) return;
     try {
@@ -151,13 +182,7 @@ export default function AdminView() {
       <div className="pey">// SYSTEM_ADMINISTRATION</div>
       <div className="ptl">SKYNET <span className="ac">CONTROL_PANEL</span></div>
       
-      {/* Tab Navigation */}
-      <div className="fx gap8 mb20 mt16">
-        <button className={`btn bs bsm ${activeTab==='overview'?'act':''}`} onClick={()=>setActiveTab('overview')}>OVERVIEW</button>
-        <button className={`btn bs bsm ${activeTab==='users'?'act':''}`} onClick={()=>setActiveTab('users')}>USERS</button>
-        {isMaster && <button className={`btn bs bsm ${activeTab==='pending'?'act':''}`} onClick={()=>setActiveTab('pending')}>PENDING</button>}
-        <button className={`btn bs bsm ${activeTab==='generations'?'act':''}`} onClick={()=>setActiveTab('generations')}>GENERATIONS</button>
-      </div>
+      <div className="mt20"></div>
 
       {activeTab === 'overview' && (
         <>
@@ -246,10 +271,26 @@ export default function AdminView() {
                   <tr key={u.id}>
                     <td className="cy">{u.full_name}</td>
                     <td>{u.email}</td>
-                    <td>{u.role?.toUpperCase()}</td>
-                    <td><span className="hbdg">{u.status?.toUpperCase()}</span></td>
+                    <td>
+                      <span 
+                        className="cy cursor-pointer hover:underline" 
+                        onClick={() => handleToggleRole(u.id, u.role)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {u.role?.toUpperCase()}
+                      </span>
+                    </td>
+                    <td>
+                      <span 
+                        className={`hbdg ${u.status === 'active' ? 'dn' : 'rd'}`}
+                        onClick={() => handleToggleStatus(u.id, u.status)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {u.status?.toUpperCase() || 'ACTIVE'}
+                      </span>
+                    </td>
                     <td className="fx gap6">
-                      <button className="btn bs bsm" onClick={() => { setSelectedUser(u); setActiveTab('generations'); }}>VIEW_PPTS</button>
+                      <button className="btn bs bsm" onClick={() => navigate(`/admin/generations?userId=${u.id}`)}>VIEW_PPTS</button>
                       <button className="btn bs bsm" style={{ color: '#ffb800' }} onClick={() => { setResetTarget(u); setShowResetModal(true); }}>RESET_PWD</button>
                       <button className="btn bs bsm" style={{ color: 'var(--rd)' }} onClick={() => handleDeleteUser(u.id)}>DELETE</button>
                     </td>
@@ -286,13 +327,14 @@ export default function AdminView() {
         <div className="card">
           <div className="fl mb12">// {selectedUser ? `${selectedUser.full_name}'S GENERATIONS` : 'GLOBAL_GENERATIONS'}</div>
           <table className="htbl">
-            <thead><tr><th>TITLE</th><th>BY</th><th>DATE</th><th>ACTIONS</th></tr></thead>
+            <thead><tr><th>TITLE</th><th>MODEL</th><th>BY</th><th>DATE</th><th>ACTIONS</th></tr></thead>
             <tbody>
               {generations.map(p => (
                 <tr key={p.id}>
                   <td className="cy">{p.title}</td>
-                  <td>[{p.generated_by}]</td>
-                  <td>{new Date(p.created_at).toLocaleDateString()}</td>
+                  <td style={{ fontSize: 9 }}>{(p.model_used || 'GROQ').toUpperCase()}</td>
+                  <td>[{p.generated_by || 'Unknown'}]</td>
+                  <td>{p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A'}</td>
                   <td className="fx gap6">
                     <button className="btn bs bsm" onClick={() => handleDownload(p.id, p.title + '.pptx')}>DOWNLOAD</button>
                     <button className="btn bs bsm" style={{ color: 'var(--rd)' }} onClick={() => handleDeletePpt(p.id)}>DELETE</button>
