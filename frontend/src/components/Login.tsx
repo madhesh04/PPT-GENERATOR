@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../AuthContext';
+import { useAuthStore } from '../store/useAuthStore';
 import SkynetBackground from './SkynetBackground';
 
 interface LoginProps {
@@ -8,7 +8,7 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onSwitchToSignup, onLoginSuccess }) => {
-  const { login } = useAuth();
+  const { login } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);

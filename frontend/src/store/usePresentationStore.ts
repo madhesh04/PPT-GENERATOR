@@ -53,9 +53,10 @@ interface PresentationState {
   setGenSteps: (steps: any[]) => void;
   
   resetCreation: () => void;
+  generatePresentation: (token: string, onSuccess: () => void) => Promise<void>;
 }
 
-export const usePresentationStore = create<PresentationState>((set) => ({
+export const usePresentationStore = create<PresentationState>((set, get) => ({
   title: '',
   topics: [],
   context: '',
@@ -80,7 +81,7 @@ export const usePresentationStore = create<PresentationState>((set) => ({
   setContext: (context) => set({ context }),
   setTone: (tone) => set({ tone }),
   setTheme: (theme) => set({ theme }),
-  setNumSlides: (num) => set({ numSlides: num }),
+  setNumSlides: (numSlides) => set({ numSlides }),
   setForceProvider: (forceProvider) => set({ forceProvider }),
   setResult: (result) => set({ result }),
   setSlides: (slides) => set({ slides }),
@@ -99,6 +100,60 @@ export const usePresentationStore = create<PresentationState>((set) => ({
     result: null,
     slides: [],
     errorMsg: '',
-    loading: false
-  })
+    loading: false,
+    genSteps: [
+      { id: 1, label: 'ANALYSING_TOPICS', status: 'pending', desc: '' },
+      { id: 2, label: 'WRITING_CONTENT', status: 'pending', desc: '' },
+      { id: 3, label: 'FETCHING_VISUALS', status: 'pending', desc: '' },
+      { id: 4, label: 'BUILDING_PPTX', status: 'pending', desc: '' }
+    ]
+  }),
+
+  generatePresentation: async (token, onSuccess) => {
+    const { title, topics, numSlides, context, tone, theme, forceProvider } = get();
+    
+    if (!title.trim()) { set({ errorMsg: 'ERROR_001 — Presentation title is required' }); return; }
+    if (!topics.length) { set({ errorMsg: 'ERROR_002 — At least one topic is required' }); return; }
+    
+    set({ errorMsg: '', loading: true });
+    
+    const sDetails = [
+      'Understanding structure and topic distribution…',
+      'Generating slide content with LLM…',
+      'Sourcing images via Pollinations / Unsplash…',
+      'Assembling branded PPTX file…'
+    ];
+
+    try {
+      for(let i=0; i<4; i++) {
+        set(state => ({
+          genSteps: state.genSteps.map((st, idx) => 
+            idx === i ? { ...st, status: 'active', desc: sDetails[i] } : st
+          )
+        }));
+        
+        await new Promise(r => setTimeout(r, 600));
+
+        if (i === 1) {
+          const params = { title, topics, num_slides: numSlides, context, tone, theme, force_provider: forceProvider };
+          const response = await apiClient.post('/generate', params, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = response.data;
+          set({ result: data, slides: data.slides });
+        }
+
+        set(state => ({
+          genSteps: state.genSteps.map((st, idx) => 
+            idx === i ? { ...st, status: 'done', desc: sDetails[i] } : st
+          )
+        }));
+      }
+      
+      onSuccess();
+    } catch (err: any) {
+      const msg = err.response?.data?.detail || 'Generation failed';
+      set({ errorMsg: msg, loading: false });
+    }
+  }
 }));

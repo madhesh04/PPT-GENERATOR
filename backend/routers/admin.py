@@ -261,3 +261,53 @@ async def admin_reject_user(user_id: str, master_user: Annotated[dict, Depends(r
         raise HTTPException(status_code=404, detail="Pending user not found")
     
     return {"status": "success", "message": "User rejected"}
+
+@router.get("/settings")
+async def admin_get_settings(admin_user: Annotated[dict, Depends(require_admin)]):
+    settings_coll = get_settings_collection()
+    config = await settings_coll.find_one({"id": "global_config"})
+    if not config:
+        return {
+            "image_generation_enabled": True,
+            "speaker_notes_enabled": True,
+            "default_model": "groq"
+        }
+    return {
+        "image_generation_enabled": config.get("image_generation_enabled", True),
+        "speaker_notes_enabled": config.get("speaker_notes_enabled", True),
+        "default_model": config.get("default_model", "groq")
+    }
+
+@router.patch("/settings")
+async def admin_update_settings(payload: dict, admin_user: Annotated[dict, Depends(require_admin)]):
+    settings_coll = get_settings_collection()
+    update_data = {}
+    if "image_generation_enabled" in payload:
+        update_data["image_generation_enabled"] = bool(payload["image_generation_enabled"])
+    if "speaker_notes_enabled" in payload:
+        update_data["speaker_notes_enabled"] = bool(payload["speaker_notes_enabled"])
+    if "default_model" in payload:
+        update_data["default_model"] = str(payload["default_model"])
+        
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No valid settings provided")
+        
+    await settings_coll.update_one(
+        {"id": "global_config"},
+        {"$set": update_data},
+        upsert=True
+    )
+    return {"status": "success", "updated": update_data}
+
+# Public read-only route for global settings
+from core.dependencies import get_current_user
+@router.get("/public/settings")
+async def public_get_settings(current_user: Annotated[dict, Depends(get_current_user)]):
+    settings_coll = get_settings_collection()
+    config = await settings_coll.find_one({"id": "global_config"})
+    if not config:
+        return {"image_generation_enabled": True, "default_model": "groq"}
+    return {
+        "image_generation_enabled": config.get("image_generation_enabled", True),
+        "default_model": config.get("default_model", "groq")
+    }
