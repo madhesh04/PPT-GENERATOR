@@ -47,29 +47,36 @@ async def login(credentials: UserLogin):
     
     claimed_role = "user" if credentials.login_as == "employee" else credentials.login_as
     db_role = user.get("role", "user").lower()
-    
+
+    # Role enforcement matrix:
+    # - employee tab  → only db_role == "user" is allowed
+    # - admin tab     → db_role must be "admin" or "master"
+    # - master tab    → db_role must be "master"
+    # An admin / master attempting to log in via the employee tab is explicitly denied.
     is_authorized = False
     if claimed_role == "user":
-        is_authorized = True
+        is_authorized = db_role == "user"
     elif claimed_role == "admin":
-        if db_role in ["admin", "master"]:
-            is_authorized = True
+        is_authorized = db_role in ["admin", "master"]
     elif claimed_role == "master":
-        if db_role == "master":
-            is_authorized = True
-            
+        is_authorized = db_role == "master"
+
     if not is_authorized:
-        raise HTTPException(
-            status_code=403, 
-            detail=f"ACCESS_DENIED — Account role '{db_role}' is insufficient for '{claimed_role}' access"
+        logger.warning(
+            "Role mismatch for %s — claimed '%s', db role is '%s'",
+            credentials.email, claimed_role, db_role
         )
-    
-    if db_role == "admin":
-        user_status = user.get("status", "active")
-        if user_status == "pending":
-            raise HTTPException(status_code=403, detail="ACCESS_PENDING — Awaiting master account approval")
-        if user_status == "rejected":
-            raise HTTPException(status_code=403, detail="ACCESS_REJECTED — Account access has been denied")
+        raise HTTPException(
+            status_code=403,
+            detail=f"ACCESS_DENIED — Account role '{db_role.upper()}' is not permitted on the '{credentials.login_as.upper()}' portal"
+        )
+
+    # Status check applies to ALL roles, not just admins
+    user_status = user.get("status", "active")
+    if user_status == "pending":
+        raise HTTPException(status_code=403, detail="ACCESS_PENDING — Awaiting master account approval")
+    if user_status in ("rejected", "disabled", "suspended"):
+        raise HTTPException(status_code=403, detail="ACCESS_DENIED — Account has been deactivated")
     
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     
