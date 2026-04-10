@@ -6,12 +6,11 @@ import { usePresentationStore } from '../../store/usePresentationStore';
 
 export default function Sidebar() {
   const { user } = useAuthStore();
-  const { sidebarCollapsed, setSidebarCollapsed } = useAppStore();
+  const { sidebarCollapsed } = useAppStore();
   const { slides } = usePresentationStore();
   const [profileDropdown, setProfileDropdown] = useState(false);
 
   const isAdminRole = user?.role?.toUpperCase() === 'ADMIN' || user?.role?.toUpperCase() === 'MASTER';
-  const isMaster = user?.role?.toUpperCase() === 'MASTER';
 
   // Profile dropdown outside click handler
   useEffect(() => {

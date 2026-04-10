@@ -8,7 +8,7 @@ import ThreeBackground from '../ThreeBackground';
 
 export default function MainLayout() {
   const { isAuthenticated, loading, user, logout } = useAuthStore();
-  const { sidebarCollapsed, toastData, timeStr, setTimeStr, setGlobalSettings, setSavedPresentations } = useAppStore();
+  const { sidebarCollapsed, setSidebarCollapsed, toastData, timeStr, setTimeStr, setGlobalSettings } = useAppStore();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();

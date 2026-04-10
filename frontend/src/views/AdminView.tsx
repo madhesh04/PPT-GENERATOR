@@ -34,7 +34,6 @@ export default function AdminView() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetTarget, setResetTarget] = useState<any>(null);
   const [resetPassword, setResetPassword] = useState('');
-  const [selectedUser, setSelectedUser] = useState<any>(null);
 
   const isMaster = user?.role?.toUpperCase() === 'MASTER';
 
@@ -58,9 +57,7 @@ export default function AdminView() {
         const data = await adminApi.getPendingUsers();
         setPending(data.pending || []);
       } else if (activeTab === 'generations') {
-        // If we have a query parameter, use that as priority
-        const targetUserId = queryUserId || selectedUser?.id;
-        const data = await adminApi.getGenerations(targetUserId);
+        const data = await adminApi.getGenerations(queryUserId || undefined);
         setGenerations(data.presentations || []);
       }
     } catch (err: any) {
@@ -85,7 +82,7 @@ export default function AdminView() {
 
   useEffect(() => {
     fetchData();
-  }, [activeTab, location.search, selectedUser]);
+  }, [activeTab, location.search]);
 
   const handleCreateUser = async () => {
     try {
@@ -325,7 +322,7 @@ export default function AdminView() {
 
       {activeTab === 'generations' && (
         <div className="card">
-          <div className="fl mb12">// {selectedUser ? `${selectedUser.full_name}'S GENERATIONS` : 'GLOBAL_GENERATIONS'}</div>
+          <div className="fl mb12">// {queryUserId ? `${users.find(u => u.id === queryUserId)?.full_name || 'USER'}'S GENERATIONS` : 'GLOBAL_GENERATIONS'}</div>
           <table className="htbl">
             <thead><tr><th>TITLE</th><th>MODEL</th><th>BY</th><th>DATE</th><th>ACTIONS</th></tr></thead>
             <tbody>
