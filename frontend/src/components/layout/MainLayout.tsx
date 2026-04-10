@@ -3,12 +3,11 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useAppStore } from '../../store/useAppStore';
-import { adminApi } from '../../api/admin';
 import ThreeBackground from '../ThreeBackground';
 
 export default function MainLayout() {
   const { isAuthenticated, loading, user, logout } = useAuthStore();
-  const { sidebarCollapsed, setSidebarCollapsed, toastData, timeStr, setTimeStr, setGlobalSettings } = useAppStore();
+  const { sidebarCollapsed, setSidebarCollapsed, toastData, timeStr, setTimeStr } = useAppStore();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -21,23 +20,7 @@ export default function MainLayout() {
     }
   }, [isAuthenticated, loading, navigate, location]);
 
-  // Sync Global Settings & History
-  useEffect(() => {
-    if (isAuthenticated) {
-      const sync = async () => {
-        try {
-          const settings = await adminApi.getPublicSettings();
-          setGlobalSettings({
-            globalImageGen: settings.image_generation_enabled,
-            globalDefaultModel: settings.default_model
-          });
-        } catch (err) { console.error("Global sync failed", err); }
-      };
-      sync();
-    }
-  }, [isAuthenticated, setGlobalSettings]);
-
-  // Click outside listener
+  // Click outside listener for profile dropdown
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {

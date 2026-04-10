@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Annotated, Optional
 from datetime import datetime, timedelta
 from bson import ObjectId
+from bson.errors import InvalidId
 import logging
-from core.dependencies import require_admin, require_master
+from core.dependencies import require_admin, require_master, get_current_user
 from db.client import (
     get_users_collection, 
     get_presentations_collection, 
@@ -88,7 +89,7 @@ async def admin_delete_presentation(presentation_id: str, admin_user: Annotated[
     presentations_coll = get_presentations_collection()
     try:
         obj_id = ObjectId(presentation_id)
-    except:
+    except InvalidId:
         raise HTTPException(status_code=400, detail="Invalid presentation ID")
         
     result = await presentations_coll.delete_one({"_id": obj_id})
@@ -145,7 +146,7 @@ async def admin_update_user_role(user_id: str, payload: UpdateRoleRequest, admin
         
     try:
         obj_id = ObjectId(user_id)
-    except:
+    except InvalidId:
         raise HTTPException(status_code=400, detail="Invalid user ID")
         
     result = await users_coll.update_one({"_id": obj_id}, {"$set": {"role": payload.role}})
@@ -159,7 +160,7 @@ async def admin_update_user_status(user_id: str, payload: UpdateStatusRequest, a
     users_coll = get_users_collection()
     try:
         obj_id = ObjectId(user_id)
-    except:
+    except InvalidId:
         raise HTTPException(status_code=400, detail="Invalid user ID")
         
     result = await users_coll.update_one({"_id": obj_id}, {"$set": {"status": payload.status}})
@@ -173,7 +174,7 @@ async def admin_update_user_password(user_id: str, payload: UpdatePasswordReques
     users_coll = get_users_collection()
     try:
         obj_id = ObjectId(user_id)
-    except:
+    except InvalidId:
         raise HTTPException(status_code=400, detail="Invalid user ID")
         
     hashed_password = get_password_hash(payload.password)
@@ -189,7 +190,7 @@ async def admin_get_user_presentations(user_id: str, admin_user: Annotated[dict,
     presentations_coll = get_presentations_collection()
     try:
         obj_id = ObjectId(user_id)
-    except:
+    except InvalidId:
         raise HTTPException(status_code=400, detail="Invalid user ID")
         
     cursor = presentations_coll.aggregate([
@@ -226,7 +227,7 @@ async def admin_delete_user(user_id: str, admin_user: Annotated[dict, Depends(re
     presentations_coll = get_presentations_collection()
     try:
         obj_id = ObjectId(user_id)
-    except:
+    except InvalidId:
         raise HTTPException(status_code=400, detail="Invalid user ID")
         
     if str(admin_user.get("user_id")) == user_id:
@@ -288,7 +289,7 @@ async def admin_approve_user(user_id: str, master_user: Annotated[dict, Depends(
     users_coll = get_users_collection()
     try:
         obj_id = ObjectId(user_id)
-    except:
+    except InvalidId:
         raise HTTPException(status_code=400, detail="Invalid user ID")
     
     result = await users_coll.update_one(
@@ -305,7 +306,7 @@ async def admin_reject_user(user_id: str, master_user: Annotated[dict, Depends(r
     users_coll = get_users_collection()
     try:
         obj_id = ObjectId(user_id)
-    except:
+    except InvalidId:
         raise HTTPException(status_code=400, detail="Invalid user ID")
     
     result = await users_coll.update_one(
@@ -354,8 +355,6 @@ async def admin_update_settings(payload: dict, admin_user: Annotated[dict, Depen
     )
     return {"status": "success", "updated": update_data}
 
-# Public read-only route for global settings
-from core.dependencies import get_current_user
 @router.get("/public/settings")
 async def public_get_settings(current_user: Annotated[dict, Depends(get_current_user)]):
     settings_coll = get_settings_collection()

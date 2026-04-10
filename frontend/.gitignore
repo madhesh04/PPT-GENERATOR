@@ -23,3 +23,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Migration / backup artifacts — never commit these
+*.temp
+*.bak

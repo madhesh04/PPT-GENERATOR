@@ -21,6 +21,21 @@ export interface GenerateResponse {
   provider?: string;
 }
 
+// Typed interface for generation pipeline steps
+export interface GenStep {
+  id: number;
+  label: string;
+  status: 'pending' | 'active' | 'done' | 'error';
+  desc: string;
+}
+
+const DEFAULT_GEN_STEPS: GenStep[] = [
+  { id: 1, label: 'ANALYSING_TOPICS', status: 'pending', desc: '' },
+  { id: 2, label: 'WRITING_CONTENT', status: 'pending', desc: '' },
+  { id: 3, label: 'FETCHING_VISUALS', status: 'pending', desc: '' },
+  { id: 4, label: 'BUILDING_PPTX', status: 'pending', desc: '' },
+];
+
 interface PresentationState {
   // Config
   title: string;
@@ -34,7 +49,7 @@ interface PresentationState {
   // Pipeline
   loading: boolean;
   errorMsg: string;
-  genSteps: any[];
+  genSteps: GenStep[];
   result: GenerateResponse | null;
   slides: SlideData[];
 
@@ -50,10 +65,11 @@ interface PresentationState {
   setSlides: (slides: SlideData[]) => void;
   setErrorMsg: (msg: string) => void;
   setLoading: (loading: boolean) => void;
-  setGenSteps: (steps: any[]) => void;
+  setGenSteps: (steps: GenStep[]) => void;
   
   resetCreation: () => void;
-  generatePresentation: (token: string, onSuccess: () => void) => Promise<void>;
+  // token parameter removed — apiClient interceptor handles Authorization header automatically
+  generatePresentation: (onSuccess: () => void) => Promise<void>;
 }
 
 export const usePresentationStore = create<PresentationState>((set, get) => ({
@@ -67,12 +83,7 @@ export const usePresentationStore = create<PresentationState>((set, get) => ({
   
   loading: false,
   errorMsg: '',
-  genSteps: [
-    { id: 1, label: 'ANALYSING_TOPICS', status: 'pending', desc: '' },
-    { id: 2, label: 'WRITING_CONTENT', status: 'pending', desc: '' },
-    { id: 3, label: 'FETCHING_VISUALS', status: 'pending', desc: '' },
-    { id: 4, label: 'BUILDING_PPTX', status: 'pending', desc: '' }
-  ],
+  genSteps: DEFAULT_GEN_STEPS,
   result: null,
   slides: [],
 
@@ -101,15 +112,10 @@ export const usePresentationStore = create<PresentationState>((set, get) => ({
     slides: [],
     errorMsg: '',
     loading: false,
-    genSteps: [
-      { id: 1, label: 'ANALYSING_TOPICS', status: 'pending', desc: '' },
-      { id: 2, label: 'WRITING_CONTENT', status: 'pending', desc: '' },
-      { id: 3, label: 'FETCHING_VISUALS', status: 'pending', desc: '' },
-      { id: 4, label: 'BUILDING_PPTX', status: 'pending', desc: '' }
-    ]
+    genSteps: DEFAULT_GEN_STEPS,
   }),
 
-  generatePresentation: async (token, onSuccess) => {
+  generatePresentation: async (onSuccess) => {
     const { title, topics, numSlides, context, tone, theme, forceProvider } = get();
     
     if (!title.trim()) { set({ errorMsg: 'ERROR_001 — Presentation title is required' }); return; }
@@ -125,7 +131,7 @@ export const usePresentationStore = create<PresentationState>((set, get) => ({
     ];
 
     try {
-      for(let i=0; i<4; i++) {
+      for (let i = 0; i < 4; i++) {
         set(state => ({
           genSteps: state.genSteps.map((st, idx) => 
             idx === i ? { ...st, status: 'active', desc: sDetails[i] } : st
@@ -136,9 +142,8 @@ export const usePresentationStore = create<PresentationState>((set, get) => ({
 
         if (i === 1) {
           const params = { title, topics, num_slides: numSlides, context, tone, theme, force_provider: forceProvider };
-          const response = await apiClient.post('/generate', params, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
+          // apiClient interceptor automatically attaches Authorization: Bearer <token>
+          const response = await apiClient.post('/generate', params);
           const data = response.data;
           set({ result: data, slides: data.slides });
         }

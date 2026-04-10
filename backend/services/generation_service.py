@@ -30,6 +30,45 @@ async def get_presentation_cache(body_title: str, topics: list, tone: str, theme
     cached = await presentations_collection.find_one({"content_hash": content_hash})
     return cached, content_hash
 
+
+async def handle_cache_hit(cached: dict, content_hash: str, current_user: dict, start_time: float) -> dict:
+    """
+    Handles the cache-hit path: clones the cached presentation for the requesting user,
+    writes a generation log, and returns the response dict.
+    Kept here in the service layer to avoid DB writes leaking into the router.
+    """
+    presentations_collection = get_presentations_collection()
+    logs_collection = get_generation_logs_collection()
+    user_id = ObjectId(current_user["user_id"])
+
+    new_doc = {
+        "user_id": user_id,
+        "title": cached["title"],
+        "topics": cached["topics"],
+        "content_hash": content_hash,
+        "slides": cached["slides"],
+        "created_at": datetime.utcnow(),
+        "theme": cached.get("theme", "neon"),
+    }
+    res = await presentations_collection.insert_one(new_doc)
+
+    await logs_collection.insert_one({
+        "user_id": str(user_id),
+        "presentation_id": res.inserted_id,
+        "action": "generate",
+        "status": "cache_hit",
+        "execution_time_ms": int((time.time() - start_time) * 1000),
+        "timestamp": datetime.utcnow(),
+    })
+
+    return {
+        "title": new_doc["title"],
+        "slides": new_doc["slides"],
+        "theme": new_doc["theme"],
+        "token": str(res.inserted_id),
+        "filename": f"{cached['title'].replace(' ', '_')}.pptx",
+    }
+
 async def run_generation_pipeline(body, current_user, start_time: float, content_hash: str):
     presentations_collection = get_presentations_collection()
     logs_collection = get_generation_logs_collection()

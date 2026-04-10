@@ -19,13 +19,9 @@ export default function AdminView() {
   const [generations, setGenerations] = useState<any[]>([]);
   const [globalSettings, setGlobalSettings] = useState({ image_gen: true, speaker_notes: true, model: 'groq' });
   
-  // Resolve active tab from URL
-  const activeTab = location.pathname.includes('/users') ? 'users' : 
-                   location.pathname.includes('/generations') ? 'generations' :
-                   location.pathname.includes('/pending') ? 'pending' : 'overview';
-
-  // Parse userId from query params
+  // Resolve active tab from ?tab= query param — avoids fragile pathname.includes() matching
   const queryParams = new URLSearchParams(location.search);
+  const activeTab = queryParams.get('tab') || 'overview';
   const queryUserId = queryParams.get('userId');
 
   // Form states
@@ -82,7 +78,7 @@ export default function AdminView() {
 
   useEffect(() => {
     fetchData();
-  }, [activeTab, location.search]);
+  }, [activeTab, queryUserId]);
 
   const handleCreateUser = async () => {
     try {
@@ -287,7 +283,7 @@ export default function AdminView() {
                       </span>
                     </td>
                     <td className="fx gap6">
-                      <button className="btn bs bsm" onClick={() => navigate(`/admin/generations?userId=${u.id}`)}>VIEW_PPTS</button>
+                      <button className="btn bs bsm" onClick={() => navigate(`/admin?tab=generations&userId=${u.id}`)}>VIEW_PPTS</button>
                       <button className="btn bs bsm" style={{ color: '#ffb800' }} onClick={() => { setResetTarget(u); setShowResetModal(true); }}>RESET_PWD</button>
                       <button className="btn bs bsm" style={{ color: 'var(--rd)' }} onClick={() => handleDeleteUser(u.id)}>DELETE</button>
                     </td>

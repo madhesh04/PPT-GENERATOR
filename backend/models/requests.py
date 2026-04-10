@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import List, Optional
+from typing import List, Optional, Literal
+
 
 class PresentationRequest(BaseModel):
     title:     str        = Field(..., min_length=1, max_length=200)
@@ -24,6 +25,7 @@ class PresentationRequest(BaseModel):
         allowed = {"professional", "executive", "technical", "academic", "sales", "simple"}
         return v.lower() if v.lower() in allowed else "professional"
 
+
 class SlideData(BaseModel):
     title: str
     content: List[str]
@@ -33,10 +35,12 @@ class SlideData(BaseModel):
     image_query: Optional[str] = None
     image_base64: Optional[str] = None
 
+
 class ExportRequest(BaseModel):
     title: str
     slides: List[SlideData]
     theme: str = "neon"
+
 
 class RegenerateSlideRequest(BaseModel):
     title: str
@@ -44,20 +48,23 @@ class RegenerateSlideRequest(BaseModel):
     tone: str
     existing_titles: List[str]
 
+
 class RegenerateImageRequest(BaseModel):
     query: str
+
 
 class UserRegister(BaseModel):
     email: str
     password: str
     full_name: str
-    # role removed in Phase 2 but I'll do it now as requested in the Implementation Plan Quick Wins
-    # role: Optional[str] = "user" 
+    # role is intentionally excluded — users cannot self-assign roles
+
 
 class UserLogin(BaseModel):
     email: str
     password: str
     login_as: str
+
 
 class AdminCreateUser(BaseModel):
     email: str
@@ -65,11 +72,14 @@ class AdminCreateUser(BaseModel):
     full_name: str
     role: str = "user"
 
+
 class UpdateRoleRequest(BaseModel):
-    role: str # Literal["user", "admin"] would be better
+    role: Literal["user", "admin"]
+
 
 class UpdatePasswordRequest(BaseModel):
-    password: str
+    password: str = Field(..., min_length=8, max_length=128)
+
 
 class UpdateStatusRequest(BaseModel):
-    status: str # Literal["active", "suspended", "pending"]
+    status: Literal["active", "suspended", "pending"]

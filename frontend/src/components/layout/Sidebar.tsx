@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useAppStore } from '../../store/useAppStore';
 import { usePresentationStore } from '../../store/usePresentationStore';
@@ -8,6 +8,7 @@ export default function Sidebar() {
   const { user } = useAuthStore();
   const { sidebarCollapsed } = useAppStore();
   const { slides } = usePresentationStore();
+  const location = useLocation();
   const [profileDropdown, setProfileDropdown] = useState(false);
 
   const isAdminRole = user?.role?.toUpperCase() === 'ADMIN' || user?.role?.toUpperCase() === 'MASTER';
@@ -64,15 +65,24 @@ export default function Sidebar() {
           <div className="ndv"></div>
           <div className="ns">
             <div className="nsl">// ADMIN</div>
-            <NavLink to="/admin" end className={({ isActive }) => `ni ${isActive ? 'act' : ''}`}>
+            <NavLink
+              to="/admin"
+              className={({ isActive }) => `ni ${isActive && !location.search ? 'act' : ''}`}
+            >
               <svg className="ni-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
               <span className="ni-lbl">ADMIN_PANEL</span>
             </NavLink>
-            <NavLink to="/admin/users" className={({ isActive }) => `ni ${isActive ? 'act' : ''}`}>
+            <NavLink
+              to="/admin?tab=users"
+              className={() => `ni ${location.pathname === '/admin' && location.search === '?tab=users' ? 'act' : ''}`}
+            >
               <svg className="ni-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
               <span className="ni-lbl">USER_MANAGEMENT</span>
             </NavLink>
-            <NavLink to="/admin/generations" className={({ isActive }) => `ni ${isActive ? 'act' : ''}`}>
+            <NavLink
+              to="/admin?tab=generations"
+              className={() => `ni ${location.pathname === '/admin' && location.search === '?tab=generations' ? 'act' : ''}`}
+            >
               <svg className="ni-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
               <span className="ni-lbl">GLOBAL_GENERATIONS</span>
             </NavLink>

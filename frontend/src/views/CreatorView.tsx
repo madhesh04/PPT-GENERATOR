@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePresentationStore } from '../store/usePresentationStore';
-import { useAuthStore } from '../store/useAuthStore';
 import { useAppStore } from '../store/useAppStore';
 
 export default function CreatorView() {
@@ -17,14 +16,12 @@ export default function CreatorView() {
     generatePresentation
   } = usePresentationStore();
 
-  const { token } = useAuthStore();
   const { showToast } = useAppStore();
   const [topicIn, setTopicIn] = useState('');
   const navigate = useNavigate();
 
   const handleStartGeneration = async () => {
-    if (!token) return;
-    await generatePresentation(token, () => {
+    await generatePresentation(() => {
       showToast('SUCCESS — Deck ready · Navigating to preview…', 2500);
       setTimeout(() => {
         navigate('/preview');

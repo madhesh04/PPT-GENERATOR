@@ -1,9 +1,12 @@
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/useAuthStore';
+import { useAppStore } from './store/useAppStore';
+import { adminApi } from './api/admin';
 
-// Layouts
+// Layouts & Guards
 import MainLayout from './components/layout/MainLayout';
+import { AdminRoute } from './components/auth/AdminRoute';
 
 // Views
 import DashboardView from './views/DashboardView';
@@ -15,11 +18,24 @@ import AdminView from './views/AdminView';
 import AuthView from './views/AuthView';
 
 export default function App() {
-  const { initialize, loading } = useAuthStore();
+  const { initialize, loading, isAuthenticated } = useAuthStore();
+  const { setGlobalSettings } = useAppStore();
 
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  // Fetch global settings ONCE after login — not on every navigation
+  useEffect(() => {
+    if (isAuthenticated) {
+      adminApi.getPublicSettings()
+        .then((data) => setGlobalSettings({
+          globalImageGen: data.image_generation_enabled,
+          globalDefaultModel: data.default_model,
+        }))
+        .catch(() => {});
+    }
+  }, [isAuthenticated, setGlobalSettings]);
 
   if (loading) {
     return (
@@ -44,11 +60,14 @@ export default function App() {
         <Route path="/preview" element={<PreviewView />} />
         <Route path="/history" element={<HistoryView />} />
         <Route path="/settings" element={<SettingsView />} />
-        
-        {/* Admin Routes */}
-        <Route path="/admin" element={<AdminView />} />
-        <Route path="/admin/users" element={<AdminView />} />
-        <Route path="/admin/generations" element={<AdminView />} />
+
+        {/* Admin Routes — guarded by role. Tab driven by ?tab= query param */}
+        <Route element={<AdminRoute />}>
+          <Route path="/admin" element={<AdminView />} />
+          {/* Redirect legacy sub-paths to query-param equivalents */}
+          <Route path="/admin/users" element={<Navigate to="/admin?tab=users" replace />} />
+          <Route path="/admin/generations" element={<Navigate to="/admin?tab=generations" replace />} />
+        </Route>
       </Route>
 
       {/* Fallback */}
