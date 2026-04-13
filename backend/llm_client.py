@@ -1,3 +1,4 @@
+import re
 import os
 import json
 import asyncio
@@ -20,18 +21,20 @@ nvidia_client = None
 if settings.nvidia_api_key and settings.nvidia_api_key.strip() != "your_nvidia_api_key_here":
     nvidia_client = OpenAI(base_url=NVIDIA_BASE_URL, api_key=settings.nvidia_api_key)
 
+JSON_REPAIR_LIMIT = 20 # Max brackets to try adding
+
 # Tone Configurations
 TONE_CONFIG = {
     "professional": {
-        "temperature": 0.5,
+        "temperature": 0.25,
         "instruction": "Maintain a polished, authoritative corporate tone. Use clear, objective language. Focus on strategic value, ROI, and professional excellence."
     },
     "creative": {
-        "temperature": 0.8,
+        "temperature": 0.5,
         "instruction": "Use an engaging, visionary, and dynamic tone. Emphasize innovation and unique perspectives. Feel free to use metaphors and inspiring language."
     },
     "technical": {
-        "temperature": 0.3,
+        "temperature": 0.2,
         "instruction": "Prioritize depth, accuracy, and engineering rigor. Use precise terminology. Explain 'how' things work internally. Include code logic where appropriate."
     },
     "educational": {
@@ -62,7 +65,7 @@ def is_technical_topic(title: str, topics: list) -> bool:
     return any(kw in text for kw in TECHNICAL_KEYWORDS)
 
 
-def _build_prompt(title: str, topics: list, num_slides: int, context: str, tone_instruction: str, include_notes: bool = True) -> tuple[str, str]:
+def _build_prompt(title: str, topics: list, num_slides: int, context: str, tone_instruction: str, include_notes: bool = True, include_images: bool = True) -> tuple[str, str]:
     """Returns (system_prompt, user_prompt)."""
     notes_instruction = """
 ═══════════════════════════
@@ -118,10 +121,9 @@ For technical, programming, or academic topics, some slides SHOULD include a cod
 - For non-code slides, set both "code" and "language" to null.
 
 ═══════════════════════════
-IMAGE SELECTION (SELECTIVE)
+IMAGE SELECTION
 ═══════════════════════════
-NOT every slide needs an image. Only assign an image_query to slides where a visual genuinely enhances understanding.
-Typically 2–3 slides per deck should have images.
+{ "NOT every slide needs an image. Only assign an image_query to slides where a visual genuinely enhances understanding. Typically 2–3 slides per deck should have images." if include_images else "CRITICAL: Image generation is DISABLED for this session. You MUST set the 'image_query' field to null for ALL slides without exception." }
 
 OUTPUT FORMAT: Return ONLY a valid raw JSON array. No markdown, no code fences.
 
@@ -144,7 +146,7 @@ Return a JSON array of exactly {num_slides} objects. Each object MUST have:
 - "code": string or null
 - "language": string or null
 - "notes": { "presenter notes" if include_notes else "empty string" }
-- "image_query": 3-6 word image search phrase or null
+- "image_query": { "3-6 word image search phrase or null" if include_images else "MUST BE null" }
 
 JSON only. Start immediately with ["""
 
@@ -152,18 +154,64 @@ JSON only. Start immediately with ["""
 
 
 def _parse_and_validate(raw: str) -> list:
-    """Parse raw JSON string and validate slide structure."""
+    """Parse raw JSON string with aggressive recovery for truncated or malformed content."""
     raw = raw.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"): raw = raw[4:]
     
-    try:
-        data = json.loads(raw.strip())
-    except Exception as e:
-        logger.error(f"Failed to parse LLM JSON: {e}")
-        raise
+    # 1. Advanced Extraction: Find the outermost JSON array boundaries
+    start_idx = raw.find('[')
+    end_idx = raw.rfind(']')
+    
+    if start_idx != -1:
+        if end_idx != -1 and end_idx > start_idx:
+            raw = raw[start_idx:end_idx+1]
+        else:
+            # Handle truncation (missing closing bracket)
+            raw = raw[start_idx:]
+    
+    # 2. Pre-processing: Escape literal newlines within JSON strings
+    # This specifically fixes the "Expecting value" error caused by raw newlines in strings
+    def _escape_interior_newlines(match):
+        return match.group(0).replace('\n', '\\n').replace('\r', '')
+    
+    # Robustly find double-quoted strings and escape their newlines
+    # Using a regex that handles escaped quotes: ((?:[^"\\]|\\.)*)
+    raw = re.sub(r'"((?:[^"\\]|\\.)*)"', _escape_interior_newlines, raw, flags=re.DOTALL)
+    
+    raw = raw.strip()
+    if not raw:
+        return []
 
+    # 2. Main Parsing Attempt
+    try:
+        return json.loads(raw)
+    except Exception:
+        # 3. Emergency Syntax Cleaning (Trailing commas)
+        try:
+            repaired = re.sub(r',\s*([\]}])', r'\1', raw)
+            return json.loads(repaired)
+        except Exception:
+            # 4. Truncation Recovery: Iteratively close brackets
+            # This handles cases where the LLM stops mid-generation
+            test_raw = repaired if 'repaired' in locals() else raw
+            for i in range(JSON_REPAIR_LIMIT):
+                try:
+                    # Try adding closing brackets in common patterns
+                    for suffix in ["]", "}]", "}}]"]:
+                        try:
+                            return json.loads(test_raw + (suffix * (i+1)) if i > 0 else test_raw + suffix)
+                        except: continue
+                except:
+                    pass
+            
+            logger.error(f"Failed to parse LLM JSON after all recovery attempts.")
+            # Final Debugging Payload: Log boundaries to terminal for inspection
+            logger.debug(f"START-CAP (First 500): {raw[:500]}")
+            logger.debug(f"END-CAP (Last 500): {raw[-500:]}")
+            raise
+
+
+def _validate_data(data: list) -> list:
+    """Standardizes slide object structure."""
     validated = []
     if isinstance(data, list):
         for item in data:
@@ -187,37 +235,45 @@ def _parse_and_validate(raw: str) -> list:
     return validated
 
 
-def _call_groq(title: str, topics: list, num_slides: int = 5, context: str = "", tone: str = "professional", include_notes: bool = True) -> list:
+def _call_groq(title: str, topics: list, num_slides: int = 5, context: str = "", tone: str = "professional", include_notes: bool = True, include_images: bool = True) -> list:
     """Synchronous Groq call with retry on JSON failure."""
     client = Groq(api_key=settings.groq_api_key)
     
     tone_cfg = TONE_CONFIG.get(tone.lower(), TONE_CONFIG["professional"])
-    system_prompt, user_prompt = _build_prompt(title, topics, num_slides, context, tone_cfg["instruction"], include_notes=include_notes)
+    system_prompt, user_prompt = _build_prompt(
+        title, topics, num_slides, context, tone_cfg["instruction"], 
+        include_notes=include_notes, include_images=include_images
+    )
 
     completion = client.chat.completions.create(
         messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
         model=GROQ_MODEL,
         temperature=tone_cfg["temperature"],
-        max_tokens=6000,
+        max_tokens=8192,
     )
-    return _parse_and_validate(completion.choices[0].message.content.strip())
+    data = _parse_and_validate(completion.choices[0].message.content.strip())
+    return _validate_data(data)
 
 
-def _call_nvidia(title: str, topics: list, num_slides: int = 5, context: str = "", tone: str = "professional", include_notes: bool = True) -> list:
+def _call_nvidia(title: str, topics: list, num_slides: int = 5, context: str = "", tone: str = "professional", include_notes: bool = True, include_images: bool = True) -> list:
     """Synchronous NVIDIA NIM call."""
     if not nvidia_client:
         raise RuntimeError("NVIDIA NIM client is not configured.")
 
     tone_cfg = TONE_CONFIG.get(tone.lower(), TONE_CONFIG["technical"])
-    system_prompt, user_prompt = _build_prompt(title, topics, num_slides, context, tone_cfg["instruction"], include_notes=include_notes)
+    system_prompt, user_prompt = _build_prompt(
+        title, topics, num_slides, context, tone_cfg["instruction"], 
+        include_notes=include_notes, include_images=include_images
+    )
 
     completion = nvidia_client.chat.completions.create(
         messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
         model=NVIDIA_MODEL,
         temperature=min(tone_cfg["temperature"], 0.35),
-        max_tokens=6000,
+        max_tokens=8192,
     )
-    return _parse_and_validate(completion.choices[0].message.content.strip())
+    data = _parse_and_validate(completion.choices[0].message.content.strip())
+    return _validate_data(data)
 
 
 async def generate_slide_content(
@@ -226,14 +282,15 @@ async def generate_slide_content(
     num_slides: int = 5,
     context: str = "",
     tone: str = "professional",
-    force_provider: str | None = None,
+    provider: str | None = None,
     include_notes: bool = True,
+    include_images: bool = True,
 ) -> tuple[list, str, str]:
     """Async entry point for slide generation with automatic provider routing."""
     use_nvidia = False
-    if force_provider == "nvidia":
+    if provider == "nvidia":
         use_nvidia = True
-    elif force_provider == "groq":
+    elif provider == "groq":
         use_nvidia = False
     else:
         use_nvidia = nvidia_client is not None and is_technical_topic(title, topics)
@@ -243,15 +300,18 @@ async def generate_slide_content(
             logger.info(f"Routing to NVIDIA NIM ({NVIDIA_MODEL})")
             # Phase 2: Wrap primary provider in a sub-timeout to allow fallback time
             slides = await asyncio.wait_for(
-                asyncio.to_thread(_call_nvidia, title, topics, num_slides, context, tone, include_notes=include_notes),
+                asyncio.to_thread(_call_nvidia, title, topics, num_slides, context, tone, include_notes=include_notes, include_images=include_images),
+                timeout=120.0
+            )
+        except (asyncio.TimeoutError, Exception) as e:
+            logger.warning(f"NVIDIA NIM failed or timed out ({e}). Falling back to Groq.")
+            logger.info(f"Using Groq ({GROQ_MODEL})")
+            slides = await asyncio.wait_for(
+                asyncio.to_thread(_call_groq, title, topics, num_slides, context, tone, include_notes=include_notes, include_images=include_images),
                 timeout=70.0
             )
-            return slides, NVIDIA_MODEL, "nvidia_nim"
-        except asyncio.TimeoutError:
-            logger.warning("NVIDIA NIM timed out. Falling back to Groq.")
-        except Exception as e:
-            logger.warning(f"NVIDIA NIM failed: {e}. Falling back to Groq.")
+        return slides, NVIDIA_MODEL, "nvidia_nim"
 
     logger.info(f"Using Groq ({GROQ_MODEL})")
-    slides = await asyncio.to_thread(_call_groq, title, topics, num_slides, context, tone, include_notes=include_notes)
+    slides = await asyncio.to_thread(_call_groq, title, topics, num_slides, context, tone, include_notes=include_notes, include_images=include_images)
     return slides, GROQ_MODEL, "groq"

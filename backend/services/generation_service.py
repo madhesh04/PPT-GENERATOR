@@ -10,6 +10,7 @@ from core.config import settings
 from db.client import get_presentations_collection, get_generation_logs_collection, get_settings_collection
 from llm_client import generate_slide_content
 from image_client import fetch_slide_image
+from core.utils import sanitize_filename
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +68,7 @@ async def handle_cache_hit(cached: dict, content_hash: str, current_user: dict, 
         "slides": new_doc["slides"],
         "theme": new_doc["theme"],
         "token": str(res.inserted_id),
-        "filename": f"{cached['title'].replace(' ', '_')}.pptx",
+        "filename": f"{sanitize_filename(cached['title'])}.pptx",
     }
 
 async def run_generation_pipeline(body, current_user, start_time: float, content_hash: str):
@@ -82,17 +83,21 @@ async def run_generation_pipeline(body, current_user, start_time: float, content
     if not global_config:
         global_config = {"image_generation_enabled": True, "speaker_notes_enabled": True, "default_model": "groq"}
 
-    images_enabled = global_config.get("image_generation_enabled", True)
+    global_images_enabled = global_config.get("image_generation_enabled", True)
     notes_enabled = global_config.get("speaker_notes_enabled", True)
     default_model_choice = global_config.get("default_model", "groq")
+
+    # Combine Global Admin setting with User Preference
+    images_enabled = global_images_enabled and body.include_images
 
     # Phase 2 Fix: Wrap LLM call with timeout
     try:
         presentation_data, model_used, provider = await asyncio.wait_for(
             generate_slide_content(
                 body.title, body.topics, body.num_slides, body.context, body.tone,
-                force_provider=body.force_provider or default_model_choice,
-                include_notes=notes_enabled
+                provider=body.force_provider or default_model_choice,
+                include_notes=notes_enabled,
+                include_images=images_enabled
             ),
             timeout=90.0
         )
@@ -101,7 +106,7 @@ async def run_generation_pipeline(body, current_user, start_time: float, content
         raise HTTPException(status_code=504, detail="AI generation timed out. Please try again.")
 
     if not presentation_data:
-        raise HTTPException(status_code=500, detail="Failed to generate slide content from AI.")
+        raise HTTPException(status_code=500, detail="PIPELINE_ORCHESTRATION_FAILURE")
 
     async def _maybe_fetch_image(slide):
         if not images_enabled:
@@ -126,13 +131,6 @@ async def run_generation_pipeline(body, current_user, start_time: float, content
         else:
             slide["image_base64"] = None
 
-    # Strip images for DB storage
-    db_slides = []
-    for s in presentation_data:
-        s_copy = s.copy()
-        s_copy["image_base64"] = None
-        db_slides.append(s_copy)
-
     new_doc = {
         "user_id": user_id,
         "generated_by": current_user.get("username", "Unknown"),
@@ -140,7 +138,7 @@ async def run_generation_pipeline(body, current_user, start_time: float, content
         "title": body.title,
         "topics": body.topics,
         "content_hash": content_hash,
-        "slides": db_slides,
+        "slides": presentation_data,
         "created_at": datetime.utcnow(),
         "theme": body.theme
     }
@@ -160,7 +158,7 @@ async def run_generation_pipeline(body, current_user, start_time: float, content
         "slides": presentation_data,
         "theme": body.theme,
         "token": str(res.inserted_id),
-        "filename": f"{body.title.replace(' ', '_')}.pptx",
+        "filename": f"{sanitize_filename(body.title)}.pptx",
         "model_used": model_used,
         "provider": provider
     }

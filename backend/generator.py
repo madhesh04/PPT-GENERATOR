@@ -5,6 +5,9 @@ from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
+import logging
+
+logger = logging.getLogger(__name__)
 
 # ── Template path ──────────────────────────────────────────────────────────────
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "template.pptx")
@@ -184,20 +187,24 @@ def _decorate_content_slide(slide, slide_title: str, content: list,
                       Inches(1.5), Inches(y), bullet_text_width, Inches(1.4),
                       font_size=bullet_font_size, color=theme.slate)
 
-    # Image — right half
+    # Image — right half layout
     if has_image:
         try:
+            # Shift bullets left if image is present (handled by width above)
             img_stream = io.BytesIO(image_bytes)
+            
+            # Position: Right side, centered vertically between title and Footer
+            # Slide Height is 11.25. Title ends at 1.4. Footer starts at 10.25.
+            # Available height: 8.85
+            
             slide.shapes.add_picture(
                 img_stream,
-                left=Inches(11.0), top=Inches(1.6),
-                width=Inches(8.0), height=Inches(8.2)
+                left=Inches(10.5), top=Inches(1.8),
+                width=Inches(8.5), height=Inches(8.0)
             )
+            logger.info(f"Successfully appended image to slide {slide_num}")
         except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning(
-                "Failed to add image to slide %d: %s", slide_num, e
-            )
+            logger.warning(f"Failed to append image to slide {slide_num}: {e}")
 
 
 def _decorate_code_slide(slide, parent_title: str, code: str,

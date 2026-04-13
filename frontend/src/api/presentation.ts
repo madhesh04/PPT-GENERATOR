@@ -39,5 +39,10 @@ export const presentationApi = {
       responseType: 'blob'
     });
     return response.data;
+  },
+
+  regenerateSlide: async (params: any) => {
+    const response = await apiClient.post('/regenerate-slide', params);
+    return response.data;
   }
 };

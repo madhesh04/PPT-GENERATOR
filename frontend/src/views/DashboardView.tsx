@@ -150,10 +150,22 @@ export default function DashboardView() {
               <tbody className="text-sm">
                 {savedPresentations.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-12 text-center text-gray-500 font-bold text-xs uppercase tracking-widest">
-                      <div className="flex flex-col items-center justify-center gap-3">
-                        <span className="material-symbols-outlined text-4xl opacity-50">folder_open</span>
-                        No History Found
+                    <td colSpan={4} className="py-24 text-center">
+                      <div className="flex flex-col items-center justify-center max-w-sm mx-auto">
+                        <div className="w-16 h-16 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-center mb-6 shadow-inner">
+                          <span className="material-symbols-outlined text-3xl text-gray-600">history_edu</span>
+                        </div>
+                        <h3 className="text-white font-bold tracking-tight mb-2 uppercase text-[12px] tracking-widest">Global Archive Empty</h3>
+                        <p className="text-gray-500 text-[10px] leading-relaxed mb-8 uppercase tracking-widest font-mono text-center px-4">
+                          No tactical assets detected in the primary storage layer. Initiate a protocol to populate history.
+                        </p>
+                        <button 
+                          onClick={() => navigate('/create')}
+                          className="bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold tracking-widest px-8 py-3 rounded-xl transition-all shadow-lg flex items-center gap-2 active:scale-95 shadow-blue-500/20"
+                        >
+                          <span className="material-symbols-outlined text-sm">bolt</span>
+                          INITIATE_PROMPT
+                        </button>
                       </div>
                     </td>
                   </tr>

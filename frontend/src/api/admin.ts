@@ -65,5 +65,15 @@ export const adminApi = {
   getPublicSettings: async () => {
     const response = await apiClient.get('/admin/public/settings');
     return response.data;
+  },
+
+  getAdminSettings: async () => {
+    const response = await apiClient.get('/admin/settings');
+    return response.data;
+  },
+
+  updateAdminSettings: async (settings: any) => {
+    const response = await apiClient.patch('/admin/settings', settings);
+    return response.data;
   }
 };

@@ -10,6 +10,7 @@ class PresentationRequest(BaseModel):
     tone:      str        = Field(default="professional")
     theme:     str        = Field(default="neon")
     force_provider: str | None = Field(default=None)
+    include_images: bool       = Field(default=True)
 
     @field_validator("topics")
     @classmethod

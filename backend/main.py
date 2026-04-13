@@ -38,7 +38,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ── Rate limiter ───────────────────────────────────────────────────────────────
-limiter = Limiter(key_func=get_remote_address, default_limits=["20/minute"])
+limiter = Limiter(key_func=get_remote_address, default_limits=["10/minute"])
 
 
 @asynccontextmanager
@@ -116,7 +116,7 @@ async def root():
     return {
         "name": "Skynet Core API",
         "status": "operational",
-        "version": "1.0.0",
+        "version": "1.2.0-PROD",
         "authorized_origins": settings.cors_origins
     }
 

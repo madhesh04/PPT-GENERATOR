@@ -12,6 +12,7 @@ from slowapi.util import get_remote_address
 
 from core.dependencies import get_current_user
 from core.converters import serialize_mongo_doc
+from core.utils import sanitize_filename
 from models.requests import (
     PresentationRequest, RegenerateSlideRequest, 
     RegenerateImageRequest, ExportRequest
@@ -126,7 +127,8 @@ async def upload_context(file: UploadFile = File(...), current_user: Annotated[d
 async def export_pdf(req: ExportRequest, user: Annotated[dict, Depends(get_current_user)]):
     try:
         pdf_io = create_pdf_presentation(req.title, [s.model_dump() for s in req.slides], req.theme)
-        fn = f"{req.title.replace(' ', '_')}_{int(time.time())}.pdf"
+        safe_title = sanitize_filename(req.title)
+        fn = f"{safe_title}_{int(time.time())}.pdf"
         return StreamingResponse(
             pdf_io,
             media_type="application/pdf",
@@ -154,12 +156,15 @@ async def export_ppt(body: ExportRequest, current_user: Annotated[dict, Depends(
                 image_bytes_list.append(None)
 
         # Generate binary
+        safe_title = sanitize_filename(body.title)
         ppt_io, filename = create_presentation(
             body.title, 
             [s.model_dump() for s in body.slides], 
             image_bytes_list, 
             theme_name=body.theme
         )
+        # Ensure filename is sanitized
+        filename = f"{safe_title}.pptx"
         
         # Save final binary to GridFS
         file_id = await StorageService.save_file(
@@ -175,7 +180,8 @@ async def export_ppt(body: ExportRequest, current_user: Annotated[dict, Depends(
         return {"token": file_id, "filename": filename}
     except Exception as e:
         logger.exception("Export failed: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+        # Production: mask internal error
+        raise HTTPException(status_code=500, detail="DOWNLOAD_PACKAGE_GENERATION_FAILED")
 
 
 @router.get("/download/{file_id}")

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useAppStore } from '../store/useAppStore';
 import apiClient from '../api/apiClient';
+import { usePresentationStore } from '../store/usePresentationStore';
 
 export default function SettingsView() {
   const { user } = useAuthStore();
@@ -9,6 +10,7 @@ export default function SettingsView() {
     globalImageGen, globalSpeakerNotes, globalDefaultModel, 
     setGlobalSettings, showToast 
   } = useAppStore();
+  const { includeImages, setIncludeImages } = usePresentationStore();
 
   const isAdminRole = user?.role?.toUpperCase() === 'ADMIN' || user?.role?.toUpperCase() === 'MASTER';
 
@@ -106,73 +108,94 @@ export default function SettingsView() {
           </div>
         </div>
 
-        {/* Generation Prefs Card */}
+        {/* System Administration Card */}
         <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-6 md:p-8 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
           <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
             <h2 className="text-sm font-bold text-white tracking-wide uppercase flex items-center gap-2">
               <span className="material-symbols-outlined text-purple-400 text-[18px]">precision_manufacturing</span>
-              Generation Preferences
+              System Administration
             </h2>
           </div>
           
           <div className="space-y-6">
-            
-            {/* Image Gen Toggle */}
-            <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors">
+            {/* Global Image Gen */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5">
               <div>
-                <div className="text-sm font-bold text-gray-200 mb-1">Image Generation</div>
-                <div className="text-[11px] text-gray-500">Automatically fetch context images per slide</div>
+                <div className="text-sm font-bold text-gray-200">Global Image Generation</div>
+                <div className="text-[11px] text-gray-500">Enable/Disable system-wide image capabilities</div>
               </div>
               <button 
                 onClick={() => handleUpdate('image_generation_enabled', !globalImageGen)}
                 disabled={!isAdminRole}
-                className={`relative w-12 h-6 rounded-full transition-all duration-300 ${globalImageGen ? 'bg-blue-500' : 'bg-gray-700'} ${!isAdminRole ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer focus:ring-2 focus:ring-blue-500/50 outline-none'}`}
+                className={`relative w-12 h-6 rounded-full transition-all ${globalImageGen ? 'bg-blue-500' : 'bg-gray-700'} ${!isAdminRole ? 'opacity-50' : 'cursor-pointer'}`}
               >
-                <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm ${globalImageGen ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-all ${globalImageGen ? 'translate-x-6' : 'translate-x-0'}`}></div>
               </button>
             </div>
 
-            {/* Speaker Notes Toggle */}
-            <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors">
+            {/* Global Speaker Notes */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5">
               <div>
-                <div className="text-sm font-bold text-gray-200 mb-1">Speaker Notes</div>
-                <div className="text-[11px] text-gray-500">Auto-generate presenter notes for each slide</div>
+                <div className="text-sm font-bold text-gray-200">Global Speaker Notes</div>
+                <div className="text-[11px] text-gray-500">Enable/Disable system-wide speaker notes</div>
               </div>
               <button 
                 onClick={() => handleUpdate('speaker_notes_enabled', !globalSpeakerNotes)}
                 disabled={!isAdminRole}
-                className={`relative w-12 h-6 rounded-full transition-all duration-300 ${globalSpeakerNotes ? 'bg-emerald-500' : 'bg-gray-700'} ${!isAdminRole ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer focus:ring-2 focus:ring-emerald-500/50 outline-none'}`}
+                className={`relative w-12 h-6 rounded-full transition-all ${globalSpeakerNotes ? 'bg-emerald-500' : 'bg-gray-700'} ${!isAdminRole ? 'opacity-50' : 'cursor-pointer'}`}
               >
-                <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm ${globalSpeakerNotes ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-all ${globalSpeakerNotes ? 'translate-x-6' : 'translate-x-0'}`}></div>
               </button>
             </div>
 
-            {/* Default Model Selector */}
-            <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors">
+            {/* Default Model */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5">
               <div>
-                <div className="text-sm font-bold text-gray-200 mb-1">Default Model</div>
-                <div className="text-[11px] text-gray-500">Select the primary LLM engine for processing</div>
+                <div className="text-sm font-bold text-gray-200">Default Intelligence Model</div>
+                <div className="text-[11px] text-gray-500">Select the default LLM for new presentations</div>
               </div>
-              <div>
-                {isAdminRole ? (
-                  <select 
-                    className="bg-[#111624] border border-white/10 text-sm text-gray-200 p-2 rounded-lg outline-none focus:border-blue-500 transition-colors cursor-pointer" 
-                    value={globalDefaultModel} 
-                    onChange={(e) => handleUpdate('default_model', e.target.value)}
-                  >
-                    <option value="groq">llama-3.3-70b-versatile (Groq)</option>
-                    <option value="nvidia">moonshotai/kimi-k2-instruct (NVIDIA)</option>
-                  </select>
-                ) : (
-                  <div className="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold tracking-widest px-3 py-1.5 rounded-full">
-                    {globalDefaultModel?.toUpperCase() || 'GROQ'}
-                  </div>
-                )}
-              </div>
+              {isAdminRole ? (
+                <select 
+                  className="bg-black/40 border border-white/10 text-xs text-gray-300 p-2 rounded-lg outline-none"
+                  value={globalDefaultModel}
+                  onChange={(e) => handleUpdate('default_model', e.target.value)}
+                >
+                  <option value="groq">llama-3.3-70b (Groq)</option>
+                  <option value="nvidia">kimi-k2.5 (NVIDIA)</option>
+                </select>
+              ) : (
+                <div className="text-xs text-blue-400 font-bold uppercase">{globalDefaultModel}</div>
+              )}
             </div>
-
           </div>
         </div>
+
+        {/* Personal Preferences Card (Conditional) */}
+        {globalImageGen && (
+          <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-6 md:p-8 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+            <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
+              <h2 className="text-sm font-bold text-white tracking-wide uppercase flex items-center gap-2">
+                <span className="material-symbols-outlined text-blue-400 text-[18px]">person_settings</span>
+                Personal Preferences
+              </h2>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 hover:bg-blue-500/10 transition-colors">
+                <div>
+                  <div className="text-sm font-bold text-gray-200 mb-1">Default Image Inclusion</div>
+                  <div className="text-[11px] text-gray-500">Enable or disable AI image generation by default for your creations</div>
+                </div>
+                <button 
+                  onClick={() => setIncludeImages(!includeImages)}
+                  className={`relative w-12 h-6 rounded-full transition-all duration-300 ${includeImages ? 'bg-blue-500' : 'bg-gray-700'} cursor-pointer focus:ring-2 focus:ring-blue-500/50 outline-none`}
+                >
+                  <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm ${includeImages ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

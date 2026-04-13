@@ -45,6 +45,7 @@ interface PresentationState {
   theme: string;
   numSlides: number;
   forceProvider: string | null;
+  includeImages: bool;
 
   // Pipeline
   loading: boolean;
@@ -61,6 +62,7 @@ interface PresentationState {
   setTheme: (theme: string) => void;
   setNumSlides: (num: number) => void;
   setForceProvider: (prov: string | null) => void;
+  setIncludeImages: (include: bool) => void;
   setResult: (res: GenerateResponse | null) => void;
   setSlides: (slides: SlideData[]) => void;
   setErrorMsg: (msg: string) => void;
@@ -80,6 +82,7 @@ export const usePresentationStore = create<PresentationState>((set, get) => ({
   theme: 'neon',
   numSlides: 5,
   forceProvider: null,
+  includeImages: true,
   
   loading: false,
   errorMsg: '',
@@ -94,6 +97,7 @@ export const usePresentationStore = create<PresentationState>((set, get) => ({
   setTheme: (theme) => set({ theme }),
   setNumSlides: (numSlides) => set({ numSlides }),
   setForceProvider: (forceProvider) => set({ forceProvider }),
+  setIncludeImages: (includeImages) => set({ includeImages }),
   setResult: (result) => set({ result }),
   setSlides: (slides) => set({ slides }),
   setErrorMsg: (errorMsg) => set({ errorMsg }),
@@ -108,6 +112,7 @@ export const usePresentationStore = create<PresentationState>((set, get) => ({
     theme: 'neon',
     numSlides: 5,
     forceProvider: null,
+    includeImages: true,
     result: null,
     slides: [],
     errorMsg: '',
@@ -116,7 +121,7 @@ export const usePresentationStore = create<PresentationState>((set, get) => ({
   }),
 
   generatePresentation: async (onSuccess) => {
-    const { title, topics, numSlides, context, tone, theme, forceProvider } = get();
+    const { title, topics, numSlides, context, tone, theme, forceProvider, includeImages } = get();
     
     if (!title.trim()) { set({ errorMsg: 'ERROR_001 — Presentation title is required' }); return; }
     if (!topics.length) { set({ errorMsg: 'ERROR_002 — At least one topic is required' }); return; }
@@ -140,8 +145,22 @@ export const usePresentationStore = create<PresentationState>((set, get) => ({
         
         await new Promise(r => setTimeout(r, 600));
 
+        if (i === 2 && !includeImages) {
+          set(state => ({
+            genSteps: state.genSteps.map((st, idx) => 
+              idx === i ? { ...st, status: 'done', desc: 'SKIPPED — Visuals disabled by policy' } : st
+            )
+          }));
+          continue;
+        }
+
         if (i === 1) {
-          const params = { title, topics, num_slides: numSlides, context, tone, theme, force_provider: forceProvider };
+          const params = { 
+            title, topics, num_slides: numSlides, 
+            context, tone, theme, 
+            force_provider: forceProvider,
+            include_images: includeImages
+          };
           // apiClient interceptor automatically attaches Authorization: Bearer <token>
           const response = await apiClient.post('/generate', params);
           const data = response.data;
