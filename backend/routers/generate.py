@@ -40,7 +40,7 @@ limiter = Limiter(key_func=get_remote_address)
 @limiter.limit("10/minute")
 async def generate_ppt(request: Request, body: PresentationRequest, current_user: Annotated[dict, Depends(get_current_user)]):
     start_time = time.time()
-    user_id = ObjectId(current_user["user_id"])
+    user_id = current_user["user_id"]  # employeeId string (no ObjectId conversion)
     
     cached, content_hash = await get_presentation_cache(
         body.title, body.topics, body.tone, body.theme, body.num_slides, body.context
@@ -99,7 +99,7 @@ async def get_my_presentations(
     limit: int = Query(20, ge=1, le=100)
 ):
     coll = get_presentations_collection()
-    user_oid = ObjectId(current_user["user_id"])
+    user_oid = current_user["user_id"]  # employeeId string
     total = await coll.count_documents({"user_id": user_oid})
     cursor = coll.find(
         {"user_id": user_oid},
@@ -199,7 +199,7 @@ async def download_ppt(file_id: str, current_user: Annotated[dict, Depends(get_c
         # Ownership check: user can only access their own presentations
         presentation = await presentations_collection.find_one({
             "_id": obj_id,
-            "user_id": ObjectId(current_user["user_id"])
+            "user_id": current_user["user_id"]
         })
         if not presentation:
             raise HTTPException(status_code=404, detail="FILE_OR_PRESENTATION_NOT_FOUND")
@@ -247,7 +247,7 @@ async def delete_presentation(presentation_id: str, current_user: Annotated[dict
         
     result = await presentations_collection.delete_one({
         "_id": obj_id,
-        "user_id": ObjectId(current_user["user_id"])
+        "user_id": current_user["user_id"]
     })
     
     if result.deleted_count == 0:

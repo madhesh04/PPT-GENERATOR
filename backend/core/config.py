@@ -7,6 +7,10 @@ class Settings(BaseSettings):
     # MongoDB
     mongodb_uri: str = "mongodb://localhost:27017"
     
+    # Timesheet Auth DB (external)
+    timesheet_mongodb_uri: str = ""  # Falls back to mongodb_uri if empty
+    timesheet_db_name: str = "Timesheet-Application"
+
     # Auth
     jwt_secret: str
     algorithm: str = "HS256"
@@ -27,7 +31,6 @@ class Settings(BaseSettings):
     # frontend_url supports comma-separated values for multi-origin CORS
     # e.g. "https://app.example.com,https://staging.example.com"
     frontend_url: str = "http://localhost:5173"
-    master_email: str = "admin@skynet.ai"
     ppt_ttl_seconds: int = 300
     ppt_font: str = "Calibri"
 

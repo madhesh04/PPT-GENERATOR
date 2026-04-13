@@ -17,7 +17,11 @@ from bson import ObjectId
 ENCODERS_BY_TYPE[ObjectId] = str
 
 from core.config import settings
-from db.client import connect_db, close_db, get_users_collection, get_presentations_collection, get_settings_collection
+from db.client import (
+    connect_db, close_db,
+    connect_timesheet_db, close_timesheet_db,
+    get_presentations_collection, get_settings_collection
+)
 from routers import auth, generate, admin
 
 # ── Logging ────────────────────────────────────────────────────────────────────
@@ -33,24 +37,19 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["20/minute"])
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Connect DB, create indexes, seed defaults
+    # Startup: Connect DBs, create indexes, seed defaults
     try:
+        # Connect to both databases
         await connect_db()
-        
-        users_coll = get_users_collection()
+        await connect_timesheet_db()
+
         presentations_coll = get_presentations_collection()
         settings_coll = get_settings_collection()
-        
-        await users_coll.create_index("email", unique=True)
+
+        # Indexes for Skynet app data only (do NOT touch external Timesheet DB)
         await presentations_coll.create_index("content_hash")
         await presentations_coll.create_index("user_id")
-        
-        # Backfill status for legacy records
-        await users_coll.update_many(
-            {"status": {"$exists": False}},
-            {"$set": {"status": "active"}}
-        )
-        
+
         # Seed default global config
         global_settings = await settings_coll.find_one({"id": "global_config"})
         if not global_settings:
@@ -60,16 +59,17 @@ async def lifespan(app: FastAPI):
                 "speaker_notes_enabled": True,
                 "default_model": "groq"
             })
-        
-        logger.info("Lifespan: MongoDB connected, indexes and settings verified.")
+
+        logger.info("Lifespan: Skynet DB + Timesheet DB connected, indexes and settings verified.")
     except Exception as e:
         logger.warning(f"Lifespan: DB setup error (might be expected in some environments): {e}")
-        
+
     yield
-    
-    # Shutdown: close the Motor client cleanly
+
+    # Shutdown: close both Motor clients cleanly
     await close_db()
-    logger.info("Lifespan: Shutting down — DB connection closed.")
+    await close_timesheet_db()
+    logger.info("Lifespan: Shutting down — all DB connections closed.")
 
 
 app = FastAPI(title="Skynet PPT Generator API", lifespan=lifespan)

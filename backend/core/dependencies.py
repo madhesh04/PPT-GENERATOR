@@ -20,12 +20,7 @@ async def get_current_user(request: Request):
         raise HTTPException(status_code=401, detail="Invalid token")
 
 async def require_admin(current_user: Annotated[dict, Depends(get_current_user)]):
-    role = current_user.get("role", "USER").upper()
-    if role not in ["ADMIN", "MASTER"]:
-        raise HTTPException(status_code=403, detail="ACCESS_DENIED — Insufficient privileges")
-    return current_user
-
-async def require_master(current_user: Annotated[dict, Depends(get_current_user)]):
-    if current_user.get("sub") != settings.master_email:
-        raise HTTPException(status_code=403, detail="ACCESS_DENIED — Master privileges required")
+    role = current_user.get("role", "").upper()
+    if role != "ADMIN":
+        raise HTTPException(status_code=403, detail="ACCESS_DENIED — Admin privileges required")
     return current_user

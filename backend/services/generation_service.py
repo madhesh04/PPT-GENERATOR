@@ -39,10 +39,11 @@ async def handle_cache_hit(cached: dict, content_hash: str, current_user: dict, 
     """
     presentations_collection = get_presentations_collection()
     logs_collection = get_generation_logs_collection()
-    user_id = ObjectId(current_user["user_id"])
+    user_id = current_user["user_id"]  # employeeId string
 
     new_doc = {
         "user_id": user_id,
+        "generated_by": current_user.get("username", "Unknown"),
         "title": cached["title"],
         "topics": cached["topics"],
         "content_hash": content_hash,
@@ -74,7 +75,7 @@ async def run_generation_pipeline(body, current_user, start_time: float, content
     logs_collection = get_generation_logs_collection()
     settings_coll = get_settings_collection()
     
-    user_id = ObjectId(current_user["user_id"])
+    user_id = current_user["user_id"]  # employeeId string
     
     # Check global system settings
     global_config = await settings_coll.find_one({"id": "global_config"})
@@ -134,6 +135,7 @@ async def run_generation_pipeline(body, current_user, start_time: float, content
 
     new_doc = {
         "user_id": user_id,
+        "generated_by": current_user.get("username", "Unknown"),
         "username": current_user.get("username", "Unknown"),
         "title": body.title,
         "topics": body.topics,

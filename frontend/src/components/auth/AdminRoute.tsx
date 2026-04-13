@@ -14,7 +14,7 @@ export function AdminRoute() {
   const { user } = useAuthStore();
   const role = user?.role?.toUpperCase();
 
-  if (role !== 'ADMIN' && role !== 'MASTER') {
+  if (role !== 'ADMIN') {
     return <Navigate to="/" replace />;
   }
 

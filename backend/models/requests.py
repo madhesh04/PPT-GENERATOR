@@ -61,9 +61,9 @@ class UserRegister(BaseModel):
 
 
 class UserLogin(BaseModel):
-    email: str
+    email: str  # Actually employeeId — kept as 'email' for frontend backward compat
     password: str
-    login_as: str
+    login_as: str = "employee"
 
 
 class AdminCreateUser(BaseModel):
