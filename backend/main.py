@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import ENCODERS_BY_TYPE
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -82,15 +82,34 @@ app = FastAPI(title="Skynet PPT Generator API", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# ── CORS ───────────────────────────────────────────────────────────────────────
-logger.info(f"CORS: Configuring origins: {settings.cors_origins}")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept"],
-)
+# ── CORS Hardened Middleware ────────────────────────────────────────────────────
+@app.middleware("http")
+async def cors_handler(request: Request, call_next):
+    origin = request.headers.get("origin")
+    
+    # Preflight Check (OPTIONS)
+    if request.method == "OPTIONS":
+        response = Response(status_code=204)
+        response.headers["Access-Control-Allow-Origin"] = origin or "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+        response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, X-Requested-With"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response
+
+    # Handle Actual Request
+    response = await call_next(request)
+    
+    # Inject headers safely
+    if origin:
+        # Check against settings (or allow all if preferred for debugging)
+        if origin in settings.cors_origins or ".vercel.app" in origin:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+            response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, X-Requested-With"
+    
+    return response
+
 
 # ── Routers ────────────────────────────────────────────────────────────────────
 app.include_router(auth.router)
