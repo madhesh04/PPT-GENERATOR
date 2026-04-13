@@ -156,7 +156,7 @@ export default function PreviewView() {
                   <span className="material-symbols-outlined text-[12px]">
                     {result.provider === 'nvidia_nim' ? 'psychology' : 'bolt'}
                   </span>
-                  {result.provider === 'nvidia_nim' ? 'NVIDIA NIM' : 'GROQ INFER'} · {result.model_used.toUpperCase()}
+                  {result.provider === 'nvidia_nim' ? 'NVIDIA NIM' : 'GROQ INFER'} · {result.model_used?.toUpperCase()}
                 </div>
               )}
             </div>

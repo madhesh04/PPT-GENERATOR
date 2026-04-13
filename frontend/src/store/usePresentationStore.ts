@@ -45,7 +45,7 @@ interface PresentationState {
   theme: string;
   numSlides: number;
   forceProvider: string | null;
-  includeImages: bool;
+  includeImages: boolean;
 
   // Pipeline
   loading: boolean;
@@ -62,7 +62,7 @@ interface PresentationState {
   setTheme: (theme: string) => void;
   setNumSlides: (num: number) => void;
   setForceProvider: (prov: string | null) => void;
-  setIncludeImages: (include: bool) => void;
+  setIncludeImages: (include: boolean) => void;
   setResult: (res: GenerateResponse | null) => void;
   setSlides: (slides: SlideData[]) => void;
   setErrorMsg: (msg: string) => void;
