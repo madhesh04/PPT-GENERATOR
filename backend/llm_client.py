@@ -235,8 +235,14 @@ async def generate_slide_content(
     if use_nvidia:
         try:
             logger.info(f"Routing to NVIDIA NIM ({NVIDIA_MODEL})")
-            slides = await asyncio.to_thread(_call_nvidia, title, topics, num_slides, context, tone, include_notes=include_notes)
+            # Phase 2: Wrap primary provider in a sub-timeout to allow fallback time
+            slides = await asyncio.wait_for(
+                asyncio.to_thread(_call_nvidia, title, topics, num_slides, context, tone, include_notes=include_notes),
+                timeout=70.0
+            )
             return slides, NVIDIA_MODEL, "nvidia_nim"
+        except asyncio.TimeoutError:
+            logger.warning("NVIDIA NIM timed out. Falling back to Groq.")
         except Exception as e:
             logger.warning(f"NVIDIA NIM failed: {e}. Falling back to Groq.")
 

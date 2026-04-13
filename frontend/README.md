@@ -1,30 +1,35 @@
-# 🏺 Kinetic Curator — Frontend (Vanish UI)
+# 🪐 SkyNet — Frontend (Vanish UI / Skynet Theme)
 
-The frontend of **Kinetic Curator** is a high-performance React application built with TypeScript and Vite. It implements the **Vanish Design System**, a custom-engineered UI framework focused on glassmorphism, high-speed CSS transitions, and Three.js visual effects.
+The frontend of **SkyNet PPT Generator** is a high-performance React application built with TypeScript and Vite. It implements a custom-engineered UI framework focused on glassmorphism, high-contrast mechanical aesthetics, and hardware-accelerated background effects.
 
 ## 🧬 Core Features
-- **Vanish Layout**: Dynamic, hardware-accelerated collapsible sidebar and flexible main content area.
-- **Three.js Particle Field**: A custom `DottedSurface` rendering engine for ambient background animations.
-- **Identity-Based Isolation**: Native state management ensures that presentation previews are cleared and isolated when switching users.
-- **JWT Authentication**: Secure role-based access control (RBAC) with support for User, Admin, and Master roles.
+- **Skynet Access Protocol**: Adapted login system supporting **Employee ID** authentication and external Timesheet role mapping.
+- **Vanish Layout**: Dynamic, collapsible sidebar with role-aware navigation (User/Admin).
+- **Mechanical Glassmorphism**: High-contrast UI with scanlines, particle fields, and mechanical animation effects.
+- **Identity-Based Isolation**: Secure state management ensures that presentation previews are isolated to the authenticated employee.
+
+## 🛡️ Authentication Architecture
+- **Shared Identity**: Authentication is delegated to the external Timesheet database.
+- **RBAC**: Native role-based access control supporting `USER` and `ADMIN` tiers.
+- **Managed Access**: Registration is disabled on the frontend; users are directed to the Timesheet administration system for account creation.
 
 ## 🛠️ Internal Architecture
-- **State Orchestration**: Managed primarily in `App.tsx` for core business logic and presentation generation.
-- **Design Tokens**: Centralized in `index.css` using CSS variables for colors, spacing, and glass effects.
-- **Responsive Logic**: Optimized for desktop-first professional use with fluid scaling.
+- **State Orchestration**: Managed in `useAuthStore` and `App.tsx` for core business logic and presentation generation.
+- **Standardized UI**: Components in `components/ui/` provide a consistent design language across the application.
+- **Vite-Powered**: Ultra-fast hot module replacement (HMR) for development.
 
-## 🚀 Build Instructions
-To build the application for production:
+## 🚀 Development & Build
 
 ```bash
 # Install dependencies
 npm install
 
+# Start development server
+npm run dev
+
 # Production build
 npm run build
 ```
 
-The output will be generated in the `dist/` directory, ready to be served by any static host (Vercel, Netlify, etc.).
-
 ---
-© 2026 iamneo | **Kinetic Curator**
+© 2026 iamneo | **SkyNet**

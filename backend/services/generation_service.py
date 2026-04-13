@@ -94,7 +94,7 @@ async def run_generation_pipeline(body, current_user, start_time: float, content
                 force_provider=body.force_provider or default_model_choice,
                 include_notes=notes_enabled
             ),
-            timeout=45.0
+            timeout=90.0
         )
     except asyncio.TimeoutError:
         logger.error("LLM synthesis timed out")
