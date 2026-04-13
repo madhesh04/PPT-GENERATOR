@@ -106,6 +106,16 @@ async def health():
     }
 
 
+@app.get("/")
+async def root():
+    return {
+        "name": "Skynet Core API",
+        "status": "operational",
+        "version": "1.0.0",
+        "authorized_origins": settings.cors_origins
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
