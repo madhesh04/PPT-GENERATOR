@@ -82,33 +82,19 @@ app = FastAPI(title="Skynet PPT Generator API", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# ── CORS Hardened Middleware ────────────────────────────────────────────────────
-@app.middleware("http")
-async def cors_handler(request: Request, call_next):
-    origin = request.headers.get("origin")
-    
-    # Preflight Check (OPTIONS)
-    if request.method == "OPTIONS":
-        response = Response(status_code=204)
-        response.headers["Access-Control-Allow-Origin"] = origin or "*"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-        response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, X-Requested-With"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        return response
-
-    # Handle Actual Request
-    response = await call_next(request)
-    
-    # Inject headers safely
-    if origin:
-        # Check against settings (or allow all if preferred for debugging)
-        if origin in settings.cors_origins or ".vercel.app" in origin:
-            response.headers["Access-Control-Allow-Origin"] = origin
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-            response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, X-Requested-With"
-    
-    return response
+# ── CORS ───────────────────────────────────────────────────────────────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origins=[
+        "http://localhost:5173", 
+        "http://127.0.0.1:5173",
+        "https://skynet-generator.vercel.app"
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
+)
 
 
 # ── Routers ────────────────────────────────────────────────────────────────────
