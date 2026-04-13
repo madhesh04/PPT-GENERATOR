@@ -1,4 +1,10 @@
 import os
+import sys
+from pathlib import Path
+
+# Add the current directory to sys.path to resolve imports when running from root (Render)
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 import logging
 import asyncio
 from contextlib import asynccontextmanager
