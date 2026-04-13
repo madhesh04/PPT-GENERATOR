@@ -10,10 +10,7 @@ from db.client import (
     get_presentations_collection,
     get_settings_collection
 )
-from models.requests import (
-    AdminCreateUser, UpdateRoleRequest,
-    UpdateStatusRequest, UpdatePasswordRequest
-)
+from models.requests import UserLogin
 from core.security import get_password_hash
 from core.config import settings
 from core.converters import serialize_mongo_doc
@@ -131,15 +128,15 @@ async def admin_get_users(
 # ── Write endpoints — DISABLED (external shared DB) ───────────────────────────
 
 @router.put("/users/{user_id}/role")
-async def admin_update_user_role(user_id: str, payload: UpdateRoleRequest, admin_user: Annotated[dict, Depends(require_admin)]):
+async def admin_update_user_role(user_id: str, payload: dict, admin_user: Annotated[dict, Depends(require_admin)]):
     raise HTTPException(status_code=403, detail=EXTERNAL_MANAGED_MSG)
 
 @router.patch("/users/{user_id}/status")
-async def admin_update_user_status(user_id: str, payload: UpdateStatusRequest, admin_user: Annotated[dict, Depends(require_admin)]):
+async def admin_update_user_status(user_id: str, payload: dict, admin_user: Annotated[dict, Depends(require_admin)]):
     raise HTTPException(status_code=403, detail=EXTERNAL_MANAGED_MSG)
 
 @router.patch("/users/{user_id}/password")
-async def admin_update_user_password(user_id: str, payload: UpdatePasswordRequest, admin_user: Annotated[dict, Depends(require_admin)]):
+async def admin_update_user_password(user_id: str, payload: dict, admin_user: Annotated[dict, Depends(require_admin)]):
     raise HTTPException(status_code=403, detail=EXTERNAL_MANAGED_MSG)
 
 @router.get("/users/{user_id}/ppts")
@@ -171,7 +168,7 @@ async def admin_delete_user(user_id: str, admin_user: Annotated[dict, Depends(re
     raise HTTPException(status_code=403, detail=EXTERNAL_MANAGED_MSG)
 
 @router.post("/users/create")
-async def admin_create_user(body: AdminCreateUser, admin_user: Annotated[dict, Depends(require_admin)]):
+async def admin_create_user(body: dict, admin_user: Annotated[dict, Depends(require_admin)]):
     raise HTTPException(status_code=403, detail=EXTERNAL_MANAGED_MSG)
 
 @router.get("/pending")

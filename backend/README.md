@@ -1,32 +1,30 @@
 # 🧬 SkyNet — Backend (FastAPI)
 
-The backend of **Kinetic Curator** is a production-hardened API powered by **FastAPI** and **Motor** (Asynchronous MongoDB driver). It manages the sequential generation pipeline, user authentication, and the administrative suite.
+The backend of **SkyNet PPT Generator** is a production-hardened API powered by **FastAPI** and **Motor** (Asynchronous MongoDB driver). It manages the sequential generation pipeline, shared authentication, and the administrative suite.
 
-## 🧠 Generation Pipeline
-1.  **AI Intelligence**: Primary content generation using **NVIDIA NIM** (Kimi K2.5). Fact-dense, technical content with a fallback to **Groq Llama 3 70B**.
-2.  **Sequential Slide Builder**: Generates content slides (5-bullet standard) and interleaves high-contrast **Code Slides** for technical topics.
-3.  **Image Search**: Multi-source image injection using **Freepik** and context-aware keyword extraction.
-4.  **Native PPTX Export**: Precision layout mapping using `python-pptx` into a corporate brand template (`template.pptx`).
+## 🧠 Shared Authentication Architecture
+SkyNet uses a **dual-database architecture**:
+1.  **Shared Auth DB (`timesheet`)**: Centralized user store used by multiple applications. Authentication is performed via `employeeId` and `password` (bcrypt).
+2.  **App Data DB (`skynet_db`)**: Stores presentation blueprints, generation logs, and global system settings.
 
 ## 🛡️ Administrative Suite
-- **Role-Based Access (RBAC)**: Supports `User`, `Admin`, and `Master` tiers.
-- **Global Generations**: Full visibility and cross-user download/delete capability for administrators.
-- **Pending Approvals**: A secure "Master-only" workflow for approving or rejecting new administrative accounts.
-- **Security Checkpoints**: Bypasses `user_id` filtering for authorized admins to allow site-wide management.
+- **Role-Based Access (RBAC)**: User roles (`admin`, `employee`, `teamlead`) are managed in the external Timesheet system.
+- **Unified Generations**: Admin portal allows full visibility and cross-user download/delete capability for presentations.
+- **Externally Managed Users**: User management (creation, role assignment, status) is consolidated in the primary Timesheet system to maintain data integrity.
 
-## 📂 Internal Structure
-- `main.py`: Entry point for FastAPI, auth dependencies, and administrative routes.
-- `llm_client.py`: The "Brain" – handles prompt engineering, failover logic, and JSON parsing.
-- `generator.py`: The "Engine" – manages the `python-pptx` layout injection and coordinate mapping.
-- `slide_renderer.py`: Handles high-contrast technical slide rendering.
+## 📂 Project Structure
+- `core/`: Config, security, and dependency logic.
+- `db/`: Motor clients for both internal and external databases.
+- `models/`: Pydantic request and response schemas.
+- `routers/`: API endpoints (auth, admin, generate).
+- `services/`: Business logic for generation, storage, and file processing.
+- `generator.py`: The "Engine" – manages `python-pptx` layout injection.
+- `slide_renderer.py`: Handles technical slide rendering logic.
 
-## 🚀 Deployment
-Ensure `requirements.txt` is installed and the `.env` is configured with:
-- `NVIDIA_API_KEY`
-- `GROQ_API_KEY`
-- `MONGODB_URI`
-
-The server is pre-configured with a `Procfile` for one-click deployment to **Render** or **Heroku**.
+## 🚀 Setup
+1. Install dependencies: `pip install -r requirements.txt`
+2. Configure `.env` from `.env.example`.
+3. Start server: `uvicorn main:app --port 8000`
 
 ---
 © 2026 iamneo | **SkyNet**

@@ -53,33 +53,8 @@ class RegenerateImageRequest(BaseModel):
     query: str
 
 
-class UserRegister(BaseModel):
-    email: str
-    password: str
-    full_name: str
-    # role is intentionally excluded — users cannot self-assign roles
-
-
 class UserLogin(BaseModel):
     email: str  # Actually employeeId — kept as 'email' for frontend backward compat
     password: str
     login_as: str = "employee"
 
-
-class AdminCreateUser(BaseModel):
-    email: str
-    password: str
-    full_name: str
-    role: str = "user"
-
-
-class UpdateRoleRequest(BaseModel):
-    role: Literal["user", "admin"]
-
-
-class UpdatePasswordRequest(BaseModel):
-    password: str = Field(..., min_length=8, max_length=128)
-
-
-class UpdateStatusRequest(BaseModel):
-    status: Literal["active", "suspended", "pending"]

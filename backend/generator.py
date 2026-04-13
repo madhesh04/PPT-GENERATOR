@@ -9,7 +9,7 @@ from pptx.enum.text import PP_ALIGN
 # ── Template path ──────────────────────────────────────────────────────────────
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "template.pptx")
 
-from shared.themes import THEME_DATA
+from core.themes import THEME_DATA
 
 # ── Themes ─────────────────────────────────────────────────────────────────────
 class Theme:

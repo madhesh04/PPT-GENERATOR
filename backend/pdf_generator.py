@@ -3,7 +3,7 @@ import base64
 from fpdf import FPDF
 from typing import List, Optional
 
-from shared.themes import THEME_DATA
+from core.themes import THEME_DATA
 
 # ── Themes ─────────────────────────────────────────────────────────────────────
 THEMES = {
