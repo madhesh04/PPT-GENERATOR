@@ -55,66 +55,125 @@ export default function SettingsView() {
   };
 
   return (
-    <div className="pg act">
-      <div className="pey">// SYSTEM_CONFIGURATION</div>
-      <div className="ptl">SYSTEM <span className="ac">SETTINGS</span></div>
-      <div className="psub">// API configuration & rendering parameters</div>
+    <div className="animate-fade-in max-w-4xl mx-auto pb-10">
+      
+      {/* Page Header */}
+      <div className="mb-8 flex items-center gap-3">
+        <span className="material-symbols-outlined text-blue-500 text-3xl">settings</span>
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-white">System Configuration</h1>
+          <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-mono">API & Rendering Parameters</p>
+        </div>
+      </div>
 
-      <div className="setgrid">
-        <div className="card" style={{ padding: 22 }}>
-          <div className="cc tl"></div><div className="cc tr"></div>
-          <div className="fl mb12">// USER_PROFILE</div>
-          <div className="fg mb16">
-            <div className="fl"><span className="fn">01 //</span> FULL_NAME</div>
-            <div className="fb2"><input className="finp" type="text" readOnly value={user?.full_name || ''} /></div>
+      <div className="space-y-6">
+        
+        {/* User Profile Card */}
+        <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-6 md:p-8 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+          <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
+            <h2 className="text-sm font-bold text-white tracking-wide uppercase flex items-center gap-2">
+              <span className="material-symbols-outlined text-blue-400 text-[18px]">account_circle</span>
+              User Profile
+            </h2>
+            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest bg-gray-800 px-2 py-1 rounded-md">
+              {isAdminRole ? 'ADMINISTRATOR' : 'STANDARD_USER'}
+            </div>
           </div>
-          <div className="fg mb16">
-            <div className="fl"><span className="fn">02 //</span> EMAIL_ADDRESS</div>
-            <div className="fb2"><input className="finp" type="text" readOnly value={user?.email || ''} /></div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <span className="text-blue-500">01 //</span> Full Name
+              </label>
+              <input 
+                className="w-full bg-[#111624] border border-white/5 text-gray-300 text-sm p-3 rounded-xl outline-none" 
+                type="text" 
+                readOnly 
+                value={user?.full_name || ''} 
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <span className="text-blue-500">02 //</span> Email Address
+              </label>
+              <input 
+                className="w-full bg-[#111624] border border-white/5 text-gray-300 text-sm p-3 rounded-xl outline-none" 
+                type="text" 
+                readOnly 
+                value={user?.email || ''} 
+              />
+            </div>
           </div>
         </div>
 
-        <div className="card" style={{ padding: 22 }}>
-          <div className="cc tl"></div><div className="cc tr"></div>
-          <div className="fl mb12">// GENERATION_PREFS</div>
-          <div className="setr">
-            <div><div className="setlbl">IMAGE_GENERATION</div><div className="setdsc">Fetch images per slide</div></div>
-            <div 
-              className={`tsw ${globalImageGen ? 'on' : ''}`} 
-              onClick={() => handleUpdate('image_generation_enabled', !globalImageGen)}
-              style={{ cursor: isAdminRole ? 'pointer' : 'not-allowed' }}
-            >
-              <div className="tknob"></div>
-            </div>
+        {/* Generation Prefs Card */}
+        <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-6 md:p-8 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+          <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
+            <h2 className="text-sm font-bold text-white tracking-wide uppercase flex items-center gap-2">
+              <span className="material-symbols-outlined text-purple-400 text-[18px]">precision_manufacturing</span>
+              Generation Preferences
+            </h2>
           </div>
-          <div className="setr">
-            <div><div className="setlbl">SPEAKER_NOTES</div><div className="setdsc">Auto-generate presenter notes</div></div>
-            <div 
-              className={`tsw ${globalSpeakerNotes ? 'on' : ''}`} 
-              onClick={() => handleUpdate('speaker_notes_enabled', !globalSpeakerNotes)}
-              style={{ cursor: isAdminRole ? 'pointer' : 'not-allowed' }}
-            >
-              <div className="tknob"></div>
-            </div>
-          </div>
-          <div className="setr" style={{ borderBottom: 'none' }}>
-            <div><div className="setlbl">DEFAULT_MODEL</div><div className="setdsc">LLM model selection</div></div>
-            {isAdminRole ? (
-              <select 
-                className="seld" 
-                value={globalDefaultModel} 
-                onChange={(e) => handleUpdate('default_model', e.target.value)}
-              >
-                <option value="groq">llama-3.3-70b-versatile (Groq)</option>
-                <option value="nvidia">moonshotai/kimi-k2-instruct (NVIDIA)</option>
-              </select>
-            ) : (
-              <div className="hbdg" style={{ background: 'rgba(0,240,255,0.05)', borderColor: 'rgba(0,240,255,0.1)' }}>
-                {globalDefaultModel?.toUpperCase() || 'GROQ'}
+          
+          <div className="space-y-6">
+            
+            {/* Image Gen Toggle */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors">
+              <div>
+                <div className="text-sm font-bold text-gray-200 mb-1">Image Generation</div>
+                <div className="text-[11px] text-gray-500">Automatically fetch context images per slide</div>
               </div>
-            )}
+              <button 
+                onClick={() => handleUpdate('image_generation_enabled', !globalImageGen)}
+                disabled={!isAdminRole}
+                className={`relative w-12 h-6 rounded-full transition-all duration-300 ${globalImageGen ? 'bg-blue-500' : 'bg-gray-700'} ${!isAdminRole ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer focus:ring-2 focus:ring-blue-500/50 outline-none'}`}
+              >
+                <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm ${globalImageGen ? 'translate-x-6' : 'translate-x-0'}`}></div>
+              </button>
+            </div>
+
+            {/* Speaker Notes Toggle */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors">
+              <div>
+                <div className="text-sm font-bold text-gray-200 mb-1">Speaker Notes</div>
+                <div className="text-[11px] text-gray-500">Auto-generate presenter notes for each slide</div>
+              </div>
+              <button 
+                onClick={() => handleUpdate('speaker_notes_enabled', !globalSpeakerNotes)}
+                disabled={!isAdminRole}
+                className={`relative w-12 h-6 rounded-full transition-all duration-300 ${globalSpeakerNotes ? 'bg-emerald-500' : 'bg-gray-700'} ${!isAdminRole ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer focus:ring-2 focus:ring-emerald-500/50 outline-none'}`}
+              >
+                <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm ${globalSpeakerNotes ? 'translate-x-6' : 'translate-x-0'}`}></div>
+              </button>
+            </div>
+
+            {/* Default Model Selector */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors">
+              <div>
+                <div className="text-sm font-bold text-gray-200 mb-1">Default Model</div>
+                <div className="text-[11px] text-gray-500">Select the primary LLM engine for processing</div>
+              </div>
+              <div>
+                {isAdminRole ? (
+                  <select 
+                    className="bg-[#111624] border border-white/10 text-sm text-gray-200 p-2 rounded-lg outline-none focus:border-blue-500 transition-colors cursor-pointer" 
+                    value={globalDefaultModel} 
+                    onChange={(e) => handleUpdate('default_model', e.target.value)}
+                  >
+                    <option value="groq">llama-3.3-70b-versatile (Groq)</option>
+                    <option value="nvidia">moonshotai/kimi-k2-instruct (NVIDIA)</option>
+                  </select>
+                ) : (
+                  <div className="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold tracking-widest px-3 py-1.5 rounded-full">
+                    {globalDefaultModel?.toUpperCase() || 'GROQ'}
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
         </div>
+
       </div>
     </div>
   );

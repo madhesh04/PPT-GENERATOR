@@ -12,14 +12,17 @@ SkyNet uses a **dual-database architecture**:
 - **Unified Generations**: Admin portal allows full visibility and cross-user download/delete capability for presentations.
 - **Externally Managed Users**: User management (creation, role assignment, status) is consolidated in the primary Timesheet system to maintain data integrity.
 
+## 🧠 Intelligence Engine
+SkyNet leverages a high-performance LLM pipeline:
+- **Primary**: NVIDIA NIM (`deepseek-ai/deepseek-v3` or `kimi-2.5`) for deep technical reasoning.
+- **Failover**: Groq (`llama-3.3-70b-versatile`) for instant recovery and uptime.
+
 ## 📂 Project Structure
-- `core/`: Config, security, and dependency logic.
-- `db/`: Motor clients for both internal and external databases.
-- `models/`: Pydantic request and response schemas.
-- `routers/`: API endpoints (auth, admin, generate).
-- `services/`: Business logic for generation, storage, and file processing.
-- `generator.py`: The "Engine" – manages `python-pptx` layout injection.
-- `slide_renderer.py`: Handles technical slide rendering logic.
+- `core/`: Critical infrastructure (Security, Config, Themes).
+- `db/`: Dual-client persistence logic (Internal/External).
+- `routers/`: Modular API surface (Auth, Admin, Generate).
+- `services/`: Core logic (AI Orchestration, Storage, PDF/PPTX generation).
+- `generator.py`: The precision PPTX layout engine.
 
 ## 🚀 Setup
 1. Install dependencies: `pip install -r requirements.txt`

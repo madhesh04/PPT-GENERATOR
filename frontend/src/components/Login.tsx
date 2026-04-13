@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
-import SkynetBackground from './SkynetBackground';
 
 interface LoginProps {
   onSwitchToSignup: () => void;
@@ -13,27 +12,11 @@ const Login: React.FC<LoginProps> = ({ onSwitchToSignup, onLoginSuccess }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [pwdVisible, setPwdVisible] = useState(false);
-  const [clock, setClock] = useState('--:--:-- IST');
   const [loginMode, setLoginMode] = useState<'employee' | 'admin'>('employee');
-
-  useEffect(() => {
-    const updateClock = () => {
-      const now = new Date();
-      const pad = (v: number) => String(v).padStart(2, '0');
-      setClock(
-        `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ` +
-        `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())} IST`
-      );
-    };
-    updateClock();
-    const interval = setInterval(updateClock, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) { setError('ERROR_001 — Employee ID is required'); return; }
+    if (!email) { setError('ERROR_001 — Identifier is required'); return; }
     if (!password) { setError('ERROR_002 — Password is required'); return; }
     
     setLoading(true);
@@ -56,203 +39,151 @@ const Login: React.FC<LoginProps> = ({ onSwitchToSignup, onLoginSuccess }) => {
       onLoginSuccess?.(loginMode);
     } catch (err: any) {
       setError(err.message);
-      const panel = document.querySelector('.skynet-panel-container');
-      if (panel) {
-        panel.animate([
-          { transform: 'translateX(-6px)' },
-          { transform: 'translateX(6px)' },
-          { transform: 'translateX(-6px)' },
-          { transform: 'translateX(0)' }
-        ], { duration: 300, easing: 'cubic-bezier(.36,.07,.19,.97)' });
-      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#020408] text-[#e8f4ff] font-['Rajdhani'] relative overflow-hidden">
-      <SkynetBackground />
-      
-      <div className="skynet-bg-overlay"></div>
-      <div className="skynet-scanlines"></div>
-      <div className="skynet-scan-beam"></div>
+    <div className="w-full max-w-[420px] relative animate-fade-up">
+      <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-8 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex flex-col gap-6">
 
-      <div className="skynet-corner skynet-corner--tl"></div>
-      <div className="skynet-corner skynet-corner--tr"></div>
-      <div className="skynet-corner skynet-corner--bl"></div>
-      <div className="skynet-corner skynet-corner--br"></div>
-
-      <div className="fixed top-[22px] left-[28px] flex items-center gap-[12px] z-20 animate-fade-down" style={{ animationDelay: '0.4s', animationFillMode: 'forwards', opacity: 0 }}>
-        <div className="w-[36px] h-[36px] bg-gradient-to-br from-[#00f0ff] to-[#0060ff] rounded-[8px] flex items-center justify-center font-['Orbitron'] font-black text-[14px] color-[#000] shadow-[0_0_20px_rgba(0,240,255,0.5)] relative after:content-[''] after:absolute after:right-[-3px] after:bottom-[-3px] after:w-[36px] after:h-[36px] after:bg-[#003050] after:rounded-[8px] after:z-[-1]">S</div>
-        <div className="flex flex-col">
-          <div className="font-['Orbitron'] text-[13px] font-bold tracking-[0.12em]">SKYNET</div>
-          <div className="font-['Share_Tech_Mono'] text-[8px] text-[#6a8aaa] tracking-[0.12em] mt-[1px]">PPT GENERATION SYSTEM v2.4</div>
-        </div>
-      </div>
-
-      <div className="fixed top-[22px] right-[28px] flex items-center gap-[8px] bg-[rgba(0,255,157,0.06)] border border-[rgba(0,255,157,0.2)] rounded-[6px] px-[14px] py-[6px] font-['Share_Tech_Mono'] text-[9px] text-[#00ff9d] tracking-[0.1em] z-20 animate-fade-down" style={{ animationDelay: '0.6s', animationFillMode: 'forwards', opacity: 0 }}>
-        <div className="w-[5px] h-[5px] rounded-full bg-[#00ff9d] shadow-[0_0_6px_#00ff9d] animate-[dotPulse_2s_ease-in-out_infinite]"></div>
-        ALL_SYSTEMS_NOMINAL
-      </div>
-
-      <div className="fixed bottom-0 left-0 right-0 h-[30px] bg-[rgba(2,8,18,0.92)] border-t border-[rgba(0,240,255,0.25)] flex items-center px-[24px] gap-[28px] z-20 backdrop-blur-[10px] animate-fade-up" style={{ animationDelay: '1.8s', animationFillMode: 'forwards', opacity: 0 }}>
-        <div className="flex items-center gap-[6px] font-['Share_Tech_Mono'] text-[9px] text-[#6a8aaa] tracking-[0.1em]">
-          <div className="w-[5px] h-[5px] rounded-full bg-[#00ff9d] shadow-[0_0_6px_#00ff9d] animate-[dotPulse_2s_ease-in-out_infinite]"></div>
-          CORE_ONLINE
-        </div>
-        <div className="flex items-center gap-[6px] font-['Share_Tech_Mono'] text-[9px] text-[#6a8aaa] tracking-[0.1em]">
-          <div className="w-[5px] h-[5px] rounded-full bg-[#00f0ff] shadow-[0_0_6px_#00f0ff] animate-[dotPulse_2s_ease-in-out_infinite]"></div>
-          LLM_CONNECTED
-        </div>
-        <div className="ml-auto font-['Share_Tech_Mono'] text-[10px] text-[#00f0ff] tracking-[0.08em]">{clock}</div>
-      </div>
-
-      <div className="relative z-10 w-full h-screen overflow-hidden flex items-center justify-center p-[10px]">
-        <div className="skynet-panel-container w-[400px] max-w-full bg-[rgba(4,12,28,0.92)] border border-[rgba(0,240,255,0.2)] rounded-[12px] p-[24px_28px] relative backdrop-blur-[30px] shadow-[0_0_50px_rgba(0,240,255,0.06),0_20px_60px_rgba(0,0,0,0.8)] animate-[panelReveal_0.8s_cubic-bezier(0.22,1,0.36,1)_0.5s_forwards]" style={{ opacity: 0, transform: 'translateY(20px)' }}>
-          
-          <div className="absolute inset-[-1px] rounded-[13px] p-[1px] pointer-events-none animate-[borderRotate_6s_linear_infinite]" style={{ background: 'linear-gradient(0deg, rgba(0,240,255,0.3), transparent 40%, transparent 60%, rgba(0,255,157,0.2))', WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude' }}></div>
-
-          <div className="absolute w-[14px] h-[14px] top-[-1px] left-[-1px] border-t-2 border-l-2 border-[#00f0ff] rounded-[2px_0_0_0]"></div>
-          <div className="absolute w-[14px] h-[14px] top-[-1px] right-[-1px] border-t-2 border-r-2 border-[#00f0ff] rounded-[0_2px_0_0]"></div>
-          <div className="absolute w-[14px] h-[14px] bottom-[-1px] left-[-1px] border-b-2 border-l-2 border-[#00f0ff] rounded-[0_0_0_2px]"></div>
-          <div className="absolute w-[14px] h-[14px] bottom-[-1px] right-[-1px] border-b-2 border-r-2 border-[#00f0ff] rounded-[0_0_2px_0]"></div>
-
-          <div className="flex items-center gap-[8px] font-['Share_Tech_Mono'] text-[8px] text-[rgba(0,240,255,0.45)] tracking-[0.14em] mb-[12px] animate-fade-up" style={{ animationDelay: '0.7s', animationFillMode: 'forwards', opacity: 0 }}>
-            SESSION_INIT
-            <div className="flex-1 h-[1px] bg-gradient-to-r from-[rgba(0,240,255,0.15)] to-transparent"></div>
+        {/* HEADER */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <div className={`w-5 h-[2px] ${loginMode === 'admin' ? 'bg-red-500' : 'bg-primary'}`}></div>
+            <span className={`text-[10px] tracking-widest font-bold uppercase ${loginMode === 'admin' ? 'text-red-500' : 'text-primary'}`}>
+              {loginMode === 'admin' ? 'ADMIN_OVERRIDE' : 'SESSION_INIT'}
+            </span>
           </div>
-
-          <h2 className="font-['Orbitron'] text-[26px] font-black tracking-[0.06em] leading-none mb-[4px] animate-fade-up" style={{ animationDelay: '0.8s', animationFillMode: 'forwards', opacity: 0 }}>
-            SKY<span className="text-[#00f0ff] drop-shadow-[0_0_15px_rgba(0,240,255,0.4)]">NET</span>
-          </h2>
-
-          <div className="flex items-center gap-[8px] font-['Share_Tech_Mono'] text-[9px] text-[#6a8aaa] tracking-[0.06em] mb-[14px] animate-fade-up" style={{ animationDelay: '0.9s', animationFillMode: 'forwards', opacity: 0 }}>
-            <span className="text-[#00f0ff]">›</span>
-            <span>_ {loginMode === 'admin' ? 'ADMIN_AUTHENTICATION' : 'AWAITING_CREDENTIALS'}</span>
-            <span className="inline-block w-[6px] h-[11px] bg-[#00f0ff] rounded-[1px] ml-[2px] animate-[cursorBlink_1.1s_step-end_infinite] shadow-[0_0_6px_#00f0ff]"></span>
+          <h2 className="text-[22px] font-bold text-white mb-1.5 tracking-tight">Skynet Application</h2>
+          <div className="text-[11px] tracking-widest font-mono flex items-center">
+            {loginMode === 'admin' ? (
+              <span className="text-red-500 font-bold uppercase flex items-center gap-1">
+                <span className="material-symbols-outlined text-[12px]">chevron_right</span>
+                ADMIN_OVERRIDE · CLEARANCE_REQUIRED
+              </span>
+            ) : (
+              <>
+                <span className="text-primary mr-2 font-bold">{'>_'}</span> 
+                <span className="text-outline-variant">AWAITING_CREDENTIALS</span>
+              </>
+            )}
           </div>
+        </div>
 
-          {/* ═══ EMPLOYEE / ADMIN TAB SELECTOR ═══ */}
-          <div className="flex mb-[16px] border border-[rgba(0,240,255,0.15)] rounded-[6px] overflow-hidden animate-fade-up" style={{ animationDelay: '0.95s', animationFillMode: 'forwards', opacity: 0 }}>
-            <button
-              type="button"
-              onClick={() => { setLoginMode('employee'); setError(''); }}
-              className={`flex-1 py-[10px] font-['Orbitron'] text-[10px] font-bold tracking-[0.16em] transition-all duration-300 flex items-center justify-center gap-[6px] ${
-                loginMode === 'employee'
-                  ? 'bg-gradient-to-r from-[rgba(0,240,255,0.12)] to-[rgba(0,96,255,0.08)] text-[#00f0ff] shadow-[inset_0_-2px_0_#00f0ff]'
-                  : 'bg-transparent text-[#4a6a8a] hover:text-[#6a8aaa]'
-              }`}
-            >
-              <svg viewBox="0 0 24 24" className="w-[12px] h-[12px]" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              EMPLOYEE
-            </button>
-            <div className="w-[1px] bg-[rgba(0,240,255,0.15)]"></div>
-            <button
-              type="button"
-              onClick={() => { setLoginMode('admin'); setError(''); }}
-              className={`flex-1 py-[10px] font-['Orbitron'] text-[10px] font-bold tracking-[0.16em] transition-all duration-300 flex items-center justify-center gap-[6px] ${
-                loginMode === 'admin'
-                  ? 'bg-gradient-to-r from-[rgba(255,184,0,0.1)] to-[rgba(255,107,53,0.06)] text-[#ffb800] shadow-[inset_0_-2px_0_#ffb800]'
-                  : 'bg-transparent text-[#4a6a8a] hover:text-[#6a8aaa]'
-              }`}
-            >
-              <svg viewBox="0 0 24 24" className="w-[12px] h-[12px]" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              ADMIN
-            </button>
-          </div>
+        {/* TABS (Segmented Control) */}
+        <div className="flex bg-[#05060A] p-1.5 rounded-xl border border-white/5 relative z-10 w-full mb-2">
+          <button 
+            type="button"
+            onClick={() => { setLoginMode('employee'); setError(''); }}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition-all ${
+              loginMode === 'employee' 
+                ? 'bg-[#1E293B]/80 text-white shadow-sm' 
+                : 'text-outline-variant hover:text-white'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">badge</span>
+            Employee
+          </button>
+          <button 
+            type="button"
+            onClick={() => { setLoginMode('admin'); setError(''); }}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition-all ${
+              loginMode === 'admin' 
+                ? 'bg-red-900/80 text-white shadow-[0_0_15px_rgba(220,38,38,0.2)]' 
+                : 'text-outline-variant hover:text-white'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
+            Admin
+          </button>
+        </div>
 
-          {error && (
-            <div className="flex items-center gap-[6px] bg-[rgba(255,45,85,0.05)] border border-[rgba(255,45,85,0.2)] rounded-[4px] p-[8px_12px] font-['Share_Tech_Mono'] text-[9px] text-[#ff2d55] mb-[12px] animate-fade-up">
-              <div className="w-[14px] h-[14px] rounded-full border border-[#ff2d55] flex items-center justify-center text-[8px]">!</div>
+        {error && (
+            <div className="flex items-center gap-2 bg-error/10 border border-error/20 rounded-lg p-3 text-[11px] text-error">
+              <span className="material-symbols-outlined text-[14px]">error</span>
               {error}
             </div>
-          )}
+        )}
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-[14px] animate-fade-up" style={{ animationDelay: '1s', animationFillMode: 'forwards', opacity: 0 }}>
-            <div className="flex flex-col gap-[4px]">
-              <label htmlFor="login_email" className="font-['Share_Tech_Mono'] text-[8px] tracking-[0.14em] text-[#4a6a8a] flex items-center gap-[5px] cursor-pointer">
-                <span className="text-[rgba(0,240,255,0.4)]">01 //</span>
-                {loginMode === 'admin' ? 'ADMIN_EMPLOYEE_ID' : 'EMPLOYEE_ID'}
-              </label>
-              <div className="relative flex items-center h-[46px] bg-[rgba(0,240,255,0.02)] border border-[rgba(0,240,255,0.15)] rounded-[4px] px-[12px] gap-[8px] transition-all focus-within:border-[#00f0ff] focus-within:bg-[rgba(0,240,255,0.04)]">
-                <svg viewBox="0 0 24 24" className="w-[13px] h-[13px] text-[rgba(0,240,255,0.4)]" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                <input
-                  id="login_email"
-                  name="email"
-                  type="text"
-                  autoComplete="username"
-                  className="flex-1 bg-transparent !border-none !outline-none !ring-0 font-['Share_Tech_Mono'] text-[12px] text-[#e8f4ff] tracking-[0.04em] placeholder:text-[#2a4060]"
-                  placeholder={loginMode === 'admin' ? 'ADMIN001' : 'EMP001'}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
+        {/* FORM */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="relative group">
+            <label className="text-[10px] text-outline-variant uppercase tracking-widest block mb-2 font-semibold">
+              {loginMode === 'admin' ? 'MANAGER_ID' : 'EMPLOYEE_ID'}
+            </label>
+            <div className="relative text-black">
+              <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-[18px]">badge</span>
+              <input 
+                name="email"
+                type="text" 
+                value={email}
+                autoComplete="username"
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-[#EFF2F6] text-gray-900 rounded-xl pl-10 pr-4 py-3 text-sm font-medium outline-none placeholder:text-gray-400 focus:ring-2 focus:ring-[#1A3EE0] transition-shadow shadow-inner" 
+                placeholder={loginMode === 'admin' ? 'neo10486' : 'neo10486'}
+              />
             </div>
-
-            <div className="flex flex-col gap-[4px]">
-              <label htmlFor="login_password" className="font-['Share_Tech_Mono'] text-[8px] tracking-[0.14em] text-[#4a6a8a] flex items-center gap-[5px] cursor-pointer">
-                <span className="text-[rgba(0,240,255,0.4)]">02 //</span>
-                ENCRYPTION_KEY
-              </label>
-              <div className="relative flex items-center h-[46px] bg-[rgba(0,240,255,0.02)] border border-[rgba(0,240,255,0.15)] rounded-[4px] px-[12px] gap-[8px] transition-all focus-within:border-[#00f0ff] focus-within:bg-[rgba(0,240,255,0.04)]">
-                <svg viewBox="0 0 24 24" className="w-[13px] h-[13px] text-[rgba(0,240,255,0.4)]" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                <input
-                  id="login_password"
-                  name="password"
-                  type={pwdVisible ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  className="flex-1 bg-transparent !border-none !outline-none !ring-0 font-['Share_Tech_Mono'] text-[12px] text-[#e8f4ff] tracking-[0.04em] placeholder:text-[#2a4060]"
-                  placeholder="••••••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <button type="button" onClick={() => setPwdVisible(!pwdVisible)} className="text-[#4a6a8a] hover:text-[#00f0ff] transition-colors flex items-center">
-                  <svg viewBox="0 0 24 24" className="w-[14px] h-[14px]" fill="none" stroke="currentColor" strokeWidth="2">
-                    {pwdVisible ? (
-                      <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
-                    ) : (
-                      <><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
-                    )}
-                  </svg>
-                </button>
-              </div>
+          </div>
+          
+          <div className="relative group">
+            <label className="text-[10px] text-outline-variant uppercase tracking-widest block mb-2 font-semibold">
+              PASSWORD
+            </label>
+            <div className="relative text-black">
+              <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-[18px]">lock</span>
+              <input 
+                name="password"
+                type="password"
+                value={password}
+                autoComplete="current-password"
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-[#EFF2F6] text-gray-900 rounded-xl pl-10 pr-10 py-3 text-sm font-bold tracking-widest outline-none placeholder:text-gray-400 focus:ring-2 focus:ring-[#1A3EE0] transition-shadow shadow-inner" 
+                placeholder="••••••••"
+              />
+              <span className="material-symbols-outlined absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer text-[18px]">visibility_off</span>
             </div>
-
-            <div className="flex justify-end mt-[-4px]">
-              {/* FORGOT_PASSWORD REMOVED PER ADMINISTRATIVE POLICY */}
-            </div>
-
-            <button
+          </div>
+          
+          <div className="pt-2">
+            <button 
               type="submit"
               disabled={loading}
-              className={`w-full h-[46px] rounded-[4px] font-['Orbitron'] text-[11px] font-bold tracking-[0.2em] text-[#fff] hover:translate-y-[-1px] transition-all disabled:opacity-50 mt-[4px] ${
-                loginMode === 'admin'
-                  ? 'bg-gradient-to-r from-[#c87800] to-[#ffb800] shadow-[0_0_15px_rgba(255,184,0,0.3)] text-[#000]'
-                  : 'bg-gradient-to-r from-[#0050c8] to-[#00b8ff] shadow-[0_0_15px_rgba(0,144,255,0.3)]'
+              className={`w-full py-3.5 text-white font-bold rounded-xl transition-all tracking-widest text-sm uppercase ${
+                loginMode === 'admin' 
+                  ? 'bg-[#990000] hover:bg-red-700 shadow-[0_0_20px_rgba(153,0,0,0.3)] border border-red-500/20' 
+                  : 'bg-[#173BE8] hover:bg-[#1A3EE0]/90 shadow-[0_0_15px_rgba(26,62,224,0.3)]'
               }`}
             >
-              {loading ? 'AUTHENTICATING...' : (loginMode === 'admin' ? 'ADMIN_AUTHENTICATE' : 'AUTHENTICATE')}
+              {loading ? 'AUTHENTICATING...' : 'AUTHENTICATE'}
             </button>
-
-            <div className="flex items-center gap-[10px] my-[2px]">
-              <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-[rgba(0,240,255,0.1)] to-transparent"></div>
-              <div className="font-['Share_Tech_Mono'] text-[8px] text-[#2a4060] tracking-[0.1em]">OR</div>
-              <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-[rgba(0,240,255,0.1)] to-transparent"></div>
-            </div>
-
-            <div className="text-center">
-              <span className="font-['Share_Tech_Mono'] text-[9px] text-[#6a8aaa] tracking-[0.08em]">
-                NO_ACCOUNT? <a href="#" onClick={(e) => { e.preventDefault(); onSwitchToSignup(); }} className="text-[#00f0ff] font-semibold">REQUEST_ACCESS →</a>
-              </span>
-            </div>
-          </form>
-
-          <div className="mt-[16px] pt-[12px] border-t border-[rgba(0,240,255,0.05)] text-[8px] text-[#2a4060] text-center tracking-[0.08em] leading-[1.6]">
-             Powered by <strong className="text-[#4a6a8a] font-normal">Skynet Core</strong> — AI Suite<br/>
-             © 2026 Skynet Systems. All rights reserved.
           </div>
-        </div>
+
+          <div className="text-center pt-2">
+            <span className="text-[11px] text-outline-variant font-medium">
+              Are you an {loginMode === 'admin' ? 'employee' : 'admin'}? 
+              <a href="#" onClick={(e) => { e.preventDefault(); setLoginMode(loginMode === 'admin' ? 'employee' : 'admin'); }} 
+                 className={`transition-colors ml-1 font-bold ${loginMode === 'admin' ? 'text-red-400 hover:text-red-300' : 'text-white hover:text-primary'}`}>
+                {loginMode === 'admin' ? 'Employee Login' : 'Admin Login'} &rarr;
+              </a>
+            </span>
+          </div>
+
+          <div className="text-center border-t border-white/5 pt-5 mt-2">
+            <div className="text-[10px] text-outline-variant font-medium">
+              Powered by <span className="text-white">Neo Q Labs &mdash; Swift Ops Training Team</span>
+            </div>
+            <div className="text-[9px] text-outline-variant/60 mt-1.5">
+              &copy; 2026 Iamneo Edutech Private Limited. All rights reserved.
+            </div>
+            <div className="mt-4">
+              <a href="#" onClick={(e) => { e.preventDefault(); onSwitchToSignup(); }} className="text-[10px] text-primary hover:text-primary/80 transition-colors uppercase tracking-widest font-bold">
+                Return to Join Protocol
+              </a>
+            </div>
+          </div>
+        </form>
       </div>
     </div>
   );

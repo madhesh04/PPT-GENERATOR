@@ -37,6 +37,10 @@ TONE_CONFIG = {
     "educational": {
         "temperature": 0.6,
         "instruction": "Adopt a clear, pedagogical style. Break down complex concepts into first principles. Use analogies and step-by-step explanations."
+    },
+    "academic": {
+        "temperature": 0.4,
+        "instruction": "Maintain a rigorous, formal, and objective academic tone. Cite concepts clearly, focus on detailed methodology, theoretical background, and ensure thorough explanations of both concepts and any code examples."
     }
 }
 
@@ -107,8 +111,10 @@ BULLET COUNT: Exactly 5 per slide. Every content slide MUST have exactly 5 bulle
 ═══════════════════════════
 CODE BLOCKS
 ═══════════════════════════
-For technical or programming topics, some slides SHOULD include a code example.
+For technical, programming, or academic topics, some slides SHOULD include a code example.
 - Put code in the "code" field as a clean, runnable snippet.
+- CRITICAL: You must use literal `\n` characters to ensure every line of code prints on a NEW LINE. Under no circumstance should multiple code statements be concatenated on the same horizontal line.
+- REQUIRED: If the tone is 'academic' or 'technical', any provided code snippet MUST be at least 10 lines long. You MUST explain the code block thoroughly line-by-line within the slide's content or notes.
 - For non-code slides, set both "code" and "language" to null.
 
 ═══════════════════════════

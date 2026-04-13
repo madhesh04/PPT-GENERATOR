@@ -94,10 +94,14 @@ async def admin_delete_presentation(presentation_id: str, admin_user: Annotated[
 async def admin_get_users(
     admin_user: Annotated[dict, Depends(require_admin)],
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100)
+    limit: int = Query(200, ge=1, le=500)
 ):
     """Read-only listing of users from the external Timesheet database."""
     users_coll = get_timesheet_users_collection()
+    
+    # Get total count for frontend
+    total_count = await users_coll.count_documents({})
+    
     cursor = users_coll.find(
         {},
         {"password": 0}  # Never expose password hashes
@@ -108,14 +112,17 @@ async def admin_get_users(
     # Map Timesheet fields → Skynet's expected response format
     serialized = []
     for u in users:
+        # Resolve name via multiple possible fields in shared DB
+        full_name = u.get("name") or u.get("fullName") or u.get("username") or "Unknown User"
+        
         mapped = {
             "id": u.get("employeeId", str(u.get("_id", ""))),
-            "email": u.get("employeeId", ""),
-            "full_name": u.get("name", ""),
+            "email": u.get("employeeId", u.get("email", "")),
+            "full_name": full_name,
             "role": u.get("role", "user").lower(),
             "status": "active",  # Timesheet has no status field — all users active
             "team_lead": u.get("teamLead", ""),
-            "ppt_count": 0,  # Can't join across databases
+            "ppt_count": 0,  
         }
         if "createdAt" in u and u["createdAt"]:
             mapped["created_at"] = u["createdAt"].isoformat() if hasattr(u["createdAt"], "isoformat") else str(u["createdAt"])
@@ -123,7 +130,12 @@ async def admin_get_users(
             mapped["created_at"] = None
         serialized.append(mapped)
 
-    return {"users": serialized}
+    return {
+        "users": serialized,
+        "total": total_count,
+        "limit": limit,
+        "skip": skip
+    }
 
 # ── Write endpoints — DISABLED (external shared DB) ───────────────────────────
 
