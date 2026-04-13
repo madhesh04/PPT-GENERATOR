@@ -50,32 +50,34 @@ export default function App() {
   }
 
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/login" element={<AuthView />} />
+    <>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/login" element={<AuthView />} />
 
-      {/* Protected Main Routes */}
-      <Route element={<MainLayout />}>
-        <Route path="/" element={<DashboardView />} />
-        <Route path="/create" element={<CreatorView />} />
-        <Route path="/preview" element={<PreviewView />} />
-        <Route path="/history" element={<HistoryView />} />
-        <Route path="/settings" element={<SettingsView />} />
+        {/* Protected Main Routes */}
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<DashboardView />} />
+          <Route path="/create" element={<CreatorView />} />
+          <Route path="/preview" element={<PreviewView />} />
+          <Route path="/history" element={<HistoryView />} />
+          <Route path="/settings" element={<SettingsView />} />
 
-        {/* Admin Routes — guarded by role. Tab driven by ?tab= query param */}
-        <Route element={<AdminRoute />}>
-          <Route path="/admin" element={<AdminView />} />
-          {/* Redirect legacy sub-paths to query-param equivalents */}
-          <Route path="/admin/users" element={<Navigate to="/admin?tab=users" replace />} />
-          <Route path="/admin/generations" element={<Navigate to="/admin?tab=generations" replace />} />
+          {/* Admin Routes — guarded by role. Tab driven by ?tab= query param */}
+          <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<AdminView />} />
+            {/* Redirect legacy sub-paths to query-param equivalents */}
+            <Route path="/admin/users" element={<Navigate to="/admin?tab=users" replace />} />
+            <Route path="/admin/generations" element={<Navigate to="/admin?tab=generations" replace />} />
+          </Route>
         </Route>
-      </Route>
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
 
       {/* Vercel Analytics */}
       <Analytics />
-    </Routes>
+    </>
   );
 }
