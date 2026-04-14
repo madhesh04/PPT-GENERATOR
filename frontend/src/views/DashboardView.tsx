@@ -46,8 +46,8 @@ export default function DashboardView() {
       <div className="mb-8 flex items-center gap-3">
         <span className="material-symbols-outlined text-[#2563EB] text-3xl">dashboard</span>
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white">Operations Dashboard</h1>
-          <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-mono">System Metrics & History</p>
+          <h1 className="text-[18px] font-extrabold text-white tracking-[-0.5px]">Operations Dashboard</h1>
+          <p className="text-[11px] font-extrabold text-gray-500 mt-1 uppercase tracking-widest">System Metrics & History</p>
         </div>
       </div>
 
@@ -65,8 +65,8 @@ export default function DashboardView() {
             </div>
           </div>
           <div>
-            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Total Generated</div>
-            <div className="text-2xl font-bold text-white">{savedPresentations.length}</div>
+            <div className="text-[10px] text-[#475569] font-extrabold uppercase tracking-widest mb-1">Total Generated</div>
+            <div className="text-[24px] font-extrabold text-white font-mono leading-none tracking-[-2px]">{savedPresentations.length}</div>
           </div>
         </div>
 
@@ -82,8 +82,8 @@ export default function DashboardView() {
             </div>
           </div>
           <div>
-            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Active Today</div>
-            <div className="text-2xl font-bold text-white">{activeTodayCount}</div>
+            <div className="text-[10px] text-[#475569] font-extrabold uppercase tracking-widest mb-1">Active Today</div>
+            <div className="text-[24px] font-extrabold text-white font-mono leading-none tracking-[-2px]">{activeTodayCount}</div>
           </div>
         </div>
 
@@ -98,8 +98,8 @@ export default function DashboardView() {
             </div>
           </div>
           <div>
-            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Model Node</div>
-            <div className="text-xl font-bold text-white tracking-tight">
+            <div className="text-[10px] text-[#475569] font-extrabold uppercase tracking-widest mb-1">Model Node</div>
+            <div className="text-[24px] font-extrabold text-white font-mono leading-none tracking-[-2px] truncate">
               {globalDefaultModel === 'nvidia' ? 'NVIDIA K2.5' : 'GROQ LLaMA'}
             </div>
           </div>
@@ -116,8 +116,8 @@ export default function DashboardView() {
             </div>
           </div>
           <div>
-            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Storage Layer</div>
-            <div className="text-xl font-bold text-white tracking-tight">GridFS</div>
+            <div className="text-[10px] text-[#475569] font-extrabold uppercase tracking-widest mb-1">Storage Layer</div>
+            <div className="text-[24px] font-extrabold text-white font-mono leading-none tracking-[-2px]">GridFS</div>
           </div>
         </div>
       </div>
@@ -128,7 +128,7 @@ export default function DashboardView() {
         {/* Recent Generations Table (Full Width Mode) */}
         <section className="lg:col-span-12 bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-sm font-bold text-white tracking-wide uppercase">Recent Generations</h3>
+            <h3 className="text-[14px] font-bold text-white font-sans">Recent Generations</h3>
             <button 
               onClick={() => navigate('/history')}
               className="text-[11px] text-gray-400 hover:text-white font-bold tracking-widest uppercase transition-colors flex items-center gap-1"
@@ -139,12 +139,12 @@ export default function DashboardView() {
           
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
-              <thead className="border-b border-white/[0.06] text-[10px] font-bold text-[#475569] uppercase tracking-widest whitespace-nowrap">
+              <thead className="border-b border-white/[0.06] text-[11px] font-semibold text-[#475569] uppercase tracking-[0.8px] whitespace-nowrap">
                 <tr>
-                  <th className="pb-3 px-4 font-bold">Deck Title</th>
-                  <th className="pb-3 px-4 font-bold">Status</th>
-                  <th className="pb-3 px-4 text-right font-bold">Timestamp</th>
-                  <th className="pb-3 px-4 text-right font-bold w-32">Action</th>
+                  <th className="pb-3 px-4 font-semibold font-sans">Deck Title</th>
+                  <th className="pb-3 px-4 font-semibold font-sans">Status</th>
+                  <th className="pb-3 px-4 text-right font-semibold font-sans">Timestamp</th>
+                  <th className="pb-3 px-4 text-right font-semibold font-sans w-32">Action</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
@@ -171,16 +171,16 @@ export default function DashboardView() {
                   </tr>
                 ) : savedPresentations.slice(0, 5).map(p => (
                   <tr key={p.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/[0.06] group">
-                    <td className="py-4 px-4 font-medium text-gray-200">
+                    <td className="py-4 px-4 font-semibold text-gray-200 text-[14px]">
                       {p.title}
                     </td>
                     <td className="py-4 px-4">
-                      <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-full">
+                      <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 text-[#4ADE80] text-[10px] uppercase font-black tracking-[0.05em] px-2.5 py-1 rounded-md">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        Complete
+                        COMPLETED
                       </span>
                     </td>
-                    <td className="py-4 px-4 text-right text-gray-400 text-xs font-mono">
+                    <td className="py-4 px-4 text-right text-gray-400 text-[14px] font-mono">
                       {new Date(p.created_at).toLocaleDateString()}
                     </td>
                     <td className="py-4 px-4 text-right">

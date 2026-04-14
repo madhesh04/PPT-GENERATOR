@@ -1,4 +1,4 @@
-import { useState } from 'react';
+
 import { Navigate, useLocation } from 'react-router-dom';
 import Login from '../components/Login';
 import { useAuthStore } from '../store/useAuthStore';
@@ -32,7 +32,7 @@ export default function AuthView() {
           <div className="w-10 h-10 flex items-center justify-center overflow-hidden rounded-lg shadow-sm border border-white/[0.06] bg-[#0F1118]">
             <img src="/logo.jpg" alt="Skynet Logo" className="w-full h-full object-cover scale-[1.3]" />
           </div>
-          <h1 className="text-white font-bold tracking-[0.2em] text-lg">SKYNET</h1>
+          <h1 className="text-[16px] font-extrabold text-white tracking-[0.1em] font-sans">SKYNET</h1>
         </div>
         <div>
           <span className="text-emerald-400 text-[10px] font-bold tracking-widest bg-emerald-400/5 px-3 py-1 rounded-md border border-emerald-400/10 hidden sm:inline-block">
@@ -50,7 +50,7 @@ export default function AuthView() {
 
       {/* BOTTOM STATUS BAR */}
       <footer className="relative z-10 w-full bg-[#0B0D14] border-t border-white/[0.06] py-3.5 px-8 flex justify-between items-center shrink-0">
-        <div className="flex gap-8 items-center text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+        <div className="flex gap-8 items-center text-[10px] font-extrabold tracking-widest text-[#475569] uppercase">
           <div className="flex items-center gap-2">
             <span>SECURE_LINK:</span>
             <span className="text-emerald-500">ESTABLISHED</span>
@@ -62,7 +62,7 @@ export default function AuthView() {
         </div>
         
         <div className="flex gap-6 items-center">
-          <div className="text-[10px] text-gray-700 font-bold border-l border-white/5 pl-4">
+          <div className="text-[10px] text-[#475569] font-extrabold uppercase tracking-widest border-l border-white/5 pl-4">
             v2.5.0-STITCH
           </div>
         </div>

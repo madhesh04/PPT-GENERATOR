@@ -55,7 +55,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               {loginMode === 'admin' ? 'ADMIN_OVERRIDE' : 'SESSION_INIT'}
             </span>
           </div>
-          <h2 className="text-[22px] font-bold text-white mb-1.5 tracking-tight">Skynet Application</h2>
+          <h2 className="text-[24px] font-extrabold text-white mb-1.5 tracking-[-0.5px]">Skynet Application</h2>
           <div className="text-[11px] tracking-widest font-mono flex items-center">
             {loginMode === 'admin' ? (
               <span className="text-red-500 font-bold uppercase flex items-center gap-1">
@@ -109,7 +109,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         {/* FORM */}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="relative group">
-            <label className="text-[10px] text-outline-variant uppercase tracking-widest block mb-2 font-semibold">
+            <label className="text-[10px] text-[#475569] font-extrabold uppercase tracking-widest block mb-2">
               {loginMode === 'admin' ? 'MANAGER_ID' : 'EMPLOYEE_ID'}
             </label>
             <div className="relative text-black">
@@ -120,14 +120,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 value={email}
                 autoComplete="username"
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-[#13161F] text-white border border-white/[0.06] rounded-xl pl-10 pr-4 py-3 text-sm font-medium outline-none placeholder:text-gray-600 focus:border-blue-500/50 transition-all shadow-inner" 
+                className="w-full bg-[#13161F] text-white border border-white/[0.06] rounded-xl pl-10 pr-4 py-3 text-[16px] font-medium outline-none placeholder:text-gray-600 focus:border-blue-500/50 transition-all shadow-inner" 
                 placeholder="User Identifier"
               />
             </div>
           </div>
           
           <div className="relative group">
-            <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-2 font-bold">
+            <label className="text-[10px] text-[#475569] font-extrabold uppercase tracking-widest block mb-2">
               PASSWORD
             </label>
             <div className="relative text-white">
@@ -138,7 +138,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 value={password}
                 autoComplete="current-password"
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-[#13161F] text-white border border-white/[0.06] rounded-xl pl-10 pr-10 py-3 text-sm font-bold tracking-widest outline-none placeholder:text-gray-600 focus:border-blue-500/50 transition-all shadow-inner" 
+                className="w-full bg-[#13161F] text-white border border-white/[0.06] rounded-xl pl-10 pr-10 py-3 text-[16px] font-bold tracking-widest outline-none placeholder:text-gray-600 focus:border-blue-500/50 transition-all shadow-inner" 
                 placeholder="••••••••"
               />
               <span className="material-symbols-outlined absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer text-[18px]">visibility_off</span>
@@ -149,7 +149,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             <button 
               type="submit"
               disabled={loading}
-              className={`w-full py-3.5 text-white font-bold rounded-xl transition-all tracking-widest text-sm uppercase ${
+              className={`w-full py-3.5 text-white font-extrabold rounded-xl transition-all tracking-widest text-[11px] uppercase ${
                 loginMode === 'admin' 
                   ? 'bg-[#990000] hover:bg-red-700 shadow-[0_0_20px_rgba(153,0,0,0.3)] border border-red-500/20' 
                   : 'bg-[#173BE8] hover:bg-[#1A3EE0]/90 shadow-[0_0_15px_rgba(26,62,224,0.3)]'

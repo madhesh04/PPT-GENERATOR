@@ -15,7 +15,7 @@ const Signup: React.FC<SignupProps> = ({ onSwitchToLogin }) => {
             <div className="w-5 h-[2px] bg-[#00ff9d]"></div>
             <span className="text-[10px] text-[#00ff9d] tracking-widest font-bold uppercase">JOIN_SYSTEM</span>
           </div>
-          <h2 className="text-[22px] font-bold text-white mb-1.5 tracking-tight">Access Initialization</h2>
+          <h2 className="text-[24px] font-extrabold text-white mb-1.5 tracking-[-0.5px]">Access Initialization</h2>
           <div className="text-[11px] text-outline-variant tracking-widest font-mono flex items-center">
             <span className="text-[#00ff9d] mr-2 font-bold">{'>_'}</span> RESTRICTED_AREA
           </div>
@@ -28,7 +28,7 @@ const Signup: React.FC<SignupProps> = ({ onSwitchToLogin }) => {
             <span className="material-symbols-outlined text-[#2563EB] text-[28px]">verified_user</span>
           </div>
 
-          <h3 className="font-bold text-sm text-[#60A5FA] tracking-wide text-center uppercase">
+          <h3 className="font-extrabold text-[14px] text-[#60A5FA] tracking-[1px] text-center uppercase">
             External Registration
           </h3>
 
@@ -40,7 +40,7 @@ const Signup: React.FC<SignupProps> = ({ onSwitchToLogin }) => {
 
           <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent my-3"></div>
 
-          <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold tracking-widest uppercase">
+          <div className="flex items-center gap-2 text-[10px] text-[#475569] font-extrabold tracking-widest uppercase">
             <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_6px_red] animate-pulse"></div>
             Self Signup Disabled
           </div>

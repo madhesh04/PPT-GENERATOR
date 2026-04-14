@@ -63,8 +63,8 @@ export default function SettingsView() {
       <div className="mb-8 flex items-center gap-3">
         <span className="material-symbols-outlined text-[#2563EB] text-3xl">settings</span>
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white">System Configuration</h1>
-          <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-mono">API & Rendering Parameters</p>
+          <h1 className="text-[18px] font-extrabold tracking-[-0.5px] text-white">System Configuration</h1>
+          <p className="text-[11px] font-semibold text-[#475569] mt-1 uppercase tracking-[0.8px] font-sans">API & Rendering Parameters</p>
         </div>
       </div>
 
@@ -77,29 +77,29 @@ export default function SettingsView() {
               <span className="material-symbols-outlined text-[#60A5FA] text-[18px]">account_circle</span>
               User Profile
             </h2>
-            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest bg-gray-800 px-2 py-1 rounded-md">
+            <div className="text-[10px] text-[#475569] font-extrabold uppercase tracking-widest bg-gray-800 px-2 py-1 rounded-md">
               {isAdminRole ? 'ADMINISTRATOR' : 'STANDARD_USER'}
             </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2 flex items-center gap-1.5">
+              <label className="block text-[10px] text-[#475569] font-extrabold uppercase tracking-widest mb-2 flex items-center gap-1.5">
                 <span className="text-[#2563EB]">01 //</span> Full Name
               </label>
               <input 
-                className="w-full bg-[#13161F] border border-white/5 text-gray-300 text-sm p-3 rounded-xl outline-none" 
+                className="w-full bg-[#13161F] border border-white/5 text-gray-300 text-[16px] p-3 rounded-xl outline-none" 
                 type="text" 
                 readOnly 
                 value={user?.full_name || ''} 
               />
             </div>
             <div>
-              <label className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2 flex items-center gap-1.5">
+              <label className="block text-[10px] text-[#475569] font-extrabold uppercase tracking-widest mb-2 flex items-center gap-1.5">
                 <span className="text-[#2563EB]">02 //</span> Email Address
               </label>
               <input 
-                className="w-full bg-[#13161F] border border-white/5 text-gray-300 text-sm p-3 rounded-xl outline-none" 
+                className="w-full bg-[#13161F] border border-white/5 text-gray-300 text-[16px] p-3 rounded-xl outline-none" 
                 type="text" 
                 readOnly 
                 value={user?.email || ''} 
@@ -122,7 +122,7 @@ export default function SettingsView() {
             <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5">
               <div>
                 <div className="text-sm font-bold text-gray-200">Global Image Generation</div>
-                <div className="text-[11px] text-gray-500">Enable/Disable system-wide image capabilities</div>
+                <div className="text-[11px] text-[#475569] font-semibold tracking-wide">Enable/Disable system-wide image capabilities</div>
               </div>
               <button 
                 onClick={() => handleUpdate('image_generation_enabled', !globalImageGen)}
@@ -137,7 +137,7 @@ export default function SettingsView() {
             <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5">
               <div>
                 <div className="text-sm font-bold text-gray-200">Global Speaker Notes</div>
-                <div className="text-[11px] text-gray-500">Enable/Disable system-wide speaker notes</div>
+                <div className="text-[11px] text-[#475569] font-semibold tracking-wide">Enable/Disable system-wide speaker notes</div>
               </div>
               <button 
                 onClick={() => handleUpdate('speaker_notes_enabled', !globalSpeakerNotes)}
@@ -152,7 +152,7 @@ export default function SettingsView() {
             <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5">
               <div>
                 <div className="text-sm font-bold text-gray-200">Default Intelligence Model</div>
-                <div className="text-[11px] text-gray-500">Select the default LLM for new presentations</div>
+                <div className="text-[11px] text-[#475569] font-semibold tracking-wide">Select the default LLM for new presentations</div>
               </div>
               {isAdminRole ? (
                 <select 
@@ -184,7 +184,7 @@ export default function SettingsView() {
               <div className="flex items-center justify-between p-4 rounded-xl bg-blue-500/5 border border-[#2563EB]/10 hover:bg-[#1D4ED8]/10 transition-colors">
                 <div>
                   <div className="text-sm font-bold text-gray-200 mb-1">Default Image Inclusion</div>
-                  <div className="text-[11px] text-gray-500">Enable or disable AI image generation by default for your creations</div>
+                  <div className="text-[11px] text-[#475569] font-semibold tracking-wide">Enable or disable AI image generation by default for your creations</div>
                 </div>
                 <button 
                   onClick={() => setIncludeImages(!includeImages)}

@@ -60,8 +60,8 @@ export default function HistoryView() {
         <div className="flex items-center gap-3">
           <span className="material-symbols-outlined text-[#2563EB] text-3xl">inventory_2</span>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-white">Generation Archive</h1>
-            <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-mono">Historical Data Logs</p>
+            <h1 className="text-[18px] font-extrabold tracking-[-0.5px] text-white">Generation Archive</h1>
+            <p className="text-[11px] font-extrabold text-[#475569] mt-1 uppercase tracking-widest">Historical Data Logs</p>
           </div>
         </div>
         <div className="flex gap-4">
@@ -113,14 +113,14 @@ export default function HistoryView() {
           
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
-              <thead>
+              <thead className="border-b border-white/[0.06] text-[11px] font-semibold text-[#475569] uppercase tracking-[0.8px] whitespace-nowrap">
                 <tr className="bg-white/[0.02] border-b border-white/[0.06]">
-                  <th className="px-6 py-4 text-[10px] text-[#475569] font-bold uppercase tracking-widest">#</th>
-                  <th className="px-6 py-4 text-[10px] text-[#475569] font-bold uppercase tracking-widest">FILENAME</th>
-                  <th className="px-6 py-4 text-[10px] text-[#475569] font-bold uppercase tracking-widest">THEME</th>
-                  <th className="px-6 py-4 text-[10px] text-[#475569] font-bold uppercase tracking-widest">STATUS</th>
-                  <th className="px-6 py-4 text-[10px] text-[#475569] font-bold uppercase tracking-widest">GENERATED AT</th>
-                  <th className="px-6 py-4 text-[10px] text-[#475569] font-bold uppercase tracking-widest text-right">ACTIONS</th>
+                  <th className="px-6 py-4 font-semibold font-sans">#</th>
+                  <th className="px-6 py-4 font-semibold font-sans">FILENAME</th>
+                  <th className="px-6 py-4 font-semibold font-sans">THEME</th>
+                  <th className="px-6 py-4 font-semibold font-sans">STATUS</th>
+                  <th className="px-6 py-4 font-semibold font-sans">GENERATED AT</th>
+                  <th className="px-6 py-4 font-semibold font-sans text-right">ACTIONS</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -132,15 +132,15 @@ export default function HistoryView() {
                   </tr>
                 ) : filteredPresentations.map((p, idx) => (
                   <tr key={p.id} className="hover:bg-white/[0.02] transition-colors group border-b border-white/[0.06]">
-                    <td className="px-6 py-4 text-[11px] text-gray-600 font-bold">{String(idx + 1).padStart(3, '0')}</td>
-                    <td className="px-6 py-4 text-[13px] font-medium text-[#60A5FA]">{p.title}.pptx</td>
-                    <td className="px-6 py-4 text-[11px] text-gray-300 uppercase tracking-wider">{p.theme}</td>
+                    <td className="px-6 py-4 text-[11px] text-[#475569] font-bold font-mono">{String(idx + 1).padStart(3, '0')}</td>
+                    <td className="px-6 py-4 text-[14px] font-semibold text-[#60A5FA]">{p.title}.pptx</td>
+                    <td className="px-6 py-4 text-[11px] text-gray-300 uppercase tracking-widest">{p.theme}</td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2.5 py-1 text-[9px] font-bold rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 tracking-wider">
+                      <span className="inline-flex items-center px-2.5 py-1 text-[10px] font-black rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 tracking-[0.05em] uppercase">
                         COMPLETED
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-[11px] text-gray-400">
+                    <td className="px-6 py-4 text-[14px] text-gray-400 font-mono font-normal">
                       {new Date(p.created_at).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -177,39 +177,39 @@ export default function HistoryView() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-24">
         <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Storage Used</span>
+            <span className="text-[10px] font-extrabold text-[#475569] uppercase tracking-widest">Total Storage Used</span>
             <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
               <span className="material-symbols-outlined text-[16px] text-[#60A5FA]">cloud</span>
             </div>
           </div>
           <div className="flex items-baseline gap-1">
-            <div className="text-3xl font-bold text-white tracking-tight">4,288</div>
+            <div className="text-[24px] font-extrabold text-white font-mono leading-none tracking-[-2px]">4,288</div>
             <div className="text-sm font-bold text-[#60A5FA]">MB</div>
           </div>
         </div>
 
         <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Success Rate</span>
+            <span className="text-[10px] font-extrabold text-[#475569] uppercase tracking-widest">Success Rate</span>
             <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
               <span className="material-symbols-outlined text-[16px] text-emerald-400">verified</span>
             </div>
           </div>
           <div className="flex items-baseline gap-1">
-            <div className="text-3xl font-bold text-white tracking-tight">98.2</div>
+            <div className="text-[24px] font-extrabold text-white font-mono leading-none tracking-[-2px]">98.2</div>
             <div className="text-sm font-bold text-emerald-400">%</div>
           </div>
         </div>
 
         <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)] overflow-hidden">
           <div className="flex items-center justify-between mb-4 relative z-10">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Records</span>
+            <span className="text-[10px] font-extrabold text-[#475569] uppercase tracking-widest">Total Records</span>
             <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
               <span className="material-symbols-outlined text-[16px] text-purple-400">inventory_2</span>
             </div>
           </div>
           <div className="flex items-baseline gap-1 relative z-10">
-            <div className="text-3xl font-bold text-white tracking-tight">{savedPresentations.length}</div>
+            <div className="text-[24px] font-extrabold text-white font-mono leading-none tracking-[-2px]">{savedPresentations.length}</div>
           </div>
           <div className="absolute -right-4 -bottom-4 opacity-[0.03] pointer-events-none">
             <span className="material-symbols-outlined text-[100px]">inventory_2</span>

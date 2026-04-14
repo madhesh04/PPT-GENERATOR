@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Share+Tech+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -40,8 +40,10 @@
   --color-text-muted:     #475569;
 
   /* ── Typography ────────────────────────────── */
-  --font-body:     "Inter", sans-serif;
-  --font-mono:     "Share Tech Mono", monospace;
+  --font-body:     "Nunito", "DM Sans", sans-serif;
+  --font-mono:     "JetBrains Mono", "DM Mono", monospace;
+  --font:          var(--font-body);
+  --mono:          var(--font-mono);
 
   /* ── Dimensions ────────────────────────────── */
   --header-h:     52px;
@@ -57,6 +59,7 @@ html, body {
   background-color: var(--color-bg-base);
   color: var(--color-text-primary);
   font-family: var(--font-body);
+  font-weight: 400;
 }
 
 .material-symbols-outlined {

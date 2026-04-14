@@ -194,8 +194,8 @@ export default function AdminView() {
           <div className="flex items-center gap-3">
             <span className="material-symbols-outlined text-[#DC2626] text-3xl">admin_panel_settings</span>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-white mb-1">System Management</h1>
-              <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-white/[0.04] px-2.5 py-1 rounded-md inline-block">
+              <h1 className="text-[18px] font-extrabold tracking-[-0.5px] text-white mb-1">System Management</h1>
+              <div className="text-[10px] text-[#475569] font-extrabold uppercase tracking-widest bg-white/[0.04] px-2.5 py-1 rounded-md inline-block">
                 {isMaster ? 'LEVEL_5_MASTER' : 'LEVEL_4_ADMIN'}
               </div>
             </div>
@@ -206,7 +206,7 @@ export default function AdminView() {
               <input 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-[#13161F] border border-white/[0.06] focus:border-[#DC2626]/50 text-gray-200 text-sm pl-12 pr-4 py-2.5 rounded-xl w-64 outline-none transition-all shadow-inner placeholder:text-gray-600" 
+                className="bg-[#13161F] border border-white/[0.06] focus:border-[#DC2626]/50 text-gray-200 text-[16px] pl-12 pr-4 py-2.5 rounded-xl w-64 outline-none transition-all shadow-inner placeholder:text-gray-600" 
                 placeholder="Search records..." 
                 type="text"
               />
@@ -265,11 +265,11 @@ export default function AdminView() {
               <h2 className="text-sm font-bold text-white tracking-wide uppercase">Provision New Account</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-              <input className="w-full bg-[#13161F] border border-white/5 text-gray-200 text-sm p-3.5 rounded-xl outline-none focus:border-purple-500/50 shadow-inner" placeholder="Full Name" value={newUser.full_name} onChange={e => setNewUser({ ...newUser, full_name: e.target.value })} />
-              <input className="w-full bg-[#13161F] border border-white/5 text-gray-200 text-sm p-3.5 rounded-xl outline-none focus:border-purple-500/50 shadow-inner" type="email" placeholder="Email Address" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
-              <input className="w-full bg-[#13161F] border border-white/5 text-gray-200 text-sm p-3.5 rounded-xl outline-none focus:border-purple-500/50 shadow-inner" type="password" placeholder="Passcode" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
+              <input className="w-full bg-[#13161F] border border-white/5 text-gray-200 text-[16px] p-3.5 rounded-xl outline-none focus:border-purple-500/50 shadow-inner" placeholder="Full Name" value={newUser.full_name} onChange={e => setNewUser({ ...newUser, full_name: e.target.value })} />
+              <input className="w-full bg-[#13161F] border border-white/5 text-gray-200 text-[16px] p-3.5 rounded-xl outline-none focus:border-purple-500/50 shadow-inner" type="email" placeholder="Email Address" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
+              <input className="w-full bg-[#13161F] border border-white/5 text-gray-200 text-[16px] p-3.5 rounded-xl outline-none focus:border-purple-500/50 shadow-inner" type="password" placeholder="Passcode" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
               <div className="relative">
-                <select className="w-full bg-[#13161F] border border-white/5 text-gray-300 text-sm p-3.5 pl-4 rounded-xl focus:border-purple-500/50 outline-none appearance-none cursor-pointer shadow-inner" value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })}>
+                <select className="w-full bg-[#13161F] border border-white/5 text-gray-300 text-[16px] p-3.5 pl-4 rounded-xl focus:border-purple-500/50 outline-none appearance-none cursor-pointer shadow-inner" value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })}>
                   <option value="user">Role: User</option>
                   <option value="admin">Role: Admin</option>
                 </select>
@@ -289,42 +289,42 @@ export default function AdminView() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Users</span>
+                  <span className="text-[10px] font-extrabold text-[#475569] uppercase tracking-widest">Total Users</span>
                   <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
                     <span className="material-symbols-outlined text-[16px] text-purple-400">group</span>
                   </div>
                 </div>
-                <div className="text-3xl font-bold text-white tracking-tight">{stats?.total_users || 0}</div>
+                <div className="text-[24px] font-extrabold text-white font-mono leading-none tracking-[-2px]">{stats?.total_users || 0}</div>
               </div>
               
               <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Generations</span>
+                  <span className="text-[10px] font-extrabold text-[#475569] uppercase tracking-widest">Total Generations</span>
                   <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
                     <span className="material-symbols-outlined text-[16px] text-[#60A5FA]">bolt</span>
                   </div>
                 </div>
-                <div className="text-3xl font-bold text-white tracking-tight">{stats?.total_generations || 0}</div>
+                <div className="text-[24px] font-extrabold text-white font-mono leading-none tracking-[-2px]">{stats?.total_generations || 0}</div>
               </div>
               
               <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pending Approvals</span>
+                  <span className="text-[10px] font-extrabold text-[#475569] uppercase tracking-widest">Pending Approvals</span>
                   <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center">
                     <span className="material-symbols-outlined text-[16px] text-amber-400">pending_actions</span>
                   </div>
                 </div>
-                <div className="text-3xl font-bold text-white tracking-tight">{stats?.pending_approvals || 0}</div>
+                <div className="text-[24px] font-extrabold text-white font-mono leading-none tracking-[-2px]">{stats?.pending_approvals || 0}</div>
               </div>
               
               <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Active Today</span>
+                  <span className="text-[10px] font-extrabold text-[#475569] uppercase tracking-widest">Active Today</span>
                   <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
                     <span className="material-symbols-outlined text-[16px] text-emerald-400">trending_up</span>
                   </div>
                 </div>
-                <div className="text-3xl font-bold text-white tracking-tight">{stats?.active_today || 0}</div>
+                <div className="text-[24px] font-extrabold text-white font-mono leading-none tracking-[-2px]">{stats?.active_today || 0}</div>
               </div>
             </div>
 
@@ -337,7 +337,7 @@ export default function AdminView() {
                 <div className="flex justify-between items-center bg-white/[0.02] border border-white/5 p-5 rounded-xl hover:bg-white/[0.04] transition-colors">
                   <div>
                     <div className="font-bold text-sm text-gray-200 mb-1">Image Generation</div>
-                    <div className="text-[11px] text-gray-500 tracking-wider">Module Status: {globalSettings.image_gen ? 'ACTIVE' : 'DISABLED'}</div>
+                    <div className="text-[14px] text-gray-500 font-mono font-normal tracking-wider">Module Status: {globalSettings.image_gen ? 'ACTIVE' : 'DISABLED'}</div>
                   </div>
                   <button 
                     onClick={() => handleToggleSetting('image_gen', globalSettings.image_gen)}
@@ -349,7 +349,7 @@ export default function AdminView() {
                 <div className="flex justify-between items-center bg-white/[0.02] border border-white/5 p-5 rounded-xl hover:bg-white/[0.04] transition-colors">
                   <div>
                     <div className="font-bold text-sm text-gray-200 mb-1">Speaker Notes</div>
-                    <div className="text-[11px] text-gray-500 tracking-wider">Module Status: {globalSettings.speaker_notes ? 'ACTIVE' : 'DISABLED'}</div>
+                    <div className="text-[14px] text-gray-500 font-mono font-normal tracking-wider">Module Status: {globalSettings.speaker_notes ? 'ACTIVE' : 'DISABLED'}</div>
                   </div>
                   <button 
                     onClick={() => handleToggleSetting('speaker_notes', globalSettings.speaker_notes)}
@@ -370,12 +370,12 @@ export default function AdminView() {
               <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead className="bg-white/[0.02] border-b border-white/5">
                   <tr>
-                    <th className="py-4 px-6 text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-tight">Index</th>
-                    <th className="py-4 px-6 text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-tight">Username</th>
-                    <th className="py-4 px-6 text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-tight">Email Addr</th>
-                    <th className="py-4 px-6 text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-tight">Privilege</th>
-                    <th className="py-4 px-6 text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-tight">Status</th>
-                    <th className="py-4 px-6 text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-tight text-right">Operations</th>
+                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Index</th>
+                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Username</th>
+                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Email Addr</th>
+                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Privilege</th>
+                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Status</th>
+                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight text-right">Operations</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -383,9 +383,9 @@ export default function AdminView() {
                     <tr><td colSpan={6} className="py-12 text-center text-gray-500 text-xs font-bold tracking-widest uppercase">No Matching Records</td></tr>
                   ) : filterData(users, ['full_name', 'email']).map((u: any, idx: number) => (
                     <tr key={u.id} className="hover:bg-white/[0.02] transition-colors group/row">
-                      <td className="py-4 px-6 text-[11px] text-gray-600 font-bold">{String(idx + 1).padStart(3, '0')}</td>
-                      <td className="py-4 px-6 text-[13px] font-medium text-white">{u.full_name}</td>
-                      <td className="py-4 px-6 text-[12px] text-gray-400">{u.email}</td>
+                      <td className="py-4 px-6 text-[11px] text-[#475569] font-bold font-mono">{String(idx + 1).padStart(3, '0')}</td>
+                      <td className="py-4 px-6 text-[14px] font-semibold text-white">{u.full_name}</td>
+                      <td className="py-4 px-6 text-[14px] text-gray-400 font-mono font-normal">{u.email}</td>
                       <td className="py-4 px-6">
                         <span 
                           onClick={() => handleToggleRole(u.id, u.role)}
@@ -435,11 +435,11 @@ export default function AdminView() {
               <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead className="bg-white/[0.02] border-b border-white/5">
                   <tr>
-                    <th className="py-4 px-6 text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-tight">Index</th>
-                    <th className="py-4 px-6 text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-tight">Username</th>
-                    <th className="py-4 px-6 text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-tight">Email Addr</th>
-                    <th className="py-4 px-6 text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-tight">Requested Role</th>
-                    <th className="py-4 px-6 text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-tight text-right">Actions</th>
+                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Index</th>
+                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Username</th>
+                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Email Addr</th>
+                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Requested Role</th>
+                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -447,9 +447,9 @@ export default function AdminView() {
                     <tr><td colSpan={5} className="py-12 text-center text-gray-500 text-xs font-bold tracking-widest uppercase">No Pending Approvals</td></tr>
                   ) : filterData(pending, ['full_name', 'email']).map((u: any, idx: number) => (
                     <tr key={u.id} className="hover:bg-white/[0.02] transition-colors group/row">
-                      <td className="py-4 px-6 text-[11px] text-gray-600 font-bold">{String(idx + 1).padStart(3, '0')}</td>
-                      <td className="py-4 px-6 text-[13px] font-medium text-white">{u.full_name}</td>
-                      <td className="py-4 px-6 text-[12px] text-gray-400">{u.email}</td>
+                      <td className="py-4 px-6 text-[11px] text-[#475569] font-bold font-mono">{String(idx + 1).padStart(3, '0')}</td>
+                      <td className="py-4 px-6 text-[14px] font-semibold text-white">{u.full_name}</td>
+                      <td className="py-4 px-6 text-[14px] text-gray-400 font-mono font-normal">{u.email}</td>
                       <td className="py-4 px-6">
                         <span className="px-2.5 py-1 rounded-md text-[9px] font-bold tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">{u.role?.toUpperCase()}</span>
                       </td>
@@ -484,12 +484,12 @@ export default function AdminView() {
               <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead className="bg-white/[0.02] border-b border-white/5">
                   <tr>
-                    <th className="py-4 px-6 text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-tight">Log ID</th>
-                    <th className="py-4 px-6 text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-tight">Deck Title</th>
-                    <th className="py-4 px-6 text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-tight">Model</th>
-                    <th className="py-4 px-6 text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-tight">Operator</th>
-                    <th className="py-4 px-6 text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-tight">Timestamp</th>
-                    <th className="py-4 px-6 text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-tight text-right">Actions</th>
+                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Log ID</th>
+                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Deck Title</th>
+                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Model</th>
+                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Operator</th>
+                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Timestamp</th>
+                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -497,15 +497,15 @@ export default function AdminView() {
                     <tr><td colSpan={6} className="py-12 text-center text-gray-500 text-xs font-bold tracking-widest uppercase">No Logs Found</td></tr>
                   ) : filterData(generations, ['title', 'generated_by']).map((p: any) => (
                     <tr key={p.id} className="hover:bg-white/[0.02] transition-colors group/row">
-                      <td className="py-4 px-6 text-[11px] text-gray-600 font-bold">#{p.id.substring(0, 6).toUpperCase()}</td>
-                      <td className="py-4 px-6 text-[13px] font-medium text-white">{p.title}</td>
+                      <td className="py-4 px-6 text-[11px] text-[#475569] font-bold font-mono">#{p.id.substring(0, 6).toUpperCase()}</td>
+                      <td className="py-4 px-6 text-[14px] font-semibold text-white">{p.title}</td>
                       <td className="py-4 px-6">
                         <span className="text-[11px] text-gray-400 font-mono tracking-tighter bg-[#13161F] px-2 py-1 rounded max-w-max border border-white/5">
                           {p.model_used || 'GROQ'}
                         </span>
                       </td>
                       <td className="py-4 px-6 text-[11px] font-medium text-amber-400">{p.generated_by || 'UNKNOWN'}</td>
-                      <td className="py-4 px-6 text-[11px] text-gray-500">{p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A'}</td>
+                      <td className="py-4 px-6 text-[14px] text-gray-500 font-mono font-normal">{p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A'}</td>
                       <td className="py-4 px-6 text-right">
                         <div className="flex justify-end gap-2 opacity-40 group-hover/row:opacity-100 transition-opacity">
                           <button onClick={() => handleDownload(p.id, p.title + '.pptx')} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors bg-white/5 text-gray-400" title="Export Artifact">

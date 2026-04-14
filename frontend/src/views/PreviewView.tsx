@@ -142,9 +142,9 @@ export default function PreviewView() {
             <span className="material-symbols-outlined text-2xl">visibility</span>
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold text-white tracking-tight truncate pr-4">{result.title}</h1>
+            <h1 className="text-[18px] font-extrabold tracking-[-0.5px] text-white truncate pr-4">{result.title}</h1>
             <div className="flex items-center gap-3 mt-1.5 overflow-x-auto no-scrollbar whitespace-nowrap">
-              <span className="text-[10px] text-gray-500 font-bold tracking-widest uppercase bg-white/5 px-2 py-0.5 rounded border border-white/5">
+              <span className="text-[10px] text-[#475569] font-extrabold tracking-widest uppercase bg-white/5 px-2 py-0.5 rounded border border-white/5 font-sans">
                 {slides.length} SLIDES · {theme.toUpperCase()} THEME
               </span>
               {result.provider && (
@@ -264,7 +264,7 @@ export default function PreviewView() {
                                 <div className="h-[1px] flex-1 bg-white/5"></div>
                              </div>
                              <input 
-                                className="w-full bg-transparent border-none text-xl font-bold text-white outline-none focus:ring-0 placeholder-white/20 p-0"
+                                className="w-full bg-transparent border-none text-[18px] tracking-[-0.5px] font-extrabold text-white outline-none focus:ring-0 placeholder-white/20 p-0"
                                 value={slide.title}
                                 onChange={e => handleTitleChange(idx, e.target.value)}
                                 placeholder="Enter Slide Title"
@@ -277,7 +277,7 @@ export default function PreviewView() {
                             <div key={bIdx} className="flex gap-4 group/bullet transition-all">
                               <div className="mt-2.5 w-1.5 h-1.5 rounded-full flex-shrink-0 transition-all group-hover/bullet:shadow-[0_0_8px_white]" style={{ backgroundColor: accentColor }}></div>
                               <textarea 
-                                className="w-full bg-transparent border-none text-[13px] leading-relaxed text-gray-400 focus:text-white transition-colors outline-none resize-none p-0 overflow-hidden min-h-[1.5em]"
+                                className="w-full bg-transparent border-none text-[14px] font-semibold leading-relaxed text-gray-400 focus:text-white transition-colors outline-none resize-none p-0 overflow-hidden min-h-[1.5em]"
                                 value={bullet}
                                 rows={2}
                                 onChange={e => {
@@ -304,7 +304,7 @@ export default function PreviewView() {
                                </div>
                                <span className="text-[9px] font-mono font-bold text-gray-500 tracking-widest uppercase">{slide.language || 'code_snippet'}</span>
                             </div>
-                            <pre className="p-4 md:p-6 text-[12px] font-mono text-blue-300 leading-relaxed overflow-x-auto whitespace-pre-wrap">
+                            <pre className="p-4 md:p-6 text-[14px] font-mono font-normal text-blue-300 leading-relaxed overflow-x-auto whitespace-pre-wrap">
                                {slide.code.replace(/\\n/g, '\n')}
                             </pre>
                             <div className="absolute top-12 right-4 opacity-0 group-hover/code:opacity-100 transition-opacity">

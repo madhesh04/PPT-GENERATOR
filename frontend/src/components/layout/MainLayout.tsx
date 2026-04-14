@@ -7,7 +7,7 @@ import { useAppStore } from '../../store/useAppStore';
 
 export default function MainLayout() {
   const { isAuthenticated, loading, user } = useAuthStore();
-  const { toastData, timeStr, setTimeStr } = useAppStore();
+  const { toastData, setTimeStr } = useAppStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -46,11 +46,11 @@ export default function MainLayout() {
 
       <div className="flex flex-col flex-grow w-[calc(100vw-52px)]">
         {/* TOP NAV BAR */}
-        <header className="h-[52px] w-full bg-[#0D0F17] border-b border-white/[0.06] flex justify-between items-center px-6 z-30 shrink-0">
+        <header className="h-[68px] w-full bg-[#0D0F17] border-b border-white/[0.06] flex justify-between items-center px-6 z-30 shrink-0">
             <div className="flex items-center gap-3">
               <div className="flex flex-col">
-                <span className="text-[14px] font-bold text-white tracking-tight leading-tight">PPT Generator</span>
-                <span className="text-[9px] font-mono text-[#475569] tracking-widest uppercase leading-tight">Q LABS · SWIFT OPS</span>
+                <span className="text-[15px] font-extrabold text-white leading-tight" style={{ fontStretch: 'condensed', letterSpacing: '-0.3px' }}>PPT Generator</span>
+                <span className="text-[10px] font-bold text-[#475569] uppercase leading-tight mt-0.5" style={{ letterSpacing: '1px' }}>Q LABS · SWIFT OPS</span>
               </div>
             </div>
 
@@ -58,10 +58,10 @@ export default function MainLayout() {
               className="flex items-center gap-3 bg-white/5 hover:bg-white/10 pl-3 pr-4 py-1.5 rounded-xl border border-white/5 cursor-pointer transition-all duration-300 group" 
               onClick={() => navigate('/settings')}
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600/20 to-blue-400/20 border border-[#2563EB]/20 flex items-center justify-center text-[12px] font-bold text-[#60A5FA] group-hover:scale-110 transition-transform">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600/20 to-blue-400/20 border border-[#2563EB]/20 flex items-center justify-center text-[12px] font-extrabold font-mono text-[#60A5FA] group-hover:scale-110 transition-transform">
                  {user?.full_name?.[0].toUpperCase() || 'U'}
               </div>
-              <span className="text-[12px] font-bold text-gray-300 group-hover:text-white transition-colors tracking-wide pr-1">
+              <span className="text-[13px] font-bold text-gray-300 group-hover:text-white transition-colors pr-1">
                 {user?.full_name?.toUpperCase() || 'EMP_0042'}
               </span>
             </div>
@@ -73,7 +73,7 @@ export default function MainLayout() {
         </main>
 
         {/* FOOTER / BOTTOM BAR */}
-        <StatusBar mode={user?.role === 'ADMIN' ? 'admin' : 'employee'} />
+        <StatusBar />
       </div>
 
       {/* TOAST SYSTEM */}

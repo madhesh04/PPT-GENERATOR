@@ -63,8 +63,8 @@ export default function CreatorView() {
       <header className="mb-8 flex items-center gap-3">
         <span className="material-symbols-outlined text-[#2563EB] text-3xl">add_box</span>
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white">Generation Engine</h1>
-          <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-mono">Configure Presentation Parameters</p>
+          <h1 className="text-[18px] font-extrabold text-white tracking-[-0.5px]">Generation Engine</h1>
+          <p className="text-[11px] font-extrabold text-[#475569] mt-1 uppercase tracking-widest">Configure Presentation Parameters</p>
         </div>
       </header>
 
@@ -83,13 +83,13 @@ export default function CreatorView() {
             <div className="space-y-6">
               {/* Title */}
               <div>
-                <label className="block text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <label className="block text-[10px] text-[#475569] font-extrabold uppercase tracking-widest mb-2 flex items-center gap-1.5">
                   <span className="text-[#2563EB]">01 //</span> Presentation Title
                 </label>
                 <div className="relative">
                   <div className="absolute top-3.5 left-4 text-gray-500 font-bold opacity-50 text-sm">T </div>
                   <input 
-                    className="w-full bg-[#13161F] border border-white/5 focus:border-[#2563EB]/50 text-gray-200 text-sm p-3.5 pl-12 rounded-xl transition-all outline-none shadow-inner" 
+                    className="w-full bg-[#13161F] border border-white/5 focus:border-[#2563EB]/50 text-gray-200 text-[16px] p-3.5 pl-12 rounded-xl transition-all outline-none shadow-inner" 
                     placeholder="e.g. System Integration Report Q3"
                     value={title}
                     onChange={e => setTitle(e.target.value)}
@@ -100,13 +100,13 @@ export default function CreatorView() {
 
               {/* Context */}
               <div>
-                <label className="block text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <label className="block text-[10px] text-[#475569] font-extrabold uppercase tracking-widest mb-2 flex items-center gap-1.5">
                   <span className="text-[#2563EB]">02 //</span> Primary Context Data
                 </label>
                 <div className="relative">
                   <div className="absolute top-3.5 left-4 text-gray-500 font-bold opacity-50 text-[18px] material-symbols-outlined">description</div>
                   <textarea 
-                    className="w-full bg-[#13161F] border border-white/5 focus:border-[#2563EB]/50 text-gray-200 text-sm p-3.5 pl-12 rounded-xl resize-none transition-all outline-none shadow-inner leading-relaxed" 
+                    className="w-full bg-[#13161F] border border-white/5 focus:border-[#2563EB]/50 text-gray-200 text-[16px] p-3.5 pl-12 rounded-xl resize-none transition-all outline-none shadow-inner leading-relaxed" 
                     placeholder="Enter the presentation core objective or data set..." 
                     rows={5}
                     value={context}
@@ -118,7 +118,7 @@ export default function CreatorView() {
 
               {/* Topics */}
               <div>
-                <label className="flex justify-between items-end block text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-2">
+                <label className="flex justify-between items-end block text-[10px] text-[#475569] font-extrabold uppercase tracking-widest mb-2">
                   <span className="flex items-center gap-1.5"><span className="text-[#2563EB]">03 //</span> Key Topics</span>
                   <span className="text-[9px] text-gray-600 font-normal">Press Enter to add</span>
                 </label>
@@ -136,7 +136,7 @@ export default function CreatorView() {
                   ))}
                   <input 
                     id="ti_id" 
-                    className="flex-1 bg-transparent border-none text-gray-200 text-sm outline-none px-2 min-w-[120px] placeholder-gray-600" 
+                    className="flex-1 bg-transparent border-none text-gray-200 text-[16px] outline-none px-2 min-w-[120px] placeholder-gray-600" 
                     placeholder={topics.length === 0 ? "Type a topic..." : ""}
                     value={topicIn}
                     disabled={loading}
@@ -152,12 +152,12 @@ export default function CreatorView() {
 
               {/* Slides */}
               <div>
-                <label className="block text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <label className="block text-[10px] text-[#475569] font-extrabold uppercase tracking-widest mb-2 flex items-center gap-1.5">
                   <span className="text-[#2563EB]">04 //</span> Slide Count Override
                 </label>
                 <div className="flex items-center gap-4 bg-[#13161F] p-2 rounded-xl border border-white/5 shadow-inner">
                   <input 
-                    className="w-16 bg-white/5 border border-white/5 focus:border-[#2563EB]/50 text-[#60A5FA] font-bold text-center p-2 rounded-lg outline-none text-sm" 
+                    className="w-16 bg-white/5 border border-white/5 focus:border-[#2563EB]/50 text-[#60A5FA] font-extrabold text-center p-2 rounded-lg outline-none text-[16px] font-mono" 
                     type="number" 
                     value={numSlides}
                     onChange={e => setNumSlides(parseInt(e.target.value) || 10)}
@@ -227,7 +227,7 @@ export default function CreatorView() {
             
             {/* Tone Matrix */}
             <div>
-              <h3 className="text-[11px] font-bold text-gray-400 tracking-widest uppercase mb-4 flex items-center gap-2">
+              <h3 className="text-[10px] font-extrabold text-[#475569] tracking-widest uppercase mb-4 flex items-center gap-2">
                 <span className="material-symbols-outlined text-[16px] text-purple-400">record_voice_over</span> Tone Matrix
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -252,7 +252,7 @@ export default function CreatorView() {
 
             {/* Visual Theme */}
             <div>
-              <h3 className="text-[11px] font-bold text-gray-400 tracking-widest uppercase mb-4 flex items-center gap-2">
+              <h3 className="text-[10px] font-extrabold text-[#475569] tracking-widest uppercase mb-4 flex items-center gap-2">
                 <span className="material-symbols-outlined text-[16px] text-emerald-400">palette</span> Visual Theme
               </h3>
               <div className="flex flex-col gap-2">
@@ -281,7 +281,7 @@ export default function CreatorView() {
 
             {/* AI Provider */}
             <div>
-              <h3 className="text-[11px] font-bold text-gray-400 tracking-widest uppercase mb-4 flex items-center gap-2">
+              <h3 className="text-[10px] font-extrabold text-[#475569] tracking-widest uppercase mb-4 flex items-center gap-2">
                 <span className="material-symbols-outlined text-[16px] text-[#60A5FA]">psychology</span> Neural Engine
               </h3>
               <div className="grid grid-cols-1 gap-2">
