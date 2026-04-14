@@ -202,13 +202,16 @@ async def download_ppt(file_id: str, current_user: Annotated[dict, Depends(get_c
         except Exception:
             raise HTTPException(status_code=400, detail="INVALID_IDENTIFIER")
             
-        # Ownership check: user can only access their own presentations
-        presentation = await presentations_collection.find_one({
-            "_id": obj_id,
-            "user_id": current_user["user_id"]
-        })
+        # Ownership check: user can only access their own presentations UNLESS they are admin/master
+        presentation = await presentations_collection.find_one({"_id": obj_id})
         if not presentation:
             raise HTTPException(status_code=404, detail="FILE_OR_PRESENTATION_NOT_FOUND")
+            
+        is_owner = presentation.get("user_id") == current_user["user_id"]
+        is_admin = current_user.get("role", "").upper() in ["ADMIN", "MASTER"]
+        
+        if not (is_owner or is_admin):
+            raise HTTPException(status_code=403, detail="UNAUTHORIZED_ACCESS")
             
         slides = presentation.get("slides", [])
         title = presentation.get("title", "Presentation")
@@ -251,11 +254,17 @@ async def delete_presentation(presentation_id: str, current_user: Annotated[dict
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid presentation ID")
         
-    result = await presentations_collection.delete_one({
-        "_id": obj_id,
-        "user_id": current_user["user_id"]
-    })
+    # Ownership check: only owner OR admin can delete
+    presentation = await presentations_collection.find_one({"_id": obj_id})
+    if not presentation:
+        raise HTTPException(status_code=404, detail="Presentation not found")
+        
+    is_owner = presentation.get("user_id") == current_user["user_id"]
+    is_admin = current_user.get("role", "").upper() in ["ADMIN", "MASTER"]
     
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Presentation not found or unauthorized")
+    if not (is_owner or is_admin):
+        raise HTTPException(status_code=403, detail="Unauthorized attempt to delete presentation")
+        
+    result = await presentations_collection.delete_one({"_id": obj_id})
+    
     return {"status": "success", "message": "Presentation deleted"}
