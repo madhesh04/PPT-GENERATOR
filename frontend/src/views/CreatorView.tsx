@@ -45,7 +45,7 @@ export default function CreatorView() {
   ];
 
   const themes = [
-    { id: 'neon', label: 'CYBER_NOIR', color: '#00f0ff' },
+    { id: 'neon', label: 'SKYNET_CORE', color: '#2563EB' },
     { id: 'ocean', label: 'OCEANIC', color: '#3b82f6' },
     { id: 'emerald', label: 'EMERALD', color: '#00ff9d' },
     { id: 'royal', label: 'ROYAL_SYS', color: '#a855f7' },
@@ -61,7 +61,7 @@ export default function CreatorView() {
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-fade-in w-full pb-12">
       <header className="mb-8 flex items-center gap-3">
-        <span className="material-symbols-outlined text-blue-500 text-3xl">add_box</span>
+        <span className="material-symbols-outlined text-[#2563EB] text-3xl">add_box</span>
         <div>
           <h1 className="text-xl font-bold tracking-tight text-white">Generation Engine</h1>
           <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-mono">Configure Presentation Parameters</p>
@@ -78,18 +78,18 @@ export default function CreatorView() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Inputs */}
         <section className="lg:col-span-7 space-y-6">
-          <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-6 md:p-8 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+          <div className="bg-[#0F1118] border border-white/[0.06] p-6 md:p-8 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
             
             <div className="space-y-6">
               {/* Title */}
               <div>
                 <label className="block text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                  <span className="text-blue-500">01 //</span> Presentation Title
+                  <span className="text-[#2563EB]">01 //</span> Presentation Title
                 </label>
                 <div className="relative">
                   <div className="absolute top-3.5 left-4 text-gray-500 font-bold opacity-50 text-sm">T </div>
                   <input 
-                    className="w-full bg-[#111624] border border-white/5 focus:border-blue-500/50 text-gray-200 text-sm p-3.5 pl-12 rounded-xl transition-all outline-none shadow-inner" 
+                    className="w-full bg-[#13161F] border border-white/5 focus:border-[#2563EB]/50 text-gray-200 text-sm p-3.5 pl-12 rounded-xl transition-all outline-none shadow-inner" 
                     placeholder="e.g. System Integration Report Q3"
                     value={title}
                     onChange={e => setTitle(e.target.value)}
@@ -101,12 +101,12 @@ export default function CreatorView() {
               {/* Context */}
               <div>
                 <label className="block text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                  <span className="text-blue-500">02 //</span> Primary Context Data
+                  <span className="text-[#2563EB]">02 //</span> Primary Context Data
                 </label>
                 <div className="relative">
                   <div className="absolute top-3.5 left-4 text-gray-500 font-bold opacity-50 text-[18px] material-symbols-outlined">description</div>
                   <textarea 
-                    className="w-full bg-[#111624] border border-white/5 focus:border-blue-500/50 text-gray-200 text-sm p-3.5 pl-12 rounded-xl resize-none transition-all outline-none shadow-inner leading-relaxed" 
+                    className="w-full bg-[#13161F] border border-white/5 focus:border-[#2563EB]/50 text-gray-200 text-sm p-3.5 pl-12 rounded-xl resize-none transition-all outline-none shadow-inner leading-relaxed" 
                     placeholder="Enter the presentation core objective or data set..." 
                     rows={5}
                     value={context}
@@ -119,15 +119,15 @@ export default function CreatorView() {
               {/* Topics */}
               <div>
                 <label className="flex justify-between items-end block text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-2">
-                  <span className="flex items-center gap-1.5"><span className="text-blue-500">03 //</span> Key Topics</span>
+                  <span className="flex items-center gap-1.5"><span className="text-[#2563EB]">03 //</span> Key Topics</span>
                   <span className="text-[9px] text-gray-600 font-normal">Press Enter to add</span>
                 </label>
                 <div 
-                  className={`w-full min-h-[52px] bg-[#111624] border border-white/5 rounded-xl flex items-center flex-wrap gap-2 p-2 transition-all cursor-text shadow-inner ${loading ? 'opacity-50' : 'focus-within:border-blue-500/50'}`}
+                  className={`w-full min-h-[52px] bg-[#13161F] border border-white/5 rounded-xl flex items-center flex-wrap gap-2 p-2 transition-all cursor-text shadow-inner ${loading ? 'opacity-50' : 'focus-within:border-[#2563EB]/50'}`}
                   onClick={() => document.getElementById('ti_id')?.focus()}
                 >
                   {topics.map((t, idx) => (
-                    <span key={idx} className="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-1 rounded-md text-[11px] font-bold uppercase flex items-center gap-1.5 shadow-sm">
+                    <span key={idx} className="bg-blue-500/10 text-[#60A5FA] border border-[#2563EB]/20 px-2.5 py-1 rounded-md text-[11px] font-bold uppercase flex items-center gap-1.5 shadow-sm">
                       {t} 
                       <button className="hover:text-red-400 hover:bg-white/5 rounded-full p-0.5" onClick={(e) => { e.stopPropagation(); setTopics(topics.filter((_, i) => i !== idx)); }}>
                         <span className="material-symbols-outlined text-[14px]">close</span>
@@ -153,11 +153,11 @@ export default function CreatorView() {
               {/* Slides */}
               <div>
                 <label className="block text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                  <span className="text-blue-500">04 //</span> Slide Count Override
+                  <span className="text-[#2563EB]">04 //</span> Slide Count Override
                 </label>
-                <div className="flex items-center gap-4 bg-[#111624] p-2 rounded-xl border border-white/5 shadow-inner">
+                <div className="flex items-center gap-4 bg-[#13161F] p-2 rounded-xl border border-white/5 shadow-inner">
                   <input 
-                    className="w-16 bg-white/5 border border-white/5 focus:border-blue-500/50 text-blue-400 font-bold text-center p-2 rounded-lg outline-none text-sm" 
+                    className="w-16 bg-white/5 border border-white/5 focus:border-[#2563EB]/50 text-[#60A5FA] font-bold text-center p-2 rounded-lg outline-none text-sm" 
                     type="number" 
                     value={numSlides}
                     onChange={e => setNumSlides(parseInt(e.target.value) || 10)}
@@ -180,7 +180,7 @@ export default function CreatorView() {
           <button 
             disabled={loading}
             onClick={handleStartGeneration}
-            className="w-full relative overflow-hidden bg-blue-600 text-white rounded-xl py-4 px-8 font-bold tracking-widest text-sm transition-all hover:bg-blue-500 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_4px_15px_-3px_rgba(37,99,235,0.4)] group"
+            className="w-full relative overflow-hidden bg-[#2563EB] text-white rounded-xl py-4 px-8 font-bold tracking-widest text-sm transition-all hover:bg-[#1D4ED8] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_4px_15px_-3px_rgba(37,99,235,0.4)] group"
           >
             <div className="flex items-center justify-center gap-3 relative z-10">
               <span className={`material-symbols-outlined ${loading ? 'animate-spin' : 'group-hover:scale-110 transition-transform'}`}>
@@ -192,13 +192,13 @@ export default function CreatorView() {
           </button>
 
           {loading && (
-            <div className="space-y-3 bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-5 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+            <div className="space-y-3 bg-[#0F1118] border border-white/[0.06] p-5 rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
               <div className="flex justify-between items-center px-1 border-b border-white/5 pb-2 mb-3">
                 <span className="text-[10px] text-gray-400 font-bold tracking-widest uppercase flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
                   System Log
                 </span>
-                <span className="text-[11px] text-blue-400 font-bold">{Math.round(pPct)}%</span>
+                <span className="text-[11px] text-[#60A5FA] font-bold">{Math.round(pPct)}%</span>
               </div>
               <div className="flex flex-col gap-1.5">
                 {genSteps.map(s => (
@@ -206,12 +206,12 @@ export default function CreatorView() {
                     {s.status === 'done' ? (
                       <span className="material-symbols-outlined text-emerald-500 text-[18px]">check_circle</span>
                     ) : s.status === 'active' ? (
-                      <span className="material-symbols-outlined text-blue-400 text-[18px] animate-spin">sync</span>
+                      <span className="material-symbols-outlined text-[#60A5FA] text-[18px] animate-spin">sync</span>
                     ) : (
                       <span className="material-symbols-outlined text-gray-500 text-[18px]">radio_button_unchecked</span>
                     )}
                     <div className="flex flex-col">
-                      <span className={`text-[11px] font-bold tracking-widest uppercase ${s.status === 'done' ? 'text-emerald-400' : s.status === 'active' ? 'text-blue-400' : 'text-gray-500'}`}>{s.label}</span>
+                      <span className={`text-[11px] font-bold tracking-widest uppercase ${s.status === 'done' ? 'text-emerald-400' : s.status === 'active' ? 'text-[#60A5FA]' : 'text-gray-500'}`}>{s.label}</span>
                       <span className={`text-[10px] mt-0.5 ${s.status === 'active' ? 'text-blue-300/70' : 'text-gray-500'}`}>{s.desc}</span>
                     </div>
                   </div>
@@ -223,7 +223,7 @@ export default function CreatorView() {
 
         {/* Right Column: Settings */}
         <section className="lg:col-span-5 space-y-6">
-          <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-6 md:p-8 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)] space-y-8">
+          <div className="bg-[#0F1118] border border-white/[0.06] p-6 md:p-8 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)] space-y-8">
             
             {/* Tone Matrix */}
             <div>
@@ -238,7 +238,7 @@ export default function CreatorView() {
                     onClick={() => setTone(t.id)}
                     className={`px-4 py-2 rounded-full text-[10px] font-bold tracking-widest transition-all ${
                       tone === t.id 
-                      ? 'bg-purple-500 text-white shadow-[0_2px_10px_rgba(168,85,247,0.3)]' 
+                      ? 'bg-[#2563EB] text-white shadow-[0_2px_10px_rgba(37,99,235,0.3)]' 
                       : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
                     }`}
                   >
@@ -282,7 +282,7 @@ export default function CreatorView() {
             {/* AI Provider */}
             <div>
               <h3 className="text-[11px] font-bold text-gray-400 tracking-widest uppercase mb-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[16px] text-blue-400">psychology</span> Neural Engine
+                <span className="material-symbols-outlined text-[16px] text-[#60A5FA]">psychology</span> Neural Engine
               </h3>
               <div className="grid grid-cols-1 gap-2">
                 {providers.map(p => (
@@ -291,12 +291,12 @@ export default function CreatorView() {
                     onClick={() => { if (!loading) setForceProvider(p.id) }}
                     className={`p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
                       forceProvider === p.id 
-                      ? 'bg-blue-600/10 border-blue-500/30 text-blue-400' 
+                      ? 'bg-[#2563EB]/10 border-[#2563EB]/30 text-[#60A5FA]' 
                       : 'bg-white/5 border-transparent hover:bg-white/10 text-gray-400 hover:text-white'
                     } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${forceProvider === p.id ? 'bg-blue-500/20 text-blue-400' : 'bg-black/20 text-gray-500'}`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${forceProvider === p.id ? 'bg-blue-500/20 text-[#60A5FA]' : 'bg-black/20 text-gray-500'}`}>
                         <span className="material-symbols-outlined text-[18px]">{p.icon}</span>
                       </div>
                       <div className="flex flex-col text-left">
@@ -304,7 +304,7 @@ export default function CreatorView() {
                         <span className={`text-[10px] ${forceProvider === p.id ? 'text-blue-300/70' : 'text-gray-500'}`}>{p.desc}</span>
                       </div>
                     </div>
-                    {forceProvider === p.id && <span className="material-symbols-outlined text-[18px] text-blue-500">radio_button_checked</span>}
+                    {forceProvider === p.id && <span className="material-symbols-outlined text-[18px] text-[#2563EB]">radio_button_checked</span>}
                     {forceProvider !== p.id && <span className="material-symbols-outlined text-[18px] text-gray-600">radio_button_unchecked</span>}
                   </div>
                 ))}

@@ -44,7 +44,7 @@ export default function DashboardView() {
     <div className="animate-fade-in max-w-7xl mx-auto pb-10">
       {/* Page Header */}
       <div className="mb-8 flex items-center gap-3">
-        <span className="material-symbols-outlined text-blue-500 text-3xl">dashboard</span>
+        <span className="material-symbols-outlined text-[#2563EB] text-3xl">dashboard</span>
         <div>
           <h1 className="text-xl font-bold tracking-tight text-white">Operations Dashboard</h1>
           <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-mono">System Metrics & History</p>
@@ -55,10 +55,10 @@ export default function DashboardView() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         
         {/* Stat Card 1 */}
-        <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-5 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex flex-col justify-between">
+        <div className="bg-[#0F1118] border border-white/[0.06] p-5 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)] flex flex-col justify-between">
           <div className="flex justify-between items-start mb-4">
-            <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-              <span className="material-symbols-outlined text-blue-500 text-sm">auto_awesome</span>
+            <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center border border-[#2563EB]/20">
+              <span className="material-symbols-outlined text-[#2563EB] text-sm">auto_awesome</span>
             </div>
             <div className="text-[10px] text-emerald-400 font-bold tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
               +12%
@@ -71,12 +71,12 @@ export default function DashboardView() {
         </div>
 
         {/* Stat Card 2 */}
-        <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-5 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex flex-col justify-between">
+        <div className="bg-[#0F1118] border border-white/[0.06] p-5 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)] flex flex-col justify-between">
           <div className="flex justify-between items-start mb-4">
             <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
               <span className="material-symbols-outlined text-emerald-500 text-sm">speed</span>
             </div>
-            <div className="flex items-center gap-1.5 text-[10px] text-blue-400 font-bold tracking-widest bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
+            <div className="flex items-center gap-1.5 text-[10px] text-[#60A5FA] font-bold tracking-widest bg-blue-500/10 px-2 py-0.5 rounded-full border border-[#2563EB]/20">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
               RUNNING
             </div>
@@ -88,7 +88,7 @@ export default function DashboardView() {
         </div>
 
         {/* Stat Card 3 */}
-        <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-5 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex flex-col justify-between">
+        <div className="bg-[#0F1118] border border-white/[0.06] p-5 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)] flex flex-col justify-between">
           <div className="flex justify-between items-start mb-4">
             <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
               <span className="material-symbols-outlined text-purple-500 text-sm">memory</span>
@@ -106,7 +106,7 @@ export default function DashboardView() {
         </div>
 
         {/* Stat Card 4 */}
-        <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-5 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex flex-col justify-between">
+        <div className="bg-[#0F1118] border border-white/[0.06] p-5 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)] flex flex-col justify-between">
           <div className="flex justify-between items-start mb-4">
             <div className="w-8 h-8 rounded-full bg-[#00ff9d]/10 flex items-center justify-center border border-[#00ff9d]/20">
               <span className="material-symbols-outlined text-[#00ff9d] text-sm">dns</span>
@@ -126,7 +126,7 @@ export default function DashboardView() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* Recent Generations Table (Full Width Mode) */}
-        <section className="lg:col-span-12 bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-6 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+        <section className="lg:col-span-12 bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-sm font-bold text-white tracking-wide uppercase">Recent Generations</h3>
             <button 
@@ -138,8 +138,8 @@ export default function DashboardView() {
           </div>
           
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="border-b border-white/10 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+            <table className="w-full text-left border-collapse">
+              <thead className="border-b border-white/[0.06] text-[10px] font-bold text-[#475569] uppercase tracking-widest whitespace-nowrap">
                 <tr>
                   <th className="pb-3 px-4 font-bold">Deck Title</th>
                   <th className="pb-3 px-4 font-bold">Status</th>
@@ -152,7 +152,7 @@ export default function DashboardView() {
                   <tr>
                     <td colSpan={4} className="py-24 text-center">
                       <div className="flex flex-col items-center justify-center max-w-sm mx-auto">
-                        <div className="w-16 h-16 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-center mb-6 shadow-inner">
+                        <div className="w-16 h-16 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-center mb-6 shadow-inner">
                           <span className="material-symbols-outlined text-3xl text-gray-600">history_edu</span>
                         </div>
                         <h3 className="text-white font-bold tracking-tight mb-2 uppercase text-[12px] tracking-widest">Global Archive Empty</h3>
@@ -161,7 +161,7 @@ export default function DashboardView() {
                         </p>
                         <button 
                           onClick={() => navigate('/create')}
-                          className="bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold tracking-widest px-8 py-3 rounded-xl transition-all shadow-lg flex items-center gap-2 active:scale-95 shadow-blue-500/20"
+                          className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-[11px] font-bold tracking-widest px-8 py-3 rounded-xl transition-all shadow-lg flex items-center gap-2 active:scale-95 shadow-blue-500/20"
                         >
                           <span className="material-symbols-outlined text-sm">bolt</span>
                           INITIATE_PROMPT
@@ -170,7 +170,7 @@ export default function DashboardView() {
                     </td>
                   </tr>
                 ) : savedPresentations.slice(0, 5).map(p => (
-                  <tr key={p.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/5 group">
+                  <tr key={p.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/[0.06] group">
                     <td className="py-4 px-4 font-medium text-gray-200">
                       {p.title}
                     </td>
@@ -186,7 +186,7 @@ export default function DashboardView() {
                     <td className="py-4 px-4 text-right">
                       <button 
                         onClick={() => handleDownload(p.id, p.title + '.pptx')}
-                        className="opacity-0 group-hover:opacity-100 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold tracking-wider px-4 py-1.5 rounded-full transition-all duration-300 shadow-md flex items-center justify-center gap-1.5 float-right"
+                        className="opacity-0 group-hover:opacity-100 bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-[11px] font-bold tracking-wider px-4 py-1.5 rounded-full transition-all duration-300 shadow-md flex items-center justify-center gap-1.5 float-right"
                       >
                         <span className="material-symbols-outlined text-[14px]">download</span>
                         GET

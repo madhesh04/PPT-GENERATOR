@@ -40,7 +40,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#020408] flex items-center justify-center font-['Share_Tech_Mono'] text-[#00f0ff] uppercase tracking-widest">
+      <div className="min-h-screen bg-[#0A0C12] flex items-center justify-center font-['Share_Tech_Mono'] text-[#00f0ff] uppercase tracking-widest">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-2 border-[rgba(0,240,255,0.1)] border-t-[#00f0ff] rounded-full animate-spin"></div>
           <div className="animate-pulse">Initializing_Skynet_Core...</div>

@@ -192,10 +192,10 @@ export default function AdminView() {
       <section className="mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
           <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-purple-500 text-3xl">admin_panel_settings</span>
+            <span className="material-symbols-outlined text-[#DC2626] text-3xl">admin_panel_settings</span>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-white mb-1">System Management</h1>
-              <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-gray-800/50 px-2.5 py-1 rounded-md inline-block">
+              <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-white/[0.04] px-2.5 py-1 rounded-md inline-block">
                 {isMaster ? 'LEVEL_5_MASTER' : 'LEVEL_4_ADMIN'}
               </div>
             </div>
@@ -206,7 +206,7 @@ export default function AdminView() {
               <input 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-[#111624] border border-white/5 focus:border-purple-500/50 text-gray-200 text-sm pl-12 pr-4 py-2.5 rounded-xl w-64 outline-none transition-all shadow-inner placeholder:text-gray-600" 
+                className="bg-[#13161F] border border-white/[0.06] focus:border-[#DC2626]/50 text-gray-200 text-sm pl-12 pr-4 py-2.5 rounded-xl w-64 outline-none transition-all shadow-inner placeholder:text-gray-600" 
                 placeholder="Search records..." 
                 type="text"
               />
@@ -214,7 +214,7 @@ export default function AdminView() {
             {activeTab === 'users' && (
               <button 
                 onClick={() => setShowCreateForm(true)}
-                className="bg-purple-600 hover:bg-purple-500 text-white px-5 py-2.5 rounded-xl font-bold text-[11px] tracking-widest uppercase flex items-center gap-2 transition-all shadow-sm"
+                className="bg-[#DC2626] hover:bg-[#B91C1C] text-white px-5 py-2.5 rounded-xl font-bold text-[11px] tracking-widest uppercase flex items-center gap-2 transition-all shadow-sm"
               >
                 <span className="material-symbols-outlined text-[18px]">person_add</span>
                 Add User
@@ -224,16 +224,16 @@ export default function AdminView() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 overflow-x-auto bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-1.5 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+        <div className="flex gap-2 overflow-x-auto bg-[#0F1118] border border-white/[0.06] p-1.5 rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
           <button 
             onClick={() => navigateTab('users')}
-            className={`px-5 py-2.5 font-bold text-[11px] tracking-widest uppercase rounded-xl transition-all whitespace-nowrap ${activeTab === 'users' ? 'bg-purple-500/20 text-purple-400' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
+            className={`px-5 py-2.5 font-bold text-[11px] tracking-widest uppercase rounded-xl transition-all whitespace-nowrap ${activeTab === 'users' ? 'bg-[#DC2626]/20 text-[#EF4444]' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
           >
             User Management
           </button>
           <button 
             onClick={() => navigateTab('generations')}
-            className={`px-5 py-2.5 font-bold text-[11px] tracking-widest uppercase rounded-xl transition-all whitespace-nowrap ${activeTab === 'generations' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
+            className={`px-5 py-2.5 font-bold text-[11px] tracking-widest uppercase rounded-xl transition-all whitespace-nowrap ${activeTab === 'generations' ? 'bg-blue-500/20 text-[#60A5FA]' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
           >
             Generation Logs
           </button>
@@ -259,17 +259,17 @@ export default function AdminView() {
         
         {/* Create User Form Popup */}
         {showCreateForm && (
-          <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-6 md:p-8 rounded-2xl mb-6 shadow-[0_8px_32px_rgba(0,0,0,0.5)] relative">
+          <div className="bg-[#0F1118] border border-white/[0.06] p-6 md:p-8 rounded-xl mb-6 shadow-[0_4px_24px_rgba(0,0,0,0.4)] relative">
             <div className="flex items-center gap-2 mb-6 border-b border-white/5 pb-4">
               <span className="material-symbols-outlined text-purple-400 text-[18px]">person_add</span>
               <h2 className="text-sm font-bold text-white tracking-wide uppercase">Provision New Account</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-              <input className="w-full bg-[#111624] border border-white/5 text-gray-200 text-sm p-3.5 rounded-xl outline-none focus:border-purple-500/50 shadow-inner" placeholder="Full Name" value={newUser.full_name} onChange={e => setNewUser({ ...newUser, full_name: e.target.value })} />
-              <input className="w-full bg-[#111624] border border-white/5 text-gray-200 text-sm p-3.5 rounded-xl outline-none focus:border-purple-500/50 shadow-inner" type="email" placeholder="Email Address" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
-              <input className="w-full bg-[#111624] border border-white/5 text-gray-200 text-sm p-3.5 rounded-xl outline-none focus:border-purple-500/50 shadow-inner" type="password" placeholder="Passcode" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
+              <input className="w-full bg-[#13161F] border border-white/5 text-gray-200 text-sm p-3.5 rounded-xl outline-none focus:border-purple-500/50 shadow-inner" placeholder="Full Name" value={newUser.full_name} onChange={e => setNewUser({ ...newUser, full_name: e.target.value })} />
+              <input className="w-full bg-[#13161F] border border-white/5 text-gray-200 text-sm p-3.5 rounded-xl outline-none focus:border-purple-500/50 shadow-inner" type="email" placeholder="Email Address" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
+              <input className="w-full bg-[#13161F] border border-white/5 text-gray-200 text-sm p-3.5 rounded-xl outline-none focus:border-purple-500/50 shadow-inner" type="password" placeholder="Passcode" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
               <div className="relative">
-                <select className="w-full bg-[#111624] border border-white/5 text-gray-300 text-sm p-3.5 pl-4 rounded-xl focus:border-purple-500/50 outline-none appearance-none cursor-pointer shadow-inner" value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })}>
+                <select className="w-full bg-[#13161F] border border-white/5 text-gray-300 text-sm p-3.5 pl-4 rounded-xl focus:border-purple-500/50 outline-none appearance-none cursor-pointer shadow-inner" value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })}>
                   <option value="user">Role: User</option>
                   <option value="admin">Role: Admin</option>
                 </select>
@@ -287,7 +287,7 @@ export default function AdminView() {
         {activeTab === 'overview' && (
           <div className="animate-fade-in space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-6 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+              <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Users</span>
                   <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
@@ -297,17 +297,17 @@ export default function AdminView() {
                 <div className="text-3xl font-bold text-white tracking-tight">{stats?.total_users || 0}</div>
               </div>
               
-              <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-6 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+              <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Generations</span>
                   <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[16px] text-blue-400">bolt</span>
+                    <span className="material-symbols-outlined text-[16px] text-[#60A5FA]">bolt</span>
                   </div>
                 </div>
                 <div className="text-3xl font-bold text-white tracking-tight">{stats?.total_generations || 0}</div>
               </div>
               
-              <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-6 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+              <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pending Approvals</span>
                   <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center">
@@ -317,7 +317,7 @@ export default function AdminView() {
                 <div className="text-3xl font-bold text-white tracking-tight">{stats?.pending_approvals || 0}</div>
               </div>
               
-              <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-6 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+              <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Active Today</span>
                   <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
@@ -328,7 +328,7 @@ export default function AdminView() {
               </div>
             </div>
 
-            <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-6 md:p-8 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+            <div className="bg-[#0F1118] border border-white/[0.06] p-6 md:p-8 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
               <div className="flex items-center gap-2 mb-6 border-b border-white/5 pb-4">
                 <span className="material-symbols-outlined text-emerald-400 text-[18px]">tune</span>
                 <h2 className="text-sm font-bold text-white tracking-wide uppercase">Global Configuration</h2>
@@ -365,7 +365,7 @@ export default function AdminView() {
 
         {/* USERS TAB */}
         {activeTab === 'users' && (
-          <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden">
+          <div className="bg-[#0F1118] border border-white/[0.06] rounded-xl shadow-[0_4px_24_rgba(0,0,0,0.4)] overflow-hidden">
             <div className="overflow-x-auto w-full">
               <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead className="bg-white/[0.02] border-b border-white/5">
@@ -389,7 +389,7 @@ export default function AdminView() {
                       <td className="py-4 px-6">
                         <span 
                           onClick={() => handleToggleRole(u.id, u.role)}
-                          className={`cursor-pointer px-2.5 py-1 rounded-md text-[9px] font-bold tracking-wider transition-colors border ${u.role === 'admin' || u.role === 'MASTER' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20'}`}
+                          className={`cursor-pointer px-2.5 py-1 rounded-md text-[9px] font-bold tracking-wider transition-colors border ${u.role === 'admin' || u.role === 'MASTER' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20' : 'bg-blue-500/10 text-[#60A5FA] border-[#2563EB]/20 hover:bg-[#1D4ED8]/20'}`}
                         >
                           {u.role?.toUpperCase()}
                         </span>
@@ -405,7 +405,7 @@ export default function AdminView() {
                       </td>
                       <td className="py-4 px-6 text-right">
                         <div className="flex justify-end gap-2 opacity-40 group-hover/row:opacity-100 transition-opacity">
-                          <button onClick={() => navigate(`/admin?tab=generations&userId=${u.id}`)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-blue-500/20 hover:text-blue-400 transition-colors bg-white/5 text-gray-400" title="View Generation Logs">
+                          <button onClick={() => navigate(`/admin?tab=generations&userId=${u.id}`)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#1D4ED8]/20 hover:text-[#60A5FA] transition-colors bg-white/5 text-gray-400" title="View Generation Logs">
                             <span className="material-symbols-outlined text-[16px]">history</span>
                           </button>
                           <button onClick={() => { setResetTarget(u); setShowResetModal(true); }} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-amber-500/20 hover:text-amber-400 transition-colors bg-white/5 text-gray-400" title="Force Password Reset">
@@ -430,7 +430,7 @@ export default function AdminView() {
 
         {/* PENDING APPROVALS TAB */}
         {activeTab === 'pending' && (
-          <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden">
+          <div className="bg-[#0F1118] border border-white/[0.06] rounded-xl shadow-[0_4px_24_rgba(0,0,0,0.4)] overflow-hidden">
             <div className="overflow-x-auto w-full">
               <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead className="bg-white/[0.02] border-b border-white/5">
@@ -473,9 +473,9 @@ export default function AdminView() {
 
         {/* GENERATIONS LOGS TAB */}
         {activeTab === 'generations' && (
-          <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden">
+          <div className="bg-[#0F1118] border border-white/[0.06] rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.4)] overflow-hidden">
             {queryUserId && (
-              <div className="px-6 py-4 bg-blue-500/10 border-b border-blue-500/20 flex justify-between items-center text-blue-400 text-[11px] font-bold tracking-wider uppercase">
+              <div className="px-6 py-4 bg-blue-500/10 border-b border-[#2563EB]/20 flex justify-between items-center text-[#60A5FA] text-[11px] font-bold tracking-wider uppercase">
                 <span className="flex items-center gap-2"><span className="material-symbols-outlined text-[16px]">filter_alt</span> Filtering by User ID = {queryUserId}</span>
                 <button onClick={() => navigate('/admin?tab=generations')} className="hover:text-white transition-colors underline decoration-blue-500/50">Clear Filter</button>
               </div>
@@ -500,7 +500,7 @@ export default function AdminView() {
                       <td className="py-4 px-6 text-[11px] text-gray-600 font-bold">#{p.id.substring(0, 6).toUpperCase()}</td>
                       <td className="py-4 px-6 text-[13px] font-medium text-white">{p.title}</td>
                       <td className="py-4 px-6">
-                        <span className="text-[11px] text-gray-400 font-mono tracking-tighter bg-[#111624] px-2 py-1 rounded max-w-max border border-white/5">
+                        <span className="text-[11px] text-gray-400 font-mono tracking-tighter bg-[#13161F] px-2 py-1 rounded max-w-max border border-white/5">
                           {p.model_used || 'GROQ'}
                         </span>
                       </td>
@@ -533,7 +533,7 @@ export default function AdminView() {
       {/* Password Reset Modal */}
       {showResetModal && (
         <div className="fixed inset-0 bg-[#020812]/90 backdrop-blur-md z-[100] flex items-center justify-center animate-fade-in p-4">
-          <div className="bg-[#0B0F19] border border-amber-500/30 max-w-md w-full p-8 rounded-2xl shadow-[0_0_50px_rgba(251,191,36,0.15)] relative">
+          <div className="bg-[#0F1118] border border-amber-500/30 max-w-md w-full p-8 rounded-xl shadow-[0_0_50px_rgba(251,191,36,0.15)] relative">
             <button 
               className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center bg-white/5 text-gray-400 hover:text-white transition-colors"
               onClick={() => { setShowResetModal(false); setResetPassword(''); }}
@@ -553,7 +553,7 @@ export default function AdminView() {
 
             <div className="space-y-4 mb-8">
               <input 
-                className="w-full bg-[#111624] border border-amber-500/20 text-white text-sm p-4 rounded-xl focus:border-amber-500/50 outline-none shadow-inner" 
+                className="w-full bg-[#13161F] border border-amber-500/20 text-white text-sm p-4 rounded-xl focus:border-amber-500/50 outline-none shadow-inner" 
                 type="password" 
                 placeholder="Enter new credentials..." 
                 value={resetPassword} 

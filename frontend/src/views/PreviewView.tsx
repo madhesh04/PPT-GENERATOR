@@ -22,7 +22,7 @@ export default function PreviewView() {
           <p className="text-gray-400 text-sm max-w-xs mx-auto">Please initiate a generation protocol from the creation hub first.</p>
         </div>
         <button 
-          className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold text-[11px] tracking-widest uppercase transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center gap-2"
+          className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white px-8 py-3 rounded-xl font-bold text-[11px] tracking-widest uppercase transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center gap-2"
           onClick={() => navigate('/create')}
         >
           <span className="material-symbols-outlined text-sm">bolt</span>
@@ -136,9 +136,9 @@ export default function PreviewView() {
     <div className="max-w-6xl mx-auto space-y-8 animate-fade-in w-full pb-20 px-4 mt-0">
       
       {/* Action Header */}
-      <div className="bg-[#0B0F19]/95 backdrop-blur-2xl border-b border-white/10 p-6 rounded-b-2xl shadow-2xl sticky top-0 z-50 flex flex-col md:flex-row items-center justify-between gap-6 transition-all ring-1 ring-white/5">
+      <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.4)] sticky top-0 z-50 flex flex-col md:flex-row items-center justify-between gap-6 transition-all">
         <div className="flex items-center gap-4 w-full md:w-auto">
-          <div className="w-12 h-12 bg-blue-600/10 rounded-xl flex items-center justify-center border border-blue-500/20 text-blue-500">
+          <div className="w-12 h-12 bg-[#2563EB]/10 rounded-xl flex items-center justify-center border border-[#2563EB]/20 text-[#2563EB]">
             <span className="material-symbols-outlined text-2xl">visibility</span>
           </div>
           <div className="flex-1 min-w-0">
@@ -151,7 +151,7 @@ export default function PreviewView() {
                 <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded border text-[9px] font-bold tracking-wider ${
                   result.provider === 'nvidia_nim' 
                   ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-                  : 'bg-blue-500/10 border-blue-500/20 text-blue-400'
+                  : 'bg-blue-500/10 border-[#2563EB]/20 text-[#60A5FA]'
                 }`}>
                   <span className="material-symbols-outlined text-[12px]">
                     {result.provider === 'nvidia_nim' ? 'psychology' : 'bolt'}
@@ -181,7 +181,7 @@ export default function PreviewView() {
           <button 
             disabled={isExporting}
             onClick={handleRebuildExport}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600/90 hover:bg-blue-600 text-white px-5 py-2.5 rounded-xl text-[11px] font-bold tracking-widest uppercase transition-all shadow-lg shadow-blue-500/20"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#2563EB]/90 hover:bg-[#2563EB] text-white px-5 py-2.5 rounded-xl text-[11px] font-bold tracking-widest uppercase transition-all shadow-lg shadow-blue-500/20"
           >
             <span className="material-symbols-outlined text-sm">{isExporting ? 'sync' : 'publish'}</span>
             {isExporting ? 'ENCODING...' : 'FINALIZE_DECK'}
@@ -190,7 +190,7 @@ export default function PreviewView() {
       </div>
 
       {/* Slide Navigator strip */}
-      <div className="bg-[#0B0F19]/90 backdrop-blur-md rounded-2xl border border-white/5 p-4 overflow-x-auto scroller-hide shadow-xl flex gap-4 min-h-[140px] items-center">
+      <div className="bg-[#0F1118] rounded-xl border border-white/[0.06] p-4 overflow-x-auto scroller-hide shadow-[0_4px_24px_rgba(0,0,0,0.4)] flex gap-4 min-h-[140px] items-center">
         {slides.map((s, idx) => (
           <div 
             key={idx} 
@@ -208,7 +208,7 @@ export default function PreviewView() {
                  <img src={s.image_base64} className="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-opacity" />
                )}
                <div className="relative z-10 flex justify-end">
-                 <span className="text-[10px] font-mono text-gray-600 font-bold group-hover:text-blue-500 transition-colors uppercase tracking-widest">
+                 <span className="text-[10px] font-mono text-gray-600 font-bold group-hover:text-[#2563EB] transition-colors uppercase tracking-widest">
                    CH-{String(idx + 1).padStart(2, '0')}
                  </span>
                </div>
@@ -230,7 +230,7 @@ export default function PreviewView() {
                <div className="absolute -left-4 top-0 bottom-0 w-[2px] bg-gradient-to-b from-transparent via-blue-500/20 to-transparent"></div>
                <div className="absolute -left-4 top-0 w-4 h-[1px] bg-blue-500/30"></div>
                
-               <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl transition-all hover:border-white/20">
+               <div className="bg-[#0F1118] border border-white/[0.06] rounded-3xl overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.4)] transition-all hover:border-white/20">
                   <div className="flex flex-col lg:flex-row">
                     
                     {/* Visual Area */}
@@ -248,7 +248,7 @@ export default function PreviewView() {
                         )}
                         <button 
                           onClick={() => handleRegenImage(idx)}
-                          className="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-md border border-white/10 text-white flex items-center justify-center gap-2 py-2 rounded-xl text-[9px] font-bold tracking-[0.2em] uppercase transition-all hover:bg-blue-600 hover:border-blue-500 invisible group-hover/img:visible animate-scale-in"
+                          className="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-md border border-white/10 text-white flex items-center justify-center gap-2 py-2 rounded-xl text-[9px] font-bold tracking-[0.2em] uppercase transition-all hover:bg-[#2563EB] hover:border-[#2563EB] invisible group-hover/img:visible animate-scale-in"
                         >
                           <span className="material-symbols-outlined text-xs">refresh</span>
                           Regenerate Asset
@@ -295,7 +295,7 @@ export default function PreviewView() {
                        </div>
 
                        {slide.code && (
-                         <div className="mt-6 bg-black/40 rounded-2xl border border-white/5 overflow-hidden group/code relative">
+                         <div className="mt-6 bg-black/40 rounded-xl border border-white/5 overflow-hidden group/code relative">
                             <div className="flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/5">
                                <div className="flex gap-1.5">
                                  <div className="w-2 h-2 rounded-full bg-red-500/40"></div>
@@ -314,7 +314,7 @@ export default function PreviewView() {
                        )}
 
                        {slide.notes && (
-                         <div className="mt-6 flex items-start gap-3 bg-white/5 p-4 rounded-2xl border border-white/5 border-dashed">
+                         <div className="mt-6 flex items-start gap-3 bg-white/5 p-4 rounded-xl border border-white/5 border-dashed">
                             <span className="material-symbols-outlined text-gray-600 text-[18px]">record_voice_over</span>
                             <p className="text-[11px] text-gray-500 italic leading-relaxed">{slide.notes}</p>
                          </div>
@@ -329,10 +329,10 @@ export default function PreviewView() {
 
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
          <button 
-           className="bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 text-white px-6 py-4 rounded-2xl flex items-center gap-3 transition-all hover:-translate-y-1 hover:shadow-2xl ring-1 ring-white/5"
+           className="bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 text-white px-6 py-4 rounded-xl flex items-center gap-3 transition-all hover:-translate-y-1 hover:shadow-2xl ring-1 ring-white/5"
            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
          >
-           <span className="material-symbols-outlined text-blue-500">arrow_upward</span>
+           <span className="material-symbols-outlined text-[#2563EB]">arrow_upward</span>
            <span className="text-[11px] font-bold tracking-widest uppercase">Protocol Back To Command</span>
          </button>
       </div>

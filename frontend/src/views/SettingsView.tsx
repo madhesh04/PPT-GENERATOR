@@ -61,7 +61,7 @@ export default function SettingsView() {
       
       {/* Page Header */}
       <div className="mb-8 flex items-center gap-3">
-        <span className="material-symbols-outlined text-blue-500 text-3xl">settings</span>
+        <span className="material-symbols-outlined text-[#2563EB] text-3xl">settings</span>
         <div>
           <h1 className="text-xl font-bold tracking-tight text-white">System Configuration</h1>
           <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-mono">API & Rendering Parameters</p>
@@ -71,10 +71,10 @@ export default function SettingsView() {
       <div className="space-y-6">
         
         {/* User Profile Card */}
-        <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-6 md:p-8 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+        <div className="bg-[#0F1118] border border-white/[0.06] p-6 md:p-8 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
           <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
             <h2 className="text-sm font-bold text-white tracking-wide uppercase flex items-center gap-2">
-              <span className="material-symbols-outlined text-blue-400 text-[18px]">account_circle</span>
+              <span className="material-symbols-outlined text-[#60A5FA] text-[18px]">account_circle</span>
               User Profile
             </h2>
             <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest bg-gray-800 px-2 py-1 rounded-md">
@@ -85,10 +85,10 @@ export default function SettingsView() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                <span className="text-blue-500">01 //</span> Full Name
+                <span className="text-[#2563EB]">01 //</span> Full Name
               </label>
               <input 
-                className="w-full bg-[#111624] border border-white/5 text-gray-300 text-sm p-3 rounded-xl outline-none" 
+                className="w-full bg-[#13161F] border border-white/5 text-gray-300 text-sm p-3 rounded-xl outline-none" 
                 type="text" 
                 readOnly 
                 value={user?.full_name || ''} 
@@ -96,10 +96,10 @@ export default function SettingsView() {
             </div>
             <div>
               <label className="block text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                <span className="text-blue-500">02 //</span> Email Address
+                <span className="text-[#2563EB]">02 //</span> Email Address
               </label>
               <input 
-                className="w-full bg-[#111624] border border-white/5 text-gray-300 text-sm p-3 rounded-xl outline-none" 
+                className="w-full bg-[#13161F] border border-white/5 text-gray-300 text-sm p-3 rounded-xl outline-none" 
                 type="text" 
                 readOnly 
                 value={user?.email || ''} 
@@ -109,10 +109,10 @@ export default function SettingsView() {
         </div>
 
         {/* System Administration Card */}
-        <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-6 md:p-8 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+        <div className="bg-[#0F1118] border border-white/[0.06] p-6 md:p-8 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
           <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
             <h2 className="text-sm font-bold text-white tracking-wide uppercase flex items-center gap-2">
-              <span className="material-symbols-outlined text-purple-400 text-[18px]">precision_manufacturing</span>
+              <span className="material-symbols-outlined text-[#DC2626] text-[18px]">precision_manufacturing</span>
               System Administration
             </h2>
           </div>
@@ -164,7 +164,7 @@ export default function SettingsView() {
                   <option value="nvidia">kimi-k2.5 (NVIDIA)</option>
                 </select>
               ) : (
-                <div className="text-xs text-blue-400 font-bold uppercase">{globalDefaultModel}</div>
+                <div className="text-xs text-[#60A5FA] font-bold uppercase">{globalDefaultModel}</div>
               )}
             </div>
           </div>
@@ -172,16 +172,16 @@ export default function SettingsView() {
 
         {/* Personal Preferences Card (Conditional) */}
         {globalImageGen && (
-          <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-6 md:p-8 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+          <div className="bg-[#0F1118] border border-white/[0.06] p-6 md:p-8 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
             <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
               <h2 className="text-sm font-bold text-white tracking-wide uppercase flex items-center gap-2">
-                <span className="material-symbols-outlined text-blue-400 text-[18px]">person_settings</span>
+                <span className="material-symbols-outlined text-[#60A5FA] text-[18px]">person_settings</span>
                 Personal Preferences
               </h2>
             </div>
             
             <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 hover:bg-blue-500/10 transition-colors">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-blue-500/5 border border-[#2563EB]/10 hover:bg-[#1D4ED8]/10 transition-colors">
                 <div>
                   <div className="text-sm font-bold text-gray-200 mb-1">Default Image Inclusion</div>
                   <div className="text-[11px] text-gray-500">Enable or disable AI image generation by default for your creations</div>

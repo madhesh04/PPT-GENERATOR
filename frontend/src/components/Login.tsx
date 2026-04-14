@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 
 interface LoginProps {
-  onSwitchToSignup: () => void;
   onLoginSuccess?: (mode: 'employee' | 'admin') => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onSwitchToSignup, onLoginSuccess }) => {
+const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const { login } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,8 +44,8 @@ const Login: React.FC<LoginProps> = ({ onSwitchToSignup, onLoginSuccess }) => {
   };
 
   return (
-    <div className="w-full max-w-[420px] relative animate-fade-up">
-      <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-8 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex flex-col gap-6">
+    <div className="w-full max-w-[420px] relative animate-fade-in">
+      <div className="bg-[#0F1118] border border-white/[0.06] p-8 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)] flex flex-col gap-6">
 
         {/* HEADER */}
         <div>
@@ -121,17 +120,17 @@ const Login: React.FC<LoginProps> = ({ onSwitchToSignup, onLoginSuccess }) => {
                 value={email}
                 autoComplete="username"
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-[#EFF2F6] text-gray-900 rounded-xl pl-10 pr-4 py-3 text-sm font-medium outline-none placeholder:text-gray-400 focus:ring-2 focus:ring-[#1A3EE0] transition-shadow shadow-inner" 
-                placeholder={loginMode === 'admin' ? 'neo10486' : 'neo10486'}
+                className="w-full bg-[#13161F] text-white border border-white/[0.06] rounded-xl pl-10 pr-4 py-3 text-sm font-medium outline-none placeholder:text-gray-600 focus:border-blue-500/50 transition-all shadow-inner" 
+                placeholder="User Identifier"
               />
             </div>
           </div>
           
           <div className="relative group">
-            <label className="text-[10px] text-outline-variant uppercase tracking-widest block mb-2 font-semibold">
+            <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-2 font-bold">
               PASSWORD
             </label>
-            <div className="relative text-black">
+            <div className="relative text-white">
               <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-[18px]">lock</span>
               <input 
                 name="password"
@@ -139,7 +138,7 @@ const Login: React.FC<LoginProps> = ({ onSwitchToSignup, onLoginSuccess }) => {
                 value={password}
                 autoComplete="current-password"
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-[#EFF2F6] text-gray-900 rounded-xl pl-10 pr-10 py-3 text-sm font-bold tracking-widest outline-none placeholder:text-gray-400 focus:ring-2 focus:ring-[#1A3EE0] transition-shadow shadow-inner" 
+                className="w-full bg-[#13161F] text-white border border-white/[0.06] rounded-xl pl-10 pr-10 py-3 text-sm font-bold tracking-widest outline-none placeholder:text-gray-600 focus:border-blue-500/50 transition-all shadow-inner" 
                 placeholder="••••••••"
               />
               <span className="material-symbols-outlined absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer text-[18px]">visibility_off</span>
@@ -176,11 +175,6 @@ const Login: React.FC<LoginProps> = ({ onSwitchToSignup, onLoginSuccess }) => {
             </div>
             <div className="text-[9px] text-outline-variant/60 mt-1.5">
               &copy; 2026 Iamneo Edutech Private Limited. All rights reserved.
-            </div>
-            <div className="mt-4">
-              <a href="#" onClick={(e) => { e.preventDefault(); onSwitchToSignup(); }} className="text-[10px] text-primary hover:text-primary/80 transition-colors uppercase tracking-widest font-bold">
-                Return to Join Protocol
-              </a>
             </div>
           </div>
         </form>

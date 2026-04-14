@@ -1,67 +1,61 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;800;900&family=Inter:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Share+Tech+Mono&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-surface-container-high: #272a32;
-  --color-surface-container-highest: #32343d;
-  --color-error-container: #93000a;
-  --color-surface-variant: #32343d;
-  --color-primary-fixed: #dee0ff;
-  --color-on-tertiary-container: #ffedeb;
-  --color-on-primary-fixed-variant: #002ccd;
-  --color-on-secondary-fixed: #25005a;
-  --color-on-surface-variant: #c5c5d9;
-  --color-background: #11131b;
-  --color-on-background: #e1e2ed;
-  --color-surface-container-lowest: #0c0e15;
-  --color-secondary: #d2bbff;
-  --color-surface-dim: #11131b;
-  --color-on-tertiary-fixed-variant: #930010;
-  --color-outline: #8e8fa2;
-  --color-secondary-container: #6001d1;
-  --color-primary-fixed-dim: #bbc3ff;
-  --color-primary-container: #3d5afe;
-  --color-surface-tint: #bbc3ff;
-  --color-secondary-fixed: #eaddff;
-  --color-on-surface: #e1e2ed;
-  --color-inverse-on-surface: #2e3038;
-  --color-on-tertiary-fixed: #410003;
-  --color-on-secondary: #3f008e;
-  --color-on-secondary-fixed-variant: #5a00c6;
-  --color-inverse-primary: #2848ee;
-  --color-tertiary: #ffb3ac;
-  --color-error: #ffb4ab;
-  --color-on-primary-container: #f1f0ff;
-  --color-surface-bright: #373941;
-  --color-inverse-surface: #e1e2ed;
-  --color-on-error: #690005;
-  --color-surface-container-low: #191b23;
-  --color-outline-variant: #444656;
-  --color-surface-container: #1d1f27;
-  --color-secondary-fixed-dim: #d2bbff;
-  --color-on-primary: #001d93;
-  --color-tertiary-container: #d02d2d;
-  --color-on-error-container: #ffdad6;
-  --color-on-tertiary: #680008;
-  --color-tertiary-fixed-dim: #ffb3ac;
-  --color-primary: #bbc3ff;
-  --color-on-primary-fixed: #000f5d;
-  --color-surface: #11131b;
-  --color-tertiary-fixed: #ffdad6;
-  --color-on-secondary-container: #c9aeff;
+  /* ── Base Surfaces ─────────────────────────── */
+  --color-bg-base:        #0A0C12;
+  --color-bg-surface:     #0F1118;
+  --color-bg-surface-2:   #13161F;
+  --color-bg-header:      #0D0F17;
+  --color-bg-sidebar:     #0B0D14;
 
-  --font-headline: "Orbitron", sans-serif;
-  --font-body: "Inter", sans-serif;
-  --font-label: "Share Tech Mono", monospace;
+  /* ── Borders ───────────────────────────────── */
+  --color-border:         rgba(255,255,255,0.06);
+  --color-border-strong:  rgba(255,255,255,0.10);
+
+  /* ── Employee Accent (Blue) ────────────────── */
+  --color-emp:            #2563EB;
+  --color-emp-hover:      #1D4ED8;
+  --color-emp-glow:       rgba(37,99,235,0.20);
+  --color-emp-muted:      rgba(37,99,235,0.12);
+  --color-emp-text:       #60A5FA;
+
+  /* ── Admin Accent (Red) ────────────────────── */
+  --color-adm:            #DC2626;
+  --color-adm-hover:      #B91C1C;
+  --color-adm-glow:       rgba(220,38,38,0.20);
+  --color-adm-muted:      rgba(220,38,38,0.10);
+  --color-adm-text:       #F87171;
+
+  /* ── Semantic ──────────────────────────────── */
+  --color-success:        #16A34A;
+  --color-success-text:   #4ADE80;
+  --color-success-muted:  rgba(22,163,74,0.12);
+  --color-warning:        #CA8A04;
+  --color-warning-text:   #FCD34D;
+
+  /* ── Text ──────────────────────────────────── */
+  --color-text-primary:   #F1F5F9;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted:     #475569;
+
+  /* ── Typography ────────────────────────────── */
+  --font-body:     "Inter", sans-serif;
+  --font-mono:     "Share Tech Mono", monospace;
+
+  /* ── Dimensions ────────────────────────────── */
+  --header-h:     52px;
+  --sidebar-w:    52px;
+  --statusbar-h:  28px;
+  --radius-card:  12px;
+  --radius-btn:   8px;
+  --radius-input: 8px;
 }
 
 html, body {
   scroll-behavior: smooth;
-}
-
-body {
-  background-color: var(--color-background);
-  color: var(--color-on-surface);
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
   font-family: var(--font-body);
 }
 
@@ -69,58 +63,6 @@ body {
   font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
 }
 
-.glow-active {
-  box-shadow: 0 0 15px rgba(61, 90, 254, 0.3);
-}
-
-.ghost-border {
-  border: 1px solid rgba(68, 70, 86, 0.15);
-}
-
-.corner-bracket-tl {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 8px;
-  height: 8px;
-  border-top: 1px solid var(--color-outline-variant);
-  border-left: 1px solid var(--color-outline-variant);
-}
-
-.corner-bracket-br {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 8px;
-  height: 8px;
-  border-bottom: 1px solid var(--color-outline-variant);
-  border-right: 1px solid var(--color-outline-variant);
-}
-
-.l-bracket-tl {
-  position: absolute;
-  top: -1px;
-  left: -1px;
-  width: 12px;
-  height: 12px;
-  border-top: 2px solid var(--color-primary-container);
-  border-left: 2px solid var(--color-primary-container);
-}
-
-.l-bracket-br {
-  position: absolute;
-  bottom: -1px;
-  right: -1px;
-  width: 12px;
-  height: 12px;
-  border-bottom: 2px solid var(--color-primary-container);
-  border-right: 2px solid var(--color-primary-container);
-}
-
-.particle-overlay {
-  background-image: radial-gradient(circle at 2px 2px, rgba(61, 90, 254, 0.15) 1px, transparent 0);
-  background-size: 40px 40px;
-}
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }

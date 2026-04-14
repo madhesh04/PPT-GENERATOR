@@ -7,7 +7,7 @@ interface SignupProps {
 const Signup: React.FC<SignupProps> = ({ onSwitchToLogin }) => {
   return (
     <div className="w-full max-w-[420px] relative animate-fade-up">
-      <div className="bg-[#0B0F19]/95 backdrop-blur-xl border border-white/5 p-8 rounded-2xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex flex-col gap-4">
+      <div className="bg-[#0F1118]/95 backdrop-blur-xl border border-white/5 p-8 rounded-xl relative shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex flex-col gap-4">
 
         {/* HEADER */}
         <div>
@@ -24,11 +24,11 @@ const Signup: React.FC<SignupProps> = ({ onSwitchToLogin }) => {
         {/* ═══ EXTERNALLY MANAGED NOTICE ═══ */}
         <div className="py-4 flex flex-col items-center gap-3 animate-fade-up">
           {/* Shield icon */}
-          <div className="w-14 h-14 bg-blue-500/10 border border-blue-500/20 rounded-full flex items-center justify-center mb-1">
-            <span className="material-symbols-outlined text-blue-500 text-[28px]">verified_user</span>
+          <div className="w-14 h-14 bg-blue-500/10 border border-[#2563EB]/20 rounded-full flex items-center justify-center mb-1">
+            <span className="material-symbols-outlined text-[#2563EB] text-[28px]">verified_user</span>
           </div>
 
-          <h3 className="font-bold text-sm text-blue-400 tracking-wide text-center uppercase">
+          <h3 className="font-bold text-sm text-[#60A5FA] tracking-wide text-center uppercase">
             External Registration
           </h3>
 
