@@ -27,11 +27,14 @@ export default function AuthView() {
 
       {/* TOP HEADER */}
       <header className="relative z-10 flex justify-between items-center px-8 py-6 w-full shrink-0 animate-fade-in">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 flex items-center justify-center overflow-hidden rounded-lg shadow-sm border border-white/[0.06] bg-[#0F1118]">
-            <img src="/logo.jpg" alt="Skynet Logo" className="w-full h-full object-cover scale-[1.3]" />
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-[#1E293B] border border-white/10">
+            <span className="material-symbols-outlined text-[#FBBF24] text-[22px]">bolt</span>
           </div>
-          <h1 className="text-[16px] font-extrabold text-white tracking-[0.1em] font-sans">SKYNET</h1>
+          <div className="flex flex-col">
+            <span className="text-[16px] font-extrabold text-white leading-tight uppercase" style={{ fontStretch: 'condensed', letterSpacing: '-0.3px' }}>PPT Generator</span>
+            <span className="text-[10px] font-bold text-[#475569] uppercase leading-tight mt-0.5" style={{ letterSpacing: '1px' }}>Q LABS · SWIFT OPS</span>
+          </div>
         </div>
         <div>
           <span className="text-emerald-400 text-[10px] font-bold tracking-widest bg-emerald-400/5 px-3 py-1 rounded-md border border-emerald-400/10 hidden sm:inline-block">
@@ -71,8 +74,7 @@ export default function AuthView() {
       <div className="absolute top-1/4 right-0 w-1/3 h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-primary/10 pointer-events-none"></div>
       <div className="absolute bottom-1/3 left-0 w-1/4 h-[1px] bg-gradient-to-l from-transparent via-tertiary-container/40 to-tertiary-container/10 pointer-events-none"></div>
       
-      <div className="absolute top-1/3 right-12 opacity-15 pointer-events-none hidden xl:block">
-        <pre className="font-label text-[10px] text-primary leading-tight tracking-[0.2em] font-bold">
+          <pre className="font-label text-[10px] text-primary/30 leading-tight tracking-[0.2em] font-bold">
 {`01011001 01010011 01010100
 01000101 01001101 00100000
 01001111 01001110 01001100
@@ -82,8 +84,7 @@ SCANNING CORE ASSETS...
 [SECURE CONNECTION OK]
 PORT: 8080 REDIRECT
 UID: EMP_422_ACTIVE`}
-        </pre>
-      </div>
+          </pre>
       
     </div>
   );
