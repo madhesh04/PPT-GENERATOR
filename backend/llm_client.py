@@ -44,6 +44,18 @@ TONE_CONFIG = {
     "academic": {
         "temperature": 0.4,
         "instruction": "Maintain a rigorous, formal, and objective academic tone. Cite concepts clearly, focus on detailed methodology, theoretical background, and ensure thorough explanations of both concepts and any code examples."
+    },
+    "executive": {
+        "temperature": 0.2,
+        "instruction": "Deliver an executive-level summary. Focus on high-level impact, strategic alignment, and business outcomes. Be extremely concise and impactful."
+    },
+    "sales": {
+        "temperature": 0.5,
+        "instruction": "Use a persuasive, compelling, and value-driven sales tone. Highlight benefits, competitive advantages, and direct solutions to client pain points."
+    },
+    "simple": {
+        "temperature": 0.3,
+        "instruction": "Keep the language extremely simple, avoiding jargon. Use a minimalist approach focused on ease of understanding and absolute clarity."
     }
 }
 

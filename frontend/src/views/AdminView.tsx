@@ -6,6 +6,30 @@ import { adminApi } from '../api/admin';
 import { presentationApi } from '../api/presentation';
 import apiClient from '../api/apiClient';
 
+interface AdminStats {
+  total_users: number;
+  total_generations: number;
+  pending_approvals: number;
+  active_today: number;
+}
+
+interface AdminUser {
+  id: string;
+  full_name: string;
+  email: string;
+  role: string;
+  status: string;
+  created_at?: string;
+}
+
+interface AdminGeneration {
+  id: string;
+  title: string;
+  model_used: string;
+  generated_by: string;
+  created_at: string;
+}
+
 export default function AdminView() {
   const { user } = useAuthStore();
   const { showToast } = useAppStore();
@@ -13,11 +37,11 @@ export default function AdminView() {
   const navigate = useNavigate();
   
   // States
-  const [stats, setStats] = useState<any>(null);
-  const [users, setUsers] = useState<any[]>([]);
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [totalUsers, setTotalUsers] = useState(0);
-  const [pending, setPending] = useState<any[]>([]);
-  const [generations, setGenerations] = useState<any[]>([]);
+  const [pending, setPending] = useState<AdminUser[]>([]);
+  const [generations, setGenerations] = useState<AdminGeneration[]>([]);
   const [globalSettings, setGlobalSettings] = useState({ image_gen: true, speaker_notes: true, model: 'groq' });
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -30,7 +54,7 @@ export default function AdminView() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newUser, setNewUser] = useState({ full_name: '', email: '', password: '', role: 'user' });
   const [showResetModal, setShowResetModal] = useState(false);
-  const [resetTarget, setResetTarget] = useState<any>(null);
+  const [resetTarget, setResetTarget] = useState<AdminUser | null>(null);
   const [resetPassword, setResetPassword] = useState('');
 
   const isMaster = user?.role?.toUpperCase() === 'MASTER';
@@ -65,7 +89,7 @@ export default function AdminView() {
   };
 
   const handleToggleSetting = async (field: string, currentVal: boolean) => {
-    const payload: any = {};
+    const payload: Record<string, string | boolean> = {};
     if (field === 'image_gen') payload.image_generation_enabled = !currentVal;
     if (field === 'speaker_notes') payload.speaker_notes_enabled = !currentVal;
     
@@ -74,7 +98,7 @@ export default function AdminView() {
       await apiClient.patch('/admin/settings', payload);
       setGlobalSettings(prev => ({ ...prev, [field]: !currentVal }));
       showToast('SUCCESS — Setting updated.');
-    } catch (err) {
+    } catch {
       showToast('Update failed');
     }
   };
@@ -90,8 +114,9 @@ export default function AdminView() {
       setShowCreateForm(false);
       setNewUser({ full_name: '', email: '', password: '', role: 'user' });
       fetchData();
-    } catch (err: any) {
-      showToast(err.response?.data?.detail || 'Creation failed');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      showToast(error.response?.data?.detail || 'Creation failed');
     }
   };
 
@@ -100,7 +125,7 @@ export default function AdminView() {
       await adminApi.approveUser(id);
       showToast('User approved');
       fetchData();
-    } catch (err) { showToast('Approval failed'); }
+    } catch { showToast('Approval failed'); }
   };
 
   const handleReject = async (id: string) => {
@@ -109,7 +134,7 @@ export default function AdminView() {
       await adminApi.rejectUser(id);
       showToast('User rejected');
       fetchData();
-    } catch (err) { showToast('Rejection failed'); }
+    } catch { showToast('Rejection failed'); }
   };
 
   const handleDeleteUser = async (id: string) => {
@@ -118,7 +143,7 @@ export default function AdminView() {
       await adminApi.deleteUser(id);
       showToast('User deleted');
       fetchData();
-    } catch (err) { showToast('Delete failed'); }
+    } catch { showToast('Delete failed'); }
   };
 
   const handleConfirmReset = async () => {
@@ -129,7 +154,7 @@ export default function AdminView() {
       setShowResetModal(false);
       setResetTarget(null);
       setResetPassword('');
-    } catch (err) { showToast('Update failed'); }
+    } catch { showToast('Update failed'); }
   };
 
   const handleToggleStatus = async (id: string, currentStatus: string) => {
@@ -138,7 +163,7 @@ export default function AdminView() {
       await adminApi.updateUserStatus(id, newStatus);
       showToast(`USER_STATUS_UPDATED: ${newStatus.toUpperCase()}`);
       fetchData();
-    } catch (err) { showToast('Update failed'); }
+    } catch { showToast('Update failed'); }
   };
 
   const handleToggleRole = async (id: string, currentRole: string) => {
@@ -147,7 +172,7 @@ export default function AdminView() {
       await adminApi.updateUserRole(id, newRole);
       showToast(`USER_ROLE_UPDATED: ${newRole.toUpperCase()}`);
       fetchData();
-    } catch (err) { showToast('Update failed'); }
+    } catch { showToast('Update failed'); }
   };
 
   const handleDeletePpt = async (id: string) => {
@@ -156,7 +181,7 @@ export default function AdminView() {
       await adminApi.deleteGeneration(id);
       showToast('Presentation deleted');
       fetchData();
-    } catch (err) { showToast('Delete failed'); }
+    } catch { showToast('Delete failed'); }
   };
 
   const handleDownload = async (id: string, filename: string) => {
@@ -170,14 +195,14 @@ export default function AdminView() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-    } catch (err) { showToast('DOWNLOAD_FAILED'); }
+    } catch { showToast('DOWNLOAD_FAILED'); }
   };
 
   const navigateTab = (tab: string) => {
     navigate(`/admin?tab=${tab}`);
   };
 
-  const filterData = (data: any[], searchFields: string[]) => {
+  const filterData = <T extends Record<string, any>>(data: T[], searchFields: (keyof T)[]) => {
     if (!searchTerm) return data;
     const lowerSearch = searchTerm.toLowerCase();
     return data.filter(item => 
@@ -381,7 +406,7 @@ export default function AdminView() {
                 <tbody className="divide-y divide-white/5">
                   {filterData(users, ['full_name', 'email']).length === 0 ? (
                     <tr><td colSpan={6} className="py-12 text-center text-gray-500 text-xs font-bold tracking-widest uppercase">No Matching Records</td></tr>
-                  ) : filterData(users, ['full_name', 'email']).map((u: any, idx: number) => (
+                  ) : filterData(users, ['full_name', 'email']).map((u: AdminUser, idx: number) => (
                     <tr key={u.id} className="hover:bg-white/[0.02] transition-colors group/row">
                       <td className="py-4 px-6 text-[11px] text-[#475569] font-bold font-mono">{String(idx + 1).padStart(3, '0')}</td>
                       <td className="py-4 px-6 text-[14px] font-semibold text-white">{u.full_name}</td>
@@ -445,7 +470,7 @@ export default function AdminView() {
                 <tbody className="divide-y divide-white/5">
                   {filterData(pending, ['full_name', 'email']).length === 0 ? (
                     <tr><td colSpan={5} className="py-12 text-center text-gray-500 text-xs font-bold tracking-widest uppercase">No Pending Approvals</td></tr>
-                  ) : filterData(pending, ['full_name', 'email']).map((u: any, idx: number) => (
+                  ) : filterData(pending, ['full_name', 'email']).map((u: AdminUser, idx: number) => (
                     <tr key={u.id} className="hover:bg-white/[0.02] transition-colors group/row">
                       <td className="py-4 px-6 text-[11px] text-[#475569] font-bold font-mono">{String(idx + 1).padStart(3, '0')}</td>
                       <td className="py-4 px-6 text-[14px] font-semibold text-white">{u.full_name}</td>
@@ -495,7 +520,7 @@ export default function AdminView() {
                 <tbody className="divide-y divide-white/5">
                   {filterData(generations, ['title', 'generated_by']).length === 0 ? (
                     <tr><td colSpan={6} className="py-12 text-center text-gray-500 text-xs font-bold tracking-widest uppercase">No Logs Found</td></tr>
-                  ) : filterData(generations, ['title', 'generated_by']).map((p: any) => (
+                  ) : filterData(generations, ['title', 'generated_by']).map((p: AdminGeneration) => (
                     <tr key={p.id} className="hover:bg-white/[0.02] transition-colors group/row">
                       <td className="py-4 px-6 text-[11px] text-[#475569] font-bold font-mono">#{p.id.substring(0, 6).toUpperCase()}</td>
                       <td className="py-4 px-6 text-[14px] font-semibold text-white">{p.title}</td>

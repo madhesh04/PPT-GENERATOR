@@ -2,9 +2,11 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
 import { presentationApi } from '../api/presentation';
+import { useDownload } from '../hooks/useDownload';
 
 export default function DashboardView() {
-  const { savedPresentations, setSavedPresentations, showToast, globalDefaultModel } = useAppStore();
+  const { savedPresentations, setSavedPresentations, globalDefaultModel } = useAppStore();
+  const { handleDownload } = useDownload();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -18,22 +20,6 @@ export default function DashboardView() {
     };
     fetchPpts();
   }, [setSavedPresentations]);
-
-  const handleDownload = async (id: string, filename: string) => {
-    showToast('DOWNLOAD — Streaming PPTX...');
-    try {
-      const blob = await presentationApi.downloadPresentation(id);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    } catch (err) {
-      showToast('DOWNLOAD_FAILED');
-    }
-  };
 
   const activeTodayCount = savedPresentations.filter(p => {
     const today = new Date().toDateString();

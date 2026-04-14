@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { presentationApi } from '../api/presentation';
+import { useDownload } from '../hooks/useDownload';
 
 export default function HistoryView() {
-  const { savedPresentations, setSavedPresentations, showToast } = useAppStore();
+  const { savedPresentations, setSavedPresentations } = useAppStore();
+  const { handleDownload } = useDownload();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [rangeFilter, setRangeFilter] = useState('ALL TIME');
@@ -19,22 +21,6 @@ export default function HistoryView() {
     };
     fetchPpts();
   }, [setSavedPresentations]);
-
-  const handleDownload = async (id: string, filename: string) => {
-    showToast('DOWNLOAD — Streaming PPTX...');
-    try {
-      const blob = await presentationApi.downloadPresentation(id);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    } catch (err) {
-      showToast('DOWNLOAD_FAILED');
-    }
-  };
 
   const filteredPresentations = savedPresentations.filter(p => {
     const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 

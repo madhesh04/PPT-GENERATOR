@@ -132,7 +132,7 @@ async def export_pdf(req: ExportRequest, user: Annotated[dict, Depends(get_curre
         return StreamingResponse(
             pdf_io,
             media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename={fn}"}
+            headers={"Content-Disposition": f'attachment; filename="{fn}"'}
         )
     except Exception as e:
         logger.error("PDF Export failed: %s", e)
@@ -185,7 +185,8 @@ async def export_ppt(body: ExportRequest, current_user: Annotated[dict, Depends(
 
 
 @router.get("/download/{file_id}")
-async def download_ppt(file_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
+@limiter.limit("30/minute")
+async def download_ppt(request: Request, file_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
     """
     Download a presentation by its file_id (GridFS) or presentation_id (MongoDB).
     Requires authentication. Users can only download their own presentations.
@@ -235,19 +236,20 @@ async def download_ppt(file_id: str, current_user: Annotated[dict, Depends(get_c
         return StreamingResponse(
             ppt_io,
             media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
         )
     
     filename = getattr(stream, 'filename', 'presentation.pptx')
     return StreamingResponse(
         stream,
         media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
 
 
 @router.delete("/presentations/{presentation_id}")
-async def delete_presentation(presentation_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
+@limiter.limit("30/minute")
+async def delete_presentation(request: Request, presentation_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
     presentations_collection = get_presentations_collection()
     try:
         obj_id = ObjectId(presentation_id)

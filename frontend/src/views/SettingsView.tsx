@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useAppStore } from '../store/useAppStore';
-import apiClient from '../api/apiClient';
+import { adminApi } from '../api/admin';
 import { usePresentationStore } from '../store/usePresentationStore';
 
 export default function SettingsView() {
@@ -17,21 +17,20 @@ export default function SettingsView() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const url = isAdminRole ? '/admin/settings' : '/admin/public/settings';
-        const res = await apiClient.get(url);
+        const res = isAdminRole ? await adminApi.getAdminSettings() : await adminApi.getPublicSettings();
         setGlobalSettings({
-          globalImageGen: res.data.image_generation_enabled,
-          globalSpeakerNotes: res.data.speaker_notes_enabled || false,
-          globalDefaultModel: res.data.default_model
+          globalImageGen: res.image_generation_enabled,
+          globalSpeakerNotes: res.speaker_notes_enabled || false,
+          globalDefaultModel: res.default_model
         });
-      } catch (err) {
+      } catch {
         console.error('Failed to fetch settings');
       }
     };
     fetchSettings();
   }, [isAdminRole, setGlobalSettings]);
 
-  const handleUpdate = async (field: string, value: any) => {
+  const handleUpdate = async (field: string, value: string | boolean) => {
     if (!isAdminRole) {
       showToast('UNAUTHORIZED — ADMIN PRIVILEGES REQUIRED');
       return;
@@ -39,20 +38,21 @@ export default function SettingsView() {
     
     showToast(`UPDATING SYSTEM_SETTING: ${field.toUpperCase()}...`);
     try {
-      const payload: any = {};
+      const payload: Record<string, string | boolean> = {};
       if (field === 'image_generation_enabled') payload.image_generation_enabled = value;
       if (field === 'speaker_notes_enabled') payload.speaker_notes_enabled = value;
       if (field === 'default_model') payload.default_model = value;
 
-      await apiClient.patch('/admin/settings', payload);
+      await adminApi.updateAdminSettings(payload);
       
       setGlobalSettings({
         [field === 'image_generation_enabled' ? 'globalImageGen' : 
          field === 'speaker_notes_enabled' ? 'globalSpeakerNotes' : 'globalDefaultModel']: value
       });
       showToast(`SUCCESS — System settings updated.`);
-    } catch (err) {
-      showToast('Setting update failed');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      showToast(error.response?.data?.detail || 'Setting update failed');
     }
   };
 

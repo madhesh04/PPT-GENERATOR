@@ -1,5 +1,16 @@
 import { create } from 'zustand';
 
+/**
+ * AUTH ARCHITECTURE NOTE:
+ * Current implementation uses localStorage for JWT storage to facilitate rapid development 
+ * and persistent sessions across reloads. 
+ * 
+ * SECURITY ADVISORY:
+ * Storing sensitive tokens in localStorage is vulnerable to XSS. 
+ * PRODUCTION_ROADMA_ITEM: Migrate to httpOnly secure cookies for token handling 
+ * and use a CSRF token mechanism for state-changing requests.
+ */
+
 interface User {
   email: string;
   full_name: string;

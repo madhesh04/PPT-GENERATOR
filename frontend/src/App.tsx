@@ -8,6 +8,7 @@ import { adminApi } from './api/admin';
 // Layouts & Guards
 import MainLayout from './components/layout/MainLayout';
 import { AdminRoute } from './components/auth/AdminRoute';
+import ErrorBoundary from './components/layout/ErrorBoundary';
 
 // Views
 import DashboardView from './views/DashboardView';
@@ -50,7 +51,7 @@ export default function App() {
   }
 
   return (
-    <>
+    <ErrorBoundary>
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<AuthView />} />
@@ -78,6 +79,6 @@ export default function App() {
 
       {/* Vercel Analytics */}
       <Analytics />
-    </>
+    </ErrorBoundary>
   );
 }

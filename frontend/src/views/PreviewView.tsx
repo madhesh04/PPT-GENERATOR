@@ -55,9 +55,9 @@ export default function PreviewView() {
       // Auto-redirect to dashboard after short delay
       setTimeout(() => {
         resetCreation();
-        navigate('/dashboard');
+        navigate('/');
       }, 1500);
-    } catch (err) {
+    } catch {
       showToast('CRITICAL_ERROR // Download interrupted');
     } finally {
       setIsExporting(false);
@@ -81,9 +81,9 @@ export default function PreviewView() {
       // Auto-redirect to dashboard after short delay
       setTimeout(() => {
         resetCreation();
-        navigate('/dashboard');
+        navigate('/');
       }, 1500);
-    } catch (err) {
+    } catch {
       showToast('CRITICAL_ERROR // PDF synthesis failed');
     } finally {
       setIsExporting(false);
@@ -96,7 +96,7 @@ export default function PreviewView() {
     try {
       const data = await presentationApi.exportPresentation({ title: result.title, slides, theme });
       await handleDownload(data.token, data.filename);
-    } catch (err) {
+    } catch {
       showToast('CRITICAL_ERROR // Rebuild failed');
     } finally {
       setIsExporting(false);
@@ -127,7 +127,7 @@ export default function PreviewView() {
       newSlides[idx].image_base64 = image_base64;
       setSlides(newSlides);
       showToast('SUCCESS // Visual element updated');
-    } catch (err) {
+    } catch {
       showToast('ERROR // Image synthesis rejected');
     }
   };

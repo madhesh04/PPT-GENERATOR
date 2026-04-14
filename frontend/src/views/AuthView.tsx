@@ -1,4 +1,3 @@
-
 import { Navigate, useLocation } from 'react-router-dom';
 import Login from '../components/Login';
 import { useAuthStore } from '../store/useAuthStore';
@@ -8,7 +7,7 @@ export default function AuthView() {
   const location = useLocation();
 
   if (isAuthenticated) {
-    const from = (location.state as any)?.from?.pathname || '/';
+    const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
     return <Navigate to={from} replace />;
   }
 
