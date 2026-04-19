@@ -4,9 +4,10 @@ from fastapi.responses import StreamingResponse
 from typing import Annotated
 import time
 import base64
+import hashlib
 import logging
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timezone
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -75,7 +76,7 @@ async def generate_notes(request: Request, body: NotesRequest, current_user: Ann
         raise HTTPException(status_code=500, detail="Failed to generate lecture notes.")
 
     # Save to presentations collection using type='notes'
-    timestamp = datetime.utcnow()
+    timestamp = datetime.now(timezone.utc)
     new_doc = {
         "user_id": user_id,
         "generated_by": current_user.get("username", "Unknown"),
@@ -178,7 +179,7 @@ async def get_my_presentations(
 
 
 @router.post("/upload-context")
-async def upload_context(file: UploadFile = File(...), current_user: Annotated[dict, Depends(get_current_user)] = None):
+async def upload_context(current_user: Annotated[dict, Depends(get_current_user)], file: UploadFile = File(...)):
     content = await file.read()
     text = extract_text_from_file(content, file.filename)
     return {"text": text, "filename": file.filename}
@@ -204,7 +205,8 @@ async def export_pdf(req: ExportRequest, user: Annotated[dict, Depends(get_curre
 async def export_ppt(body: ExportRequest, current_user: Annotated[dict, Depends(get_current_user)]):
     try:
         # Convert base64 fields back to bytes
-        image_bytes_list = []
+        from typing import Optional
+        image_bytes_list: list[Optional[bytes]] = []
         for slide in body.slides:
             if slide.image_base64:
                 try:
@@ -279,7 +281,8 @@ async def download_ppt(request: Request, file_id: str, current_user: Annotated[d
         title = presentation.get("title", "Presentation")
         theme = presentation.get("theme", "standard")
         
-        image_bytes_list = []
+        from typing import Optional
+        image_bytes_list: list[Optional[bytes]] = []
         for s in slides:
             b64 = s.get("image_base64")
             if b64 and "," in b64:

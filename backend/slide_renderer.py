@@ -30,9 +30,9 @@ ACCENT     = (245, 83, 61)      # #F5533D  neon red
 TEXT_LIGHT = (241, 245, 249)    # #F1F5F9
 TEXT_DIM   = (148, 163, 184)    # #94A3B8
 WHITE      = (255, 255, 255)
+from typing import Optional, Any
 
-
-def _find_font(size: int) -> ImageFont.FreeTypeFont:
+def _find_font(size: int) -> Any:
     """Try common system font paths; fall back to Pillow default."""
     candidates = [
         "arial.ttf",
@@ -165,7 +165,7 @@ def _render_slide_pillow(slide, slide_index: int, width: int, height: int) -> st
     approx_char_w = max(6, font_bullet.size // 2)
     # If image is present, the text area is much narrower
     actual_bullet_width = (max_bullet_width // 2) if image_bytes else max_bullet_width
-    chars_per_line = max(20, actual_bullet_width // approx_char_w)
+    chars_per_line = int(max(20, actual_bullet_width // approx_char_w))
 
     for i, bullet in enumerate(bullets):
         y = content_y + i * line_h
@@ -247,7 +247,7 @@ def render_slides_to_images(
 
     try:
         import comtypes.client
-        import pythoncom
+        import pythoncom # type: ignore
 
         with open(tmp_pptx, "wb") as f:
             f.write(pptx_buffer.read())

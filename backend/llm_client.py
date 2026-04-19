@@ -81,11 +81,8 @@ def is_technical_topic(title: str, topics: list) -> bool:
 def _build_prompt(title: str, topics: list, num_slides: int, context: str, tone_instruction: str, include_notes: bool = True, include_images: bool = True) -> tuple[str, str]:
     """Returns (system_prompt, user_prompt)."""
     notes_instruction = """
-═══════════════════════════
-SPEAKER NOTES
-═══════════════════════════
 Add a "notes" field per slide: 2-4 sentences the presenter speaks aloud.
-Notes should: expand on what's on the slide, add one more example or data point not in the bullets, and guide the presenter's delivery.
+Notes should: expand on slide content, add extra data not in bullets, and guide delivery.
 """ if include_notes else "\nSPEAKER NOTES: Set the 'notes' field to an empty string for all slides.\n"
 
     context_block = (
@@ -113,40 +110,29 @@ TONE & AUDIENCE STYLE: {tone_instruction}
 
 {notes_instruction}
 
-═══════════════════════════════════════════
-CONTENT QUALITY STANDARD - NON-NEGOTIABLE
-═══════════════════════════════════════════
-
+CONTENT QUALITY STANDARD
 Every bullet point you write must do ALL of the following:
-  ✔ {bullet_instruction}
-  ✔ Be a complete, standalone sentence of {word_range}
-  ✔ Deliver genuine insight - no filler, no structural meta-text
-  ✔ Where the concept warrants it: include a real-world example, analogy, case study, or data point
+  * {bullet_instruction}
+  * Be a complete, standalone sentence of {word_range}
+  * Deliver genuine insight - no filler, no structural meta-text
+  * Include a real-world example, analogy, or data point where applicable
 
 NEVER WRITE PLACEHOLDERS. NEVER WRITE META-TEXT ABOUT THE SLIDE.
 
-═══════════════════════════
 DOMAIN DETECTION
-═══════════════════════════
 Infer the domain of this presentation from the title, topics, and context. Then apply domain-appropriate depth.
 
-═══════════════════════════
 SLIDE STRUCTURE RULES
-═══════════════════════════
 BULLET COUNT: Exactly 5 per slide. Every content slide MUST have exactly 5 bullet points.
 
-═══════════════════════════
 CODE BLOCKS
-═══════════════════════════
 For technical, programming, or academic topics, some slides SHOULD include a code example.
-- Put code in the "code" field as a clean, runnable snippet.
-- CRITICAL: You must use literal `\\n` characters to ensure every line of code prints on a NEW LINE. Under no circumstance should multiple code statements be concatenated on the same horizontal line.
-- REQUIRED: If the tone is 'academic' or 'technical', any provided code snippet MUST be at least 10 lines long. You MUST explain the code block thoroughly line-by-line within the slide's content or notes.
+- Put code in the "code" field as a clean snippet.
+- CRITICAL: Use literal newline characters (\\n) to ensure every line of code prints on a NEW LINE. 
+- REQUIRED: For 'academic' or 'technical' tones, provided code snippets MUST be at least 10 lines. Explain the code block thoroughly.
 - For non-code slides, set both "code" and "language" to null.
 
-═══════════════════════════
 IMAGE SELECTION
-═══════════════════════════
 { "NOT every slide needs an image. Only assign an image_query to slides where a visual genuinely enhances understanding. Typically 2–3 slides per deck should have images." if include_images else "CRITICAL: Image generation is DISABLED for this session. You MUST set the 'image_query' field to null for ALL slides without exception." }
 
 OUTPUT FORMAT: Return ONLY a valid raw JSON array. Start immediately with '[' and end immediately with ']'. No markdown, no code fences.
@@ -207,6 +193,7 @@ def _parse_and_validate(raw: str) -> list:
         return []
 
     # 2. Main Parsing Attempt
+    repaired = raw  # Initialize to raw to avoid uninitialized variable
     try:
         return json.loads(raw)
     except Exception:
@@ -218,7 +205,7 @@ def _parse_and_validate(raw: str) -> list:
         except Exception:
             # 4. Truncation Recovery: Iteratively close brackets
             # This handles cases where the LLM stops mid-generation
-            test_raw = repaired if 'repaired' in locals() else raw
+            test_raw = repaired
             for i in range(JSON_REPAIR_LIMIT):
                 try:
                     # Try adding closing brackets in common patterns
@@ -235,7 +222,7 @@ def _parse_and_validate(raw: str) -> list:
                     f.write("=== RAW ===\n")
                     f.write(raw)
                     f.write("\n\n=== REPAIRED ===\n")
-                    f.write(repaired if 'repaired' in locals() else "N/A")
+                    f.write(repaired)
             except:
                 pass
 
@@ -274,18 +261,19 @@ def _call_groq(title: str, topics: list, num_slides: int = 5, context: str = "",
     
     tone_cfg = TONE_CONFIG.get(tone.lower(), TONE_CONFIG["professional"])
     system_prompt, user_prompt = _build_prompt(
-        title, topics, num_slides, context, tone_cfg["instruction"], 
+        title, topics, num_slides, context, str(tone_cfg["instruction"]), 
         include_notes=include_notes, include_images=include_images
     )
 
     completion = client.chat.completions.create(
         messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
         model=GROQ_MODEL,
-        temperature=tone_cfg["temperature"] if num_slides <= 10 else min(0.2, tone_cfg["temperature"]),
+        temperature=float(tone_cfg["temperature"] if num_slides <= 10 else min(0.2, tone_cfg["temperature"])),
         max_tokens=8192,
         top_p=0.9,
     )
-    data = _parse_and_validate(completion.choices[0].message.content.strip())
+    content = completion.choices[0].message.content
+    data = _parse_and_validate(content.strip() if content else "")
     return _validate_data(data)
 
 
@@ -296,18 +284,19 @@ def _call_nvidia(title: str, topics: list, num_slides: int = 5, context: str = "
 
     tone_cfg = TONE_CONFIG.get(tone.lower(), TONE_CONFIG["technical"])
     system_prompt, user_prompt = _build_prompt(
-        title, topics, num_slides, context, tone_cfg["instruction"], 
+        title, topics, num_slides, context, str(tone_cfg["instruction"]), 
         include_notes=include_notes, include_images=include_images
     )
 
     completion = nvidia_client.chat.completions.create(
         messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
         model=NVIDIA_MODEL,
-        temperature=min(tone_cfg["temperature"], 0.35) if num_slides <= 10 else 0.15,
+        temperature=float(min(tone_cfg["temperature"], 0.35) if num_slides <= 10 else 0.15),
         max_tokens=8192,
         top_p=0.9,
     )
-    data = _parse_and_validate(completion.choices[0].message.content.strip())
+    content = completion.choices[0].message.content
+    data = _parse_and_validate(content.strip() if content else "")
     return _validate_data(data)
 
 
@@ -406,7 +395,8 @@ def _call_groq_notes(subject: str, unit: str, topics: list, context: str, pages:
         temperature=0.3,
         max_tokens=8192,
     )
-    return completion.choices[0].message.content.strip()
+    content = completion.choices[0].message.content
+    return content.strip() if content else ""
 
 
 async def generate_lecture_notes(subject: str, unit: str, topics: list, context: str, pages: int, depth: str, format: str, provider: str | None = None) -> tuple[str, str, str]:

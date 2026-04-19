@@ -82,7 +82,7 @@ async def _fetch_freepik(query: str) -> bytes | None:
                     "per_page": 1,
                     "type": "photo"
                 },
-                headers={"x-freepik-api-key": FREEPIK_KEY}
+                headers={"x-freepik-api-key": str(FREEPIK_KEY)}
             )
             if r.status_code != 200:
                 return None

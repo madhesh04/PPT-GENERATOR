@@ -284,7 +284,7 @@ export const usePresentationStore = create<PresentationState>((set, get) => ({
   },
 
   regenerateSlide: async (index) => {
-    const { slides, title, context, tone } = get();
+    const { slides, context, tone } = get();
     if (!slides[index]) return;
 
     set({ loading: true, errorMsg: '' });

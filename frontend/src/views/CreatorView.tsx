@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import apiClient from '../api/apiClient';
-import { useNavigate } from 'react-router-dom';
 import { usePresentationStore } from '../store/usePresentationStore';
 import { useToast } from '../components/ui/ToastContainer';
 import TagInput from '../components/ui/TagInput';
@@ -37,20 +36,7 @@ const CheckIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
   </svg>
 );
-const DownloadIcon = () => (
-  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-  </svg>
-);
-const ChevronIcon = ({ dir }: { dir: 'left' | 'right' }) => (
-  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-    {dir === 'left' ? (
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-    ) : (
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-    )}
-  </svg>
-);
+
 
 /* ─── Config options ─── */
 const TONES = ['Professional', 'Academic', 'Casual', 'Technical', 'Executive', 'Creative'];
@@ -165,7 +151,6 @@ function EngineGlyph({ cls }: { cls: string }) {
 
 /* ─── Main View ─── */
 export default function CreatorView() {
-  const navigate = useNavigate();
   const { showToast } = useToast();
   const {
     title, topics, context, tone, theme, numSlides, forceProvider, includeImages,
@@ -173,8 +158,7 @@ export default function CreatorView() {
     setTitle, setTopics, setContext, setTone, setTheme, setNumSlides, setForceProvider, setIncludeImages,
     setTrack, setClient, setModule, setCourse, setTargetAudience,
     notesContent,
-    generatePresentation, generateLectureNotes, loading, errorMsg, setErrorMsg, setGenSteps,
-    resetCreation,
+    generatePresentation, generateLectureNotes, loading, errorMsg, setErrorMsg,
     updateSlide,
     regenerateSlide,
     result, slides,

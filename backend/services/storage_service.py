@@ -5,9 +5,11 @@ from db.client import get_db
 
 logger = logging.getLogger(__name__)
 
+from typing import Optional
+
 class StorageService:
     @staticmethod
-    async def save_file(filename: str, file_bytes: bytes, metadata: dict = None) -> str:
+    async def save_file(filename: str, file_bytes: bytes, metadata: Optional[dict] = None) -> str:
         db = get_db()
         bucket = AsyncIOMotorGridFSBucket(db)
         try:

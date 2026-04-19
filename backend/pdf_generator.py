@@ -1,9 +1,9 @@
 import io
 import base64
-from fpdf import FPDF
+from fpdf import FPDF # type: ignore
 from typing import List, Optional
 
-from core.themes import THEME_DATA
+from core.themes import THEME_DATA # type: ignore
 
 # ── Themes ─────────────────────────────────────────────────────────────────────
 THEMES = {

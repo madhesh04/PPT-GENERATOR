@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Annotated, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from bson.errors import InvalidId
 import logging
@@ -31,7 +31,7 @@ async def admin_get_stats(admin_user: Annotated[dict, Depends(require_admin)]):
     total_generations = await presentations_coll.count_documents({})
     pending_approvals = 0  # No approval workflow in shared DB
 
-    yesterday = datetime.utcnow() - timedelta(days=1)
+    yesterday = datetime.now(timezone.utc) - timedelta(days=1)
     active_today = await presentations_coll.aggregate([
         {"$match": {"created_at": {"$gte": yesterday}}},
         {"$group": {"_id": "$user_id"}},
@@ -225,7 +225,7 @@ async def admin_get_settings(admin_user: Annotated[dict, Depends(require_admin)]
 @router.patch("/settings")
 async def admin_update_settings(payload: dict, admin_user: Annotated[dict, Depends(require_admin)]):
     settings_coll = get_settings_collection()
-    update_data = {}
+    update_data: dict = {}
     if "image_generation_enabled" in payload:
         update_data["image_generation_enabled"] = bool(payload["image_generation_enabled"])
     if "speaker_notes_enabled" in payload:
