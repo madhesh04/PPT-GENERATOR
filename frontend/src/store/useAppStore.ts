@@ -1,44 +1,48 @@
 import { create } from 'zustand';
 
-interface ToastData {
-  show: boolean;
-  msg: string;
-}
 
 interface AppState {
   sidebarCollapsed: boolean;
-  toastData: ToastData;
   timeStr: string;
-  savedPresentations: any[];
   globalImageGen: boolean;
   globalSpeakerNotes: boolean;
   globalDefaultModel: string;
+  isDarkMode: boolean;
+  settingsLoaded: boolean;
+
   setSidebarCollapsed: (collapsed: boolean) => void;
-  showToast: (msg: string, dur?: number) => void;
+  toggleTheme: () => void;
   setTimeStr: (time: string) => void;
-  setSavedPresentations: (ppts: any[]) => void;
   setGlobalSettings: (settings: any) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
   sidebarCollapsed: false,
-  toastData: { show: false, msg: '' },
   timeStr: '',
-  savedPresentations: [],
   globalImageGen: true,
   globalSpeakerNotes: true,
   globalDefaultModel: 'groq',
+  isDarkMode: localStorage.getItem('theme') !== 'light',
+  settingsLoaded: false,
 
   setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
-
-  showToast: (msg: string, dur = 3000) => {
-    set({ toastData: { show: true, msg } });
-    setTimeout(() => {
-      set((state) => ({ toastData: { ...state.toastData, show: false } }));
-    }, dur);
-  },
+  toggleTheme: () => set((state) => {
+    const nextMode = !state.isDarkMode;
+    if (nextMode) {
+      document.documentElement.classList.remove('light');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.add('light');
+      localStorage.setItem('theme', 'light');
+    }
+    return { isDarkMode: nextMode };
+  }),
 
   setTimeStr: (timeStr) => set({ timeStr }),
-  setSavedPresentations: (savedPresentations) => set({ savedPresentations }),
-  setGlobalSettings: (settings) => set((state) => ({ ...state, ...settings })),
+  setGlobalSettings: (settings) => set({
+    globalImageGen: settings.image_gen ?? true,
+    globalSpeakerNotes: settings.speaker_notes ?? true,
+    globalDefaultModel: settings.model ?? 'groq',
+    settingsLoaded: true,
+  }),
 }));

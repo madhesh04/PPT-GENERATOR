@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Annotated, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from bson.errors import InvalidId
 import logging
@@ -31,7 +31,7 @@ async def admin_get_stats(admin_user: Annotated[dict, Depends(require_admin)]):
     total_generations = await presentations_coll.count_documents({})
     pending_approvals = 0  # No approval workflow in shared DB
 
-    yesterday = datetime.utcnow() - timedelta(days=1)
+    yesterday = datetime.now(timezone.utc) - timedelta(days=1)
     active_today = await presentations_coll.aggregate([
         {"$match": {"created_at": {"$gte": yesterday}}},
         {"$group": {"_id": "$user_id"}},
@@ -109,20 +109,28 @@ async def admin_get_users(
 
     users = await cursor.to_list(length=limit)
 
+    # Fetch PPT count for all users in one go
+    presentations_coll = get_presentations_collection()
+    counts_cursor = presentations_coll.aggregate([
+        {"$group": {"_id": "$user_id", "count": {"$sum": 1}}}
+    ])
+    ppt_counts = {str(doc["_id"]): doc["count"] for doc in await counts_cursor.to_list(None)}
+
     # Map Timesheet fields → Skynet's expected response format
     serialized = []
     for u in users:
         # Resolve name via multiple possible fields in shared DB
         full_name = u.get("name") or u.get("fullName") or u.get("username") or "Unknown User"
+        user_id = u.get("employeeId", str(u.get("_id", "")))
         
         mapped = {
-            "id": u.get("employeeId", str(u.get("_id", ""))),
+            "id": user_id,
             "email": u.get("employeeId", u.get("email", "")),
             "full_name": full_name,
             "role": u.get("role", "user").lower(),
             "status": "active",  # Timesheet has no status field — all users active
             "team_lead": u.get("teamLead", ""),
-            "ppt_count": 0,  
+            "ppt_count": ppt_counts.get(user_id, 0),  
         }
         if "createdAt" in u and u["createdAt"]:
             mapped["created_at"] = u["createdAt"].isoformat() if hasattr(u["createdAt"], "isoformat") else str(u["createdAt"])
@@ -217,7 +225,7 @@ async def admin_get_settings(admin_user: Annotated[dict, Depends(require_admin)]
 @router.patch("/settings")
 async def admin_update_settings(payload: dict, admin_user: Annotated[dict, Depends(require_admin)]):
     settings_coll = get_settings_collection()
-    update_data = {}
+    update_data: dict = {}
     if "image_generation_enabled" in payload:
         update_data["image_generation_enabled"] = bool(payload["image_generation_enabled"])
     if "speaker_notes_enabled" in payload:

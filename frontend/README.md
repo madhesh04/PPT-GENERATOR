@@ -1,25 +1,26 @@
-# 🪐 SkyNet — Frontend (Vanish UI / Skynet Theme)
+# 🪐 SkyNet — Frontend (React + Vanish UI)
 
-The frontend of **SkyNet PPT Generator** is a high-performance React application built with TypeScript and Vite. It implements a custom-engineered UI framework focused on glassmorphism, high-contrast mechanical aesthetics, and hardware-accelerated background effects.
+The frontend of **SkyNet PPT Generator** is a high-performance React application built with TypeScript and Vite. It features a custom-engineered UI framework called **Vanish**, focused on glassmorphism, mechanical aesthetics, and professional presentation workflows.
 
 ## 🧬 Core Features
-- **Skynet Access Protocol**: Adapted login system supporting **Employee ID** authentication and external Timesheet role mapping.
-- **Vanish Layout**: Dynamic, collapsible sidebar with role-aware navigation (User/Admin).
-- **Mechanical Glassmorphism**: High-contrast UI with scanlines, particle fields, and mechanical animation effects.
-- **Identity-Based Isolation**: Secure state management ensures that presentation previews are isolated to the authenticated employee.
+- **Live Preview System**: High-fidelity, static-frame presentation preview with real-time editing and navigation controls.
+- **Skynet Access Protocol**: Identity-based login supporting **Employee ID** authentication and role-aware navigation.
+- **Vanish Design Language**: High-contrast UI with mechanical animations, glassmorphism, and hardware-accelerated effects.
+- **Role-Aware Dashboards**: Tailored experiences for `USER` and `ADMIN` roles, including analytical KPI tiles for administrators.
+- **Integrated Editor**: On-the-fly slide editing, regeneration of specific slides, and dynamic image swapping.
 
-## 🛡️ Authentication Architecture
-- **Shared Identity**: Authentication is delegated to the external Timesheet database.
-- **RBAC**: Native role-based access control supporting `USER` and `ADMIN` tiers.
-- **Managed Access**: Registration is disabled on the frontend; users are directed to the Timesheet administration system for account creation.
+## 🛡️ Authentication & RBAC
+- **Shared Identity**: Authentication is delegated to the external Timesheet database to maintain a single source of truth for user accounts.
+- **Managed Access**: User registration is disabled; account creation and role assignments are handled via the centralized administration system.
+- **Session Security**: Secure state management with automatic logout and token expiration handling.
 
 ## 🛠️ Internal Architecture
-- **State Orchestration**: Managed in `useAuthStore` and `App.tsx` for core business logic and presentation generation.
-- **Standardized UI**: Components in `components/ui/` provide a consistent design language across the application.
-- **Vite-Powered**: Ultra-fast hot module replacement (HMR) for development.
+- **Creator Engine**: `CreatorView.tsx` manages the complex state of slide generation, previewing, and exporting.
+- **UI Components**: Standardized, reusable components in `src/components/ui/` ensure visual consistency.
+- **State Management**: Orchestrated via custom hooks and stores for robust authentication and application flow.
+- **Styling**: Powered by Vanilla CSS for maximum flexibility and precise animation control.
 
 ## 🚀 Development & Build
-
 ```bash
 # Install dependencies
 npm install

@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { Analytics } from '@vercel/analytics/react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/useAuthStore';
 import { useAppStore } from './store/useAppStore';
@@ -13,7 +12,6 @@ import ErrorBoundary from './components/layout/ErrorBoundary';
 // Views
 import DashboardView from './views/DashboardView';
 import CreatorView from './views/CreatorView';
-import PreviewView from './views/PreviewView';
 import HistoryView from './views/HistoryView';
 import SettingsView from './views/SettingsView';
 import AdminView from './views/AdminView';
@@ -21,11 +19,20 @@ import AuthView from './views/AuthView';
 
 export default function App() {
   const { initialize, loading, isAuthenticated } = useAuthStore();
-  const { setGlobalSettings } = useAppStore();
+  const { setGlobalSettings, isDarkMode } = useAppStore();
 
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  // Apply theme class on mount
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.add('light');
+    }
+  }, [isDarkMode]);
 
   // Fetch global settings ONCE after login — not on every navigation
   useEffect(() => {
@@ -41,11 +48,9 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0A0C12] flex items-center justify-center font-['Share_Tech_Mono'] text-[#00f0ff] uppercase tracking-widest">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-2 border-[rgba(0,240,255,0.1)] border-t-[#00f0ff] rounded-full animate-spin"></div>
-          <div className="animate-pulse">Initializing_Skynet_Core...</div>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-primary)', color: 'var(--accent-text)', fontFamily: 'var(--mono)', fontSize: '12px', letterSpacing: '0.12em', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ width: '40px', height: '40px', border: '2px solid rgba(3,37,189,0.15)', borderTop: '2px solid var(--accent-text)', borderRadius: '50%', animation: 'spinning 0.8s linear infinite' }} />
+        INITIALISING_CORE...
       </div>
     );
   }
@@ -60,14 +65,12 @@ export default function App() {
         <Route element={<MainLayout />}>
           <Route path="/" element={<DashboardView />} />
           <Route path="/create" element={<CreatorView />} />
-          <Route path="/preview" element={<PreviewView />} />
           <Route path="/history" element={<HistoryView />} />
           <Route path="/settings" element={<SettingsView />} />
 
-          {/* Admin Routes — guarded by role. Tab driven by ?tab= query param */}
+          {/* Admin Routes — guarded by role */}
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={<AdminView />} />
-            {/* Redirect legacy sub-paths to query-param equivalents */}
             <Route path="/admin/users" element={<Navigate to="/admin?tab=users" replace />} />
             <Route path="/admin/generations" element={<Navigate to="/admin?tab=generations" replace />} />
           </Route>
@@ -77,8 +80,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
-      {/* Vercel Analytics */}
-      <Analytics />
     </ErrorBoundary>
   );
 }

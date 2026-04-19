@@ -4,9 +4,10 @@ from fastapi.responses import StreamingResponse
 from typing import Annotated
 import time
 import base64
+import hashlib
 import logging
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timezone
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -15,7 +16,7 @@ from core.converters import serialize_mongo_doc
 from core.utils import sanitize_filename
 from models.requests import (
     PresentationRequest, RegenerateSlideRequest, 
-    RegenerateImageRequest, ExportRequest
+    RegenerateImageRequest, ExportRequest, NotesRequest
 )
 from db.client import (
     get_presentations_collection, 
@@ -27,7 +28,7 @@ from services.storage_service import StorageService
 from services.file_extractor import extract_text_from_file
 from pdf_generator import create_pdf_presentation
 from generator import create_presentation
-from llm_client import generate_slide_content
+from llm_client import generate_slide_content, generate_lecture_notes
 from image_client import fetch_slide_image
 
 router = APIRouter(tags=["generate"])
@@ -52,6 +53,67 @@ async def generate_ppt(request: Request, body: PresentationRequest, current_user
         return await handle_cache_hit(cached, content_hash, current_user, start_time)
 
     return await run_generation_pipeline(body, current_user, start_time, content_hash)
+
+
+@router.post("/generate-notes")
+@limiter.limit("10/minute")
+async def generate_notes(request: Request, body: NotesRequest, current_user: Annotated[dict, Depends(get_current_user)]):
+    start_time = time.time()
+    user_id = current_user["user_id"]
+    presentations_collection = get_presentations_collection()
+    logs_collection = get_generation_logs_collection()
+    
+    # Simple hash for content
+    content_hash = hashlib.sha256(f"notes-{body.subject}-{body.unit}-{body.format}-{body.depth}".encode()).hexdigest()
+    
+    # Attempt generation
+    try:
+        content, model_used, provider = await generate_lecture_notes(
+            body.subject, body.unit, body.topics, body.context, body.pages, body.depth, body.format, body.force_provider
+        )
+    except Exception as e:
+        logger.error(f"Error generating notes: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate lecture notes.")
+
+    # Save to presentations collection using type='notes'
+    timestamp = datetime.now(timezone.utc)
+    new_doc = {
+        "user_id": user_id,
+        "generated_by": current_user.get("username", "Unknown"),
+        "username": current_user.get("username", "Unknown"),
+        "title": f"Notes: {body.subject} - {body.unit}".strip("- "),
+        "topics": body.topics,
+        "content_hash": content_hash,
+        "content": content, # Store raw markdown
+        "slides": [], # Notes don't have slides, but schema might expect list
+        "created_at": timestamp,
+        "theme": "notes",
+        "type": "notes",
+        "track": body.track,
+        "client": body.client,
+        "module": None,
+        "course": None,
+    }
+    
+    res = await presentations_collection.insert_one(new_doc)
+    
+    await logs_collection.insert_one({
+        "user_id": str(user_id),
+        "presentation_id": res.inserted_id,
+        "action": "generate_notes",
+        "status": "success",
+        "execution_time_ms": int((time.time() - start_time) * 1000),
+        "timestamp": timestamp
+    })
+
+    return {
+        "title": new_doc["title"],
+        "content": content,
+        "token": str(res.inserted_id),
+        "filename": f"{sanitize_filename(new_doc['title'])}.md",
+        "model_used": model_used,
+        "provider": provider
+    }
 
 
 @router.post("/regenerate-slide")
@@ -97,14 +159,14 @@ async def regenerate_image(body: RegenerateImageRequest, current_user: Annotated
 async def get_my_presentations(
     current_user: Annotated[dict, Depends(get_current_user)],
     skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100)
+    limit: int = Query(20, ge=1, le=1000)
 ):
     coll = get_presentations_collection()
     user_oid = current_user["user_id"]  # employeeId string
     total = await coll.count_documents({"user_id": user_oid})
     cursor = coll.find(
         {"user_id": user_oid},
-        {"_id": 1, "title": 1, "theme": 1, "created_at": 1}
+        {"_id": 1, "title": 1, "theme": 1, "created_at": 1, "type": 1, "track": 1}
     ).sort("created_at", -1).skip(skip).limit(limit)
     
     presentations = await cursor.to_list(length=limit)
@@ -117,7 +179,7 @@ async def get_my_presentations(
 
 
 @router.post("/upload-context")
-async def upload_context(file: UploadFile = File(...), current_user: Annotated[dict, Depends(get_current_user)] = None):
+async def upload_context(current_user: Annotated[dict, Depends(get_current_user)], file: UploadFile = File(...)):
     content = await file.read()
     text = extract_text_from_file(content, file.filename)
     return {"text": text, "filename": file.filename}
@@ -143,7 +205,8 @@ async def export_pdf(req: ExportRequest, user: Annotated[dict, Depends(get_curre
 async def export_ppt(body: ExportRequest, current_user: Annotated[dict, Depends(get_current_user)]):
     try:
         # Convert base64 fields back to bytes
-        image_bytes_list = []
+        from typing import Optional
+        image_bytes_list: list[Optional[bytes]] = []
         for slide in body.slides:
             if slide.image_base64:
                 try:
@@ -218,7 +281,8 @@ async def download_ppt(request: Request, file_id: str, current_user: Annotated[d
         title = presentation.get("title", "Presentation")
         theme = presentation.get("theme", "standard")
         
-        image_bytes_list = []
+        from typing import Optional
+        image_bytes_list: list[Optional[bytes]] = []
         for s in slides:
             b64 = s.get("image_base64")
             if b64 and "," in b64:

@@ -1,207 +1,346 @@
-import { useEffect, useState } from 'react';
-import { useAppStore } from '../store/useAppStore';
-import { presentationApi } from '../api/presentation';
+import { useEffect, useState, useMemo } from 'react';
+import apiClient from '../api/apiClient';
+import Badge from '../components/ui/Badge';
+import SearchableDropdown from '../components/ui/SearchableDropdown';
+import { useToast } from '../components/ui/ToastContainer';
 import { useDownload } from '../hooks/useDownload';
+import { RefreshCw, Download, Trash2, Archive, Search, FileDown } from 'lucide-react';
+
+/* Types */
+interface Presentation {
+  id: string;
+  title: string;
+  type: string;
+  theme?: string;
+  num_slides?: number;
+  created_at: string;
+  model_used?: string;
+  track?: string;
+  status?: string;
+  download_token?: string;
+}
+
+
+
+/* Helpers */
+function formatTs(ts: string): string {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHrs = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHrs < 24) return `${diffHrs}h ago`;
+  if (diffDays < 30) return `${diffDays}d ago`;
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+/* Constants */
+const PAGE_SIZE = 10;
+const TYPE_OPTS = [
+  { value: 'all', label: 'All Types' },
+  { value: 'ppt', label: 'Presentation' },
+  { value: 'notes', label: 'Lecture Notes' },
+];
 
 export default function HistoryView() {
-  const { savedPresentations, setSavedPresentations } = useAppStore();
-  const { handleDownload } = useDownload();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const [rangeFilter, setRangeFilter] = useState('ALL TIME');
+  const { handleDownload: downloadPpt } = useDownload();
+  const { showToast } = useToast();
+  const [presentations, setPresentations] = useState<Presentation[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [page, setPage] = useState(1);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    show: boolean;
+    id: string | null;
+  }>({ show: false, id: null });
+
+  const fetchHistory = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    try {
+      const r = await apiClient.get('/presentations/me?limit=500');
+      const list = r.data?.presentations ?? [];
+      const standardized = list.map((p: any) => ({
+        ...p,
+        type: p.type || 'ppt',
+      }));
+      setPresentations(standardized);
+    } catch (err) {
+      console.error('Failed to fetch history', err);
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchPpts = async () => {
-      try {
-        const ppts = await presentationApi.getMyPresentations();
-        setSavedPresentations(ppts || []);
-      } catch (err) {
-        console.error('Failed to fetch history', err);
-      }
-    };
-    fetchPpts();
-  }, [setSavedPresentations]);
+    fetchHistory();
 
-  const filteredPresentations = savedPresentations.filter(p => {
-    const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          p.theme.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'ALL' || true; // Currently all are COMPLETED
-    
-    let matchesRange = true;
-    if (rangeFilter !== 'ALL TIME') {
-      const now = new Date();
-      const created = new Date(p.created_at);
-      const diffDays = (now.getTime() - created.getTime()) / (1000 * 3600 * 24);
-      if (rangeFilter === 'LAST 7 DAYS') matchesRange = diffDays <= 7;
-      else if (rangeFilter === 'LAST 30 DAYS') matchesRange = diffDays <= 30;
+    const onFocus = () => fetchHistory(false);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
+
+  /* Filtered + paginated */
+  const filtered = useMemo(() => {
+    let data = [...presentations];
+    if (search) data = data.filter((p) => p.title.toLowerCase().includes(search.toLowerCase()));
+    if (typeFilter !== 'all') data = data.filter((p) => p.type === typeFilter);
+    if (fromDate) data = data.filter((p) => new Date(p.created_at) >= new Date(fromDate));
+    if (toDate) data = data.filter((p) => new Date(p.created_at) <= new Date(toDate + 'T23:59:59'));
+    return data;
+  }, [presentations, search, typeFilter, fromDate, toDate]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  /* KPIs */
+  const totalRec = presentations.length;
+  const pptsCount = presentations.filter((p) => p.type === 'ppt').length;
+  const notesCount = presentations.filter((p) => p.type === 'notes').length;
+
+  /* Download */
+
+
+  /* Delete */
+  async function handleDelete(id: string) {
+    setConfirmConfig({ show: true, id });
+  }
+
+  async function executeDelete() {
+    if (!confirmConfig.id) return;
+    try {
+      await apiClient.delete(`/presentations/${confirmConfig.id}`);
+      setPresentations((prev) => prev.filter((p) => p.id !== confirmConfig.id));
+      showToast('Record deleted', 'success');
+    } catch {
+      showToast('Delete failed', 'error');
+    } finally {
+      setConfirmConfig({ show: false, id: null });
     }
+  }
 
-    return matchesSearch && matchesStatus && matchesRange;
-  });
+  /* Export CSV */
+  function exportCsv() {
+    const rows = [
+      ['#', 'Title', 'Type', 'Track', 'Theme', 'Status', 'Generated At'],
+      ...filtered.map((p, i) => [String(i + 1), p.title, p.type, p.track || '', p.theme || '', 'Completed', p.created_at]),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'skynet_history.csv'; a.click();
+    showToast('CSV exported', 'success');
+  }
+
+  function resetFilters() {
+    setSearch(''); setTypeFilter('all'); setFromDate(''); setToDate(''); setPage(1);
+  }
 
   return (
-    <div className="max-w-7xl mx-auto w-full animate-fade-in pb-12">
-      <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="flex items-center gap-3">
-          <span className="material-symbols-outlined text-[#2563EB] text-3xl">inventory_2</span>
-          <div>
-            <h1 className="text-[18px] font-extrabold tracking-[-0.5px] text-white">Generation Archive</h1>
-            <p className="text-[11px] font-extrabold text-[#475569] mt-1 uppercase tracking-widest">Historical Data Logs</p>
-          </div>
+    <div style={{ animation: 'fadeUp 0.3s ease both' }}>
+      {/* Page header */}
+      <div className="page-header">
+        <div className="page-header-left">
+          <div className="page-header-icon"><Archive size={20} /></div>
+          <div className="page-title">Generation Archive</div>
         </div>
-        <div className="flex gap-4">
-          <button className="bg-white/5 hover:bg-white/10 text-white px-5 py-2.5 rounded-xl border border-white/10 flex items-center gap-2 transition-all shadow-sm">
-            <span className="material-symbols-outlined text-[18px]">download</span>
-            <span className="text-[11px] font-bold tracking-widest uppercase">Export Logs</span>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button 
+            className="ghost-btn" 
+            onClick={() => fetchHistory(true)} 
+            disabled={loading}
+          >
+            <RefreshCw size={16} className={loading ? 'spin' : ''} />
+            Refresh
+          </button>
+          <button className="ghost-btn" onClick={exportCsv}>
+            <FileDown size={16} /> Export CSV
           </button>
         </div>
       </div>
-      
-      <div className="grid grid-cols-1 gap-6 mb-8">
-        {/* Search Bar & Filters */}
-        <div className="bg-[#0F1118] border border-white/[0.06] rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
-          <div className="flex flex-col md:flex-row gap-4 p-4 items-center">
-            <div className="relative flex-1 w-full">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[18px]">search</span>
-              <input 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-[#13161F] border border-white/5 focus:border-[#2563EB]/50 rounded-xl outline-none pl-12 pr-4 py-3 text-sm text-gray-200 placeholder:text-gray-600 transition-all shadow-inner" 
-                placeholder="Search by filename or theme..." 
-                type="text"
-              />
-            </div>
-            <div className="flex gap-3 w-full md:w-auto">
-              <select 
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-[#13161F] border border-white/[0.06] text-gray-300 text-[11px] font-mono tracking-widest py-3 px-4 rounded-xl focus:border-[#2563EB]/50 appearance-none cursor-pointer outline-none shadow-inner transition-all uppercase"
+
+      {/* KPI row */}
+      <div className="hist-kpi-row">
+        {[
+          { label: 'Total Records', value: totalRec, sub: 'all time', num: true },
+          { label: 'Presentations', value: pptsCount, sub: 'PPTX files', num: true },
+          { label: 'Lecture Notes', value: notesCount, sub: 'text docs', num: true },
+          { label: 'Storage Used', value: `${(totalRec * 2.3).toFixed(1)} MB`, sub: 'estimated', num: false },
+        ].map(({ label, value, sub, num }) => (
+          <div className="hist-kpi" key={label}>
+            <div className="hist-kpi-label">{label}</div>
+            <div className={`hist-kpi-val${num ? ' num' : ''}`}>{value}</div>
+            <div className="hist-kpi-sub">{sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="history-filters">
+        {/* Search */}
+        <div className="search-wrap">
+          <Search size={16} />
+          <input
+            className="search-input"
+            type="text"
+            id="history-search"
+            placeholder="Search by title…"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          />
+        </div>
+
+        {/* Type filter */}
+        <SearchableDropdown
+          id="hist-type"
+          label="TYPE"
+          value={typeFilter}
+          options={TYPE_OPTS}
+          onChange={(v) => { setTypeFilter(v); setPage(1); }}
+          searchable={false}
+          style={{ minWidth: '160px' }}
+        />
+
+        {/* Date from */}
+        <div className="dr-pill" style={{ minWidth: '130px' }}>
+          <span className="dr-pill-label">FROM</span>
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontFamily: 'var(--mono)', fontSize: '11px', fontWeight: 700, outline: 'none', cursor: 'pointer', colorScheme: 'dark' }}
+          />
+        </div>
+        <span className="dr-sep">→</span>
+        <div className="dr-pill" style={{ minWidth: '130px' }}>
+          <span className="dr-pill-label">TO</span>
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => { setToDate(e.target.value); setPage(1); }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontFamily: 'var(--mono)', fontSize: '11px', fontWeight: 700, outline: 'none', cursor: 'pointer', colorScheme: 'dark' }}
+          />
+        </div>
+
+        {/* Reset */}
+        <button className="dr-reset" onClick={resetFilters} title="Clear filters">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+        </button>
+      </div>
+
+      {/* Table */}
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style={{ width: '40px' }}>#</th>
+              <th>Title</th>
+              <th>Type</th>
+              <th>Track</th>
+              <th>Theme</th>
+              <th>Status</th>
+              <th>Generated At</th>
+              <th style={{ width: '90px' }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '12px' }}>Loading records…</td></tr>
+            ) : paginated.length === 0 ? (
+              <tr><td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '12px' }}>
+                {search || typeFilter !== 'all' || fromDate || toDate ? 'No records match the current filters.' : 'No records yet.'}
+              </td></tr>
+            ) : paginated.map((p, idx) => (
+              <tr key={p.id}>
+                <td className="tbl-entry-id">{String((page - 1) * PAGE_SIZE + idx + 1).padStart(3, '0')}</td>
+                <td style={{ fontWeight: 600, maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</td>
+                <td>
+                  <Badge variant={p.type === 'ppt' ? 'blue' : 'purple'} dot>
+                    {p.type === 'ppt' ? 'PPT' : 'Notes'}
+                  </Badge>
+                </td>
+                <td className="mono-cell">{p.track || '—'}</td>
+                <td className="mono-cell">{p.theme || '—'}</td>
+                <td><Badge variant="green" dot>Completed</Badge></td>
+                <td className="mono-cell">{formatTs(p.created_at)}</td>
+                <td>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    {p.type !== 'notes' && (
+                      <button className="action-btn action-btn-dl" onClick={() => downloadPpt(p.id, `${p.title}.pptx`)} title="Download">
+                        <Download size={14} /> DL
+                      </button>
+                    )}
+                    <button className="action-btn action-btn-del" onClick={() => handleDelete(p.id)} title="Delete">
+                      <Trash2 size={14} /> DEL
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="table-footer">
+          <span className="records-label">
+            SHOWING {paginated.length} OF {filtered.length} RECORDS
+          </span>
+          <div className="pagination">
+            <button className="page-btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>‹</button>
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((pg) => (
+              <button
+                key={pg}
+                className={`page-btn${pg === page ? ' current' : ''}`}
+                onClick={() => setPage(pg)}
               >
-                <option value="ALL">STATUS: ALL</option>
-                <option value="COMPLETED">STATUS: COMPLETED</option>
-              </select>
-              <select 
-                value={rangeFilter}
-                onChange={(e) => setRangeFilter(e.target.value)}
-                className="bg-[#13161F] border border-white/[0.06] text-gray-300 text-[11px] font-mono tracking-widest py-3 px-4 rounded-xl focus:border-[#2563EB]/50 appearance-none cursor-pointer outline-none shadow-inner transition-all uppercase"
-              >
-                <option value="ALL TIME">RANGE: ALL TIME</option>
-                <option value="LAST 30 DAYS">RANGE: LAST 30 DAYS</option>
-                <option value="LAST 7 DAYS">RANGE: LAST 7 DAYS</option>
-              </select>
-            </div>
+                {pg}
+              </button>
+            ))}
+            {totalPages > 5 && page < totalPages && <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>…</span>}
+            <button className="page-btn" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>›</button>
           </div>
         </div>
-        
-        {/* Table View */}
-        <div className="bg-[#0F1118] border border-white/[0.06] rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.4)] overflow-hidden">
-          
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead className="border-b border-white/[0.06] text-[11px] font-semibold text-[#475569] uppercase tracking-[0.8px] whitespace-nowrap">
-                <tr className="bg-white/[0.02] border-b border-white/[0.06]">
-                  <th className="px-6 py-4 font-semibold font-sans">#</th>
-                  <th className="px-6 py-4 font-semibold font-sans">FILENAME</th>
-                  <th className="px-6 py-4 font-semibold font-sans">THEME</th>
-                  <th className="px-6 py-4 font-semibold font-sans">STATUS</th>
-                  <th className="px-6 py-4 font-semibold font-sans">GENERATED AT</th>
-                  <th className="px-6 py-4 font-semibold font-sans text-right">ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {filteredPresentations.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500 text-xs font-bold tracking-widest uppercase">
-                      NO RECORDS FOUND
-                    </td>
-                  </tr>
-                ) : filteredPresentations.map((p, idx) => (
-                  <tr key={p.id} className="hover:bg-white/[0.02] transition-colors group border-b border-white/[0.06]">
-                    <td className="px-6 py-4 text-[11px] text-[#475569] font-bold font-mono">{String(idx + 1).padStart(3, '0')}</td>
-                    <td className="px-6 py-4 text-[14px] font-semibold text-[#60A5FA]">{p.title}.pptx</td>
-                    <td className="px-6 py-4 text-[11px] text-gray-300 uppercase tracking-widest">{p.theme}</td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2.5 py-1 text-[10px] font-black rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 tracking-[0.05em] uppercase">
-                        COMPLETED
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-[14px] text-gray-400 font-mono font-normal">
-                      {new Date(p.created_at).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-3 opacity-40 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => handleDownload(p.id, p.title + '.pptx')}
-                          className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#1D4ED8]/20 hover:text-[#60A5FA] transition-colors bg-white/5 text-gray-400" 
-                          title="Download"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">download</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          
-          <div className="flex justify-between items-center p-5 bg-white/[0.01] border-t border-white/5">
-            <span className="text-[10px] font-bold text-gray-500 tracking-widest uppercase">DISPLAYING: {String(filteredPresentations.length).padStart(2, '0')} RECORDS</span>
-            <div className="flex items-center gap-3">
-              <button className="text-[10px] font-bold text-gray-500 hover:text-white transition-colors tracking-widest uppercase disabled:opacity-50">PREV</button>
-              <div className="flex gap-2">
-                <span className="px-2.5 py-1 rounded-md bg-blue-500/20 text-[#60A5FA] text-[11px] font-bold">1</span>
+      </div>
+      {/* Confirmation Modal */}
+      {confirmConfig.show && (
+        <div className="progress-overlay show">
+          <div className="progress-modal" style={{ maxWidth: '400px', padding: '30px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+              <div style={{ 
+                width: '40px', height: '40px', borderRadius: '50%', 
+                background: 'rgba(239,68,68,0.1)', color: 'var(--red)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '1px solid rgba(239,68,68,0.2)'
+              }}>
+                <span className="material-symbols-outlined">report</span>
               </div>
-              <button className="text-[10px] font-bold text-gray-500 hover:text-white transition-colors tracking-widest uppercase disabled:opacity-50">NEXT</button>
+              <div>
+                <h2 className="progress-title" style={{ fontSize: '14px' }}>Purge Record</h2>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>This will permanently delete the presentation. Confirm?</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="primary-btn" 
+                style={{ flex: 1, justifyContent: 'center', background: 'var(--red)' }} 
+                onClick={executeDelete}
+              >
+                Confirm Delete
+              </button>
+              <button 
+                className="ghost-btn" 
+                style={{ flex: 1, justifyContent: 'center' }} 
+                onClick={() => setConfirmConfig({ show: false, id: null })}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
-      </div>
-      
-      {/* Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-24">
-        <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[10px] font-extrabold text-[#475569] uppercase tracking-widest">Total Storage Used</span>
-            <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[16px] text-[#60A5FA]">cloud</span>
-            </div>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <div className="text-[24px] font-extrabold text-white font-mono leading-none tracking-[-2px]">4,288</div>
-            <div className="text-sm font-bold text-[#60A5FA]">MB</div>
-          </div>
-        </div>
-
-        <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[10px] font-extrabold text-[#475569] uppercase tracking-widest">Success Rate</span>
-            <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[16px] text-emerald-400">verified</span>
-            </div>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <div className="text-[24px] font-extrabold text-white font-mono leading-none tracking-[-2px]">98.2</div>
-            <div className="text-sm font-bold text-emerald-400">%</div>
-          </div>
-        </div>
-
-        <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)] overflow-hidden">
-          <div className="flex items-center justify-between mb-4 relative z-10">
-            <span className="text-[10px] font-extrabold text-[#475569] uppercase tracking-widest">Total Records</span>
-            <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[16px] text-purple-400">inventory_2</span>
-            </div>
-          </div>
-          <div className="flex items-baseline gap-1 relative z-10">
-            <div className="text-[24px] font-extrabold text-white font-mono leading-none tracking-[-2px]">{savedPresentations.length}</div>
-          </div>
-          <div className="absolute -right-4 -bottom-4 opacity-[0.03] pointer-events-none">
-            <span className="material-symbols-outlined text-[100px]">inventory_2</span>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

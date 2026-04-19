@@ -1,6 +1,7 @@
 import os
 import copy
 import io
+from typing import Optional, Any
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
@@ -40,7 +41,7 @@ SLIDE_H = Inches(11.25)
 
 # ── Slide duplication (within same prs — preserves image relationships) ────────
 
-def _duplicate_slide_within(prs: Presentation, source_idx: int):
+def _duplicate_slide_within(prs: Any, source_idx: int):
     """
     Clone slide[source_idx] and append it to the end of prs.
     Works within the SAME Presentation so all embedded image/media parts
@@ -80,7 +81,7 @@ def _duplicate_slide_within(prs: Presentation, source_idx: int):
 
 def _add_text_box(slide, text, left, top, width, height,
                   font_size=24, bold=False,
-                  color: RGBColor = None,
+                  color: Optional[RGBColor] = None,
                   align=PP_ALIGN.LEFT,
                   italic=False):
     txBox = slide.shapes.add_textbox(left, top, width, height)

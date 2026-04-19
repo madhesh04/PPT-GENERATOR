@@ -3,14 +3,14 @@ import base64
 import hashlib
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 from fastapi import HTTPException
-from core.config import settings
-from db.client import get_presentations_collection, get_generation_logs_collection, get_settings_collection
-from llm_client import generate_slide_content
-from image_client import fetch_slide_image
-from core.utils import sanitize_filename
+from core.config import settings # type: ignore
+from db.client import get_presentations_collection, get_generation_logs_collection, get_settings_collection # type: ignore
+from llm_client import generate_slide_content # type: ignore
+from image_client import fetch_slide_image # type: ignore
+from core.utils import sanitize_filename # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +49,13 @@ async def handle_cache_hit(cached: dict, content_hash: str, current_user: dict, 
         "topics": cached["topics"],
         "content_hash": content_hash,
         "slides": cached["slides"],
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
         "theme": cached.get("theme", "neon"),
+        "type": cached.get("type", "ppt"),
+        "track": cached.get("track", None),
+        "client": cached.get("client", None),
+        "module": cached.get("module", None),
+        "course": cached.get("course", None),
     }
     res = await presentations_collection.insert_one(new_doc)
 
@@ -60,7 +65,7 @@ async def handle_cache_hit(cached: dict, content_hash: str, current_user: dict, 
         "action": "generate",
         "status": "cache_hit",
         "execution_time_ms": int((time.time() - start_time) * 1000),
-        "timestamp": datetime.utcnow(),
+        "timestamp": datetime.now(timezone.utc),
     })
 
     return {
@@ -99,7 +104,7 @@ async def run_generation_pipeline(body, current_user, start_time: float, content
                 include_notes=notes_enabled,
                 include_images=images_enabled
             ),
-            timeout=90.0
+            timeout=180.0
         )
     except asyncio.TimeoutError:
         logger.error("LLM synthesis timed out")
@@ -139,8 +144,13 @@ async def run_generation_pipeline(body, current_user, start_time: float, content
         "topics": body.topics,
         "content_hash": content_hash,
         "slides": presentation_data,
-        "created_at": datetime.utcnow(),
-        "theme": body.theme
+        "created_at": datetime.now(timezone.utc),
+        "theme": body.theme,
+        "type": body.type,
+        "track": body.track,
+        "client": body.client,
+        "module": body.module,
+        "course": body.course,
     }
     res = await presentations_collection.insert_one(new_doc)
     
@@ -150,7 +160,7 @@ async def run_generation_pipeline(body, current_user, start_time: float, content
         "action": "generate",
         "status": "success",
         "execution_time_ms": int((time.time() - start_time) * 1000),
-        "timestamp": datetime.utcnow()
+        "timestamp": datetime.now(timezone.utc)
     })
 
     return {

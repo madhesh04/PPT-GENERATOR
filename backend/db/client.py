@@ -2,12 +2,14 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from core.config import settings
 import logging
 
+from typing import Optional
+
 logger = logging.getLogger(__name__)
 
 
 # ── Skynet Application Database (presentations, settings, logs) ────────────────
 class Database:
-    client: AsyncIOMotorClient = None
+    client: Optional[AsyncIOMotorClient] = None
     db = None
 
 
@@ -50,7 +52,7 @@ def get_settings_collection():
 
 # ── Timesheet Auth Database (external — read-only for auth) ────────────────────
 class TimesheetDatabase:
-    client: AsyncIOMotorClient = None
+    client: Optional[AsyncIOMotorClient] = None
     db = None
 
 
