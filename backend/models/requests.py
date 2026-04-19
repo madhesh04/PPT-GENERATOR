@@ -33,6 +33,12 @@ class PresentationRequest(BaseModel):
         allowed = {"professional", "executive", "technical", "academic", "sales", "simple", "casual", "creative"}
         return v.lower() if v.lower() in allowed else "professional"
 
+    @field_validator("theme")
+    @classmethod
+    def validate_theme(cls, v: str) -> str:
+        allowed = {"neon", "ocean", "emerald", "royal", "dark", "light", "carbon"}
+        return v.lower() if v.lower() in allowed else "neon"
+
 
 class NotesRequest(BaseModel):
     subject:   str        = Field(..., min_length=1, max_length=200)

@@ -3,6 +3,8 @@ import apiClient from '../api/apiClient';
 import Badge from '../components/ui/Badge';
 import SearchableDropdown from '../components/ui/SearchableDropdown';
 import { useToast } from '../components/ui/ToastContainer';
+import { useDownload } from '../hooks/useDownload';
+import { RefreshCw, Download, Trash2, Archive, Search, FileDown } from 'lucide-react';
 
 /* Types */
 interface Presentation {
@@ -18,32 +20,7 @@ interface Presentation {
   download_token?: string;
 }
 
-/* Icons */
-const ArchiveIcon = () => (
-  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
-  </svg>
-);
-const ExportIcon = () => (
-  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-  </svg>
-);
-const SearchIcon = () => (
-  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-  </svg>
-);
-const DownloadIcon = () => (
-  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-  </svg>
-);
-const TrashIcon = () => (
-  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-  </svg>
-);
+
 
 /* Helpers */
 function formatTs(ts: string): string {
@@ -70,6 +47,7 @@ const TYPE_OPTS = [
 ];
 
 export default function HistoryView() {
+  const { handleDownload: downloadPpt } = useDownload();
   const { showToast } = useToast();
   const [presentations, setPresentations] = useState<Presentation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -78,35 +56,30 @@ export default function HistoryView() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    show: boolean;
+    id: string | null;
+  }>({ show: false, id: null });
+
+  const fetchHistory = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    try {
+      const r = await apiClient.get('/presentations/me?limit=500');
+      const list = r.data?.presentations ?? [];
+      const standardized = list.map((p: any) => ({
+        ...p,
+        type: p.type || 'ppt',
+      }));
+      setPresentations(standardized);
+    } catch (err) {
+      console.error('Failed to fetch history', err);
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let isMounted = true;
-    
-    const fetchHistory = async () => {
-      try {
-        const r = await apiClient.get('/presentations/me?limit=500');
-        if (!isMounted) return;
-        const list = r.data?.presentations ?? [];
-        const standardized = list.map((p: any) => ({
-          ...p,
-          type: p.type || 'ppt',
-        }));
-        setPresentations(standardized);
-      } catch (err) {
-        if (isMounted) console.error('Failed to fetch history', err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-    
-    setLoading(true);
     fetchHistory();
-    
-    const interval = setInterval(fetchHistory, 5000);
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
   }, []);
 
   /* Filtered + paginated */
@@ -128,27 +101,23 @@ export default function HistoryView() {
   const notesCount = presentations.filter((p) => p.type === 'notes').length;
 
   /* Download */
-  async function handleDownload(token: string, title: string) {
-    try {
-      const resp = await apiClient.get(`/download/${token}`, { responseType: 'blob' });
-      const url = URL.createObjectURL(resp.data);
-      const a = document.createElement('a');
-      a.href = url; a.download = `${title}.pptx`; a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      showToast('Download failed', 'error');
-    }
-  }
+
 
   /* Delete */
   async function handleDelete(id: string) {
-    if (!confirm('Delete this record?')) return;
+    setConfirmConfig({ show: true, id });
+  }
+
+  async function executeDelete() {
+    if (!confirmConfig.id) return;
     try {
-      await apiClient.delete(`/presentations/${id}`);
-      setPresentations((prev) => prev.filter((p) => p.id !== id));
+      await apiClient.delete(`/presentations/${confirmConfig.id}`);
+      setPresentations((prev) => prev.filter((p) => p.id !== confirmConfig.id));
       showToast('Record deleted', 'success');
     } catch {
       showToast('Delete failed', 'error');
+    } finally {
+      setConfirmConfig({ show: false, id: null });
     }
   }
 
@@ -173,12 +142,22 @@ export default function HistoryView() {
       {/* Page header */}
       <div className="page-header">
         <div className="page-header-left">
-          <div className="page-header-icon"><ArchiveIcon /></div>
+          <div className="page-header-icon"><Archive size={20} /></div>
           <div className="page-title">Generation Archive</div>
         </div>
-        <button className="ghost-btn" onClick={exportCsv}>
-          <ExportIcon /> Export CSV
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button 
+            className="ghost-btn" 
+            onClick={() => fetchHistory(true)} 
+            disabled={loading}
+          >
+            <RefreshCw size={16} className={loading ? 'spin' : ''} />
+            Refresh
+          </button>
+          <button className="ghost-btn" onClick={exportCsv}>
+            <FileDown size={16} /> Export CSV
+          </button>
+        </div>
       </div>
 
       {/* KPI row */}
@@ -201,7 +180,7 @@ export default function HistoryView() {
       <div className="history-filters">
         {/* Search */}
         <div className="search-wrap">
-          <SearchIcon />
+          <Search size={16} />
           <input
             className="search-input"
             type="text"
@@ -288,12 +267,12 @@ export default function HistoryView() {
                 <td>
                   <div style={{ display: 'flex', gap: '4px' }}>
                     {p.type !== 'notes' && (
-                      <button className="action-btn action-btn-dl" onClick={() => handleDownload(p.id, p.title)} title="Download">
-                        <DownloadIcon /> DL
+                      <button className="action-btn action-btn-dl" onClick={() => downloadPpt(p.id, `${p.title}.pptx`)} title="Download">
+                        <Download size={14} /> DL
                       </button>
                     )}
                     <button className="action-btn action-btn-del" onClick={() => handleDelete(p.id)} title="Delete">
-                      <TrashIcon /> DEL
+                      <Trash2 size={14} /> DEL
                     </button>
                   </div>
                 </td>
@@ -321,6 +300,43 @@ export default function HistoryView() {
           </div>
         </div>
       </div>
+      {/* Confirmation Modal */}
+      {confirmConfig.show && (
+        <div className="progress-overlay show">
+          <div className="progress-modal" style={{ maxWidth: '400px', padding: '30px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+              <div style={{ 
+                width: '40px', height: '40px', borderRadius: '50%', 
+                background: 'rgba(239,68,68,0.1)', color: 'var(--red)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '1px solid rgba(239,68,68,0.2)'
+              }}>
+                <span className="material-symbols-outlined">report</span>
+              </div>
+              <div>
+                <h2 className="progress-title" style={{ fontSize: '14px' }}>Purge Record</h2>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>This will permanently delete the presentation. Confirm?</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="primary-btn" 
+                style={{ flex: 1, justifyContent: 'center', background: 'var(--red)' }} 
+                onClick={executeDelete}
+              >
+                Confirm Delete
+              </button>
+              <button 
+                className="ghost-btn" 
+                style={{ flex: 1, justifyContent: 'center' }} 
+                onClick={() => setConfirmConfig({ show: false, id: null })}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

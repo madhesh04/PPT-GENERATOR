@@ -5,11 +5,11 @@ import { create } from 'zustand';
 interface Toast {
   id: number;
   message: string;
-  type: 'success' | 'error';
+  type: 'success' | 'error' | 'info';
 }
 interface ToastStoreState {
   toasts: Toast[];
-  showToast: (message: string, type: 'success' | 'error') => void;
+  showToast: (message: string, type: 'success' | 'error' | 'info') => void;
   removeToast: (id: number) => void;
 }
 
@@ -55,7 +55,7 @@ export default function ToastContainer() {
       {toasts.map((toast) => (
         <div key={toast.id} className={`toast ${toast.type}`} onClick={() => removeToast(toast.id)}>
           <div className="toast-bar" />
-          {toast.type === 'success' ? <CheckIcon /> : <XIcon />}
+          {toast.type === 'success' ? <CheckIcon /> : toast.type === 'error' ? <XIcon /> : <CheckIcon />}
           <span className="toast-msg">{toast.message}</span>
         </div>
       ))}

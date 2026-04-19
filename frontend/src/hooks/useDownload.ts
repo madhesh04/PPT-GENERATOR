@@ -1,11 +1,11 @@
-import { useAppStore } from '../store/useAppStore';
 import { presentationApi } from '../api/presentation';
+import { useToastStore } from '../components/ui/ToastContainer';
 
 export function useDownload() {
-  const { showToast } = useAppStore();
+  const { showToast } = useToastStore.getState();
 
   const handleDownload = async (id: string, filename: string) => {
-    showToast('DOWNLOAD — Streaming PPTX...');
+    showToast('SKYNET // Downloading presentation...', 'info');
     try {
       const blob = await presentationApi.downloadPresentation(id);
       const url = window.URL.createObjectURL(blob);
@@ -17,9 +17,10 @@ export function useDownload() {
       a.remove();
       // Revoke the object URL to free up memory
       setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+      showToast('DOWNLOAD_SUCCESS · Ready for Deployment', 'success');
     } catch (err) {
       console.error('Download failed:', err);
-      showToast('DOWNLOAD_FAILED');
+      showToast('CRITICAL_ERROR // Download interrupted', 'error');
     }
   };
 

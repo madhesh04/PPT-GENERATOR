@@ -55,7 +55,7 @@ const THEMES = [
     },
   },
   {
-    value: 'oceanic',
+    value: 'ocean',
     label: 'Oceanic',
     preview: {
       bg: '#0a1628', accent: '#0ea5e9', accent2: '#22d3a5',
@@ -100,7 +100,6 @@ const ENGINES = [
   { value: 'auto', label: 'AUTO_ROUTE', desc: 'Smart provider selection', iconClass: 'blue' },
   { value: 'nvidia', label: 'NVIDIA_NIM', desc: 'High-throughput inference', iconClass: 'green' },
   { value: 'groq', label: 'GROQ_INFER', desc: 'Ultra-fast generation', iconClass: 'yellow' },
-  { value: 'claude', label: 'CLAUDE_SONNET', desc: 'Advanced reasoning', iconClass: 'purple' },
 ];
 
 const TRACK_OPTS = [{ value: '', label: 'Select Track' }, ...TRACKS.map((t) => ({ value: t, label: t }))];
@@ -195,19 +194,7 @@ export default function CreatorView() {
   /* Slider background */
   const sliderPct = ((numSlides - 3) / (15 - 3)) * 100;
 
-  async function handleDownloadPresentation(token: string, fileName: string) {
-    try {
-      const resp = await apiClient.get(`/download/${token}`, { responseType: 'blob' });
-      const url = URL.createObjectURL(resp.data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      showToast('Download failed', 'error');
-    }
-  }
+  const { handleDownload: downloadPpt } = useDownload();
 
   async function handleGenerate() {
     if (!title.trim()) { showToast('Presentation title is required', 'error'); return; }
@@ -656,7 +643,6 @@ export default function CreatorView() {
                   <option value="auto">AUTO_ROUTE</option>
                   <option value="nvidia">NVIDIA_NIM</option>
                   <option value="groq">GROQ_INFER</option>
-                  <option value="claude">CLAUDE_SONNET</option>
                 </select>
               </div>
 
@@ -734,7 +720,7 @@ export default function CreatorView() {
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button 
                   className="modal-primary-btn" 
-                  onClick={() => result && handleDownloadPresentation(result.token, result.filename)}
+                  onClick={() => result && downloadPpt(result.token, result.filename)}
                 >
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} width={16} height={16}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />

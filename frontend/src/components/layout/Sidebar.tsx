@@ -107,7 +107,7 @@ export default function Sidebar() {
           </svg>
         </div>
         {/* Logout */}
-        <button className="logout-btn" aria-label="Logout" onClick={logout} title="Logout">
+        <button className="logout-btn" aria-label="Logout" onClick={() => { logout(); navigate('/login'); }} title="Logout">
           <LogoutIcon />
         </button>
       </div>

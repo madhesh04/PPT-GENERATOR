@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
-import { useAppStore } from '../store/useAppStore';
+import { useToastStore } from '../components/ui/ToastContainer';
 import { adminApi } from '../api/admin';
 import { presentationApi } from '../api/presentation';
 import apiClient from '../api/apiClient';
@@ -34,7 +34,7 @@ interface AdminGeneration {
 
 export default function AdminView() {
   const { user } = useAuthStore();
-  const { showToast } = useAppStore();
+  const { showToast } = useToastStore();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -62,6 +62,15 @@ export default function AdminView() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetTarget, setResetTarget] = useState<AdminUser | null>(null);
   const [resetPassword, setResetPassword] = useState('');
+  
+  // Confirmation state
+  const [confirmConfig, setConfirmConfig] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type: 'danger' | 'warning';
+  }>({ show: false, title: '', message: '', onConfirm: () => {}, type: 'danger' });
 
   const isMaster = user?.role?.toUpperCase() === 'MASTER';
 
@@ -99,13 +108,13 @@ export default function AdminView() {
     if (field === 'image_gen') payload.image_generation_enabled = !currentVal;
     if (field === 'speaker_notes') payload.speaker_notes_enabled = !currentVal;
     
-    showToast(`UPDATING SYSTEM_SETTING: ${field.toUpperCase()}...`);
+    showToast(`UPDATING SYSTEM_SETTING: ${field.toUpperCase()}...`, 'info');
     try {
       await apiClient.patch('/admin/settings', payload);
       setGlobalSettings(prev => ({ ...prev, [field]: !currentVal }));
-      showToast('SUCCESS — Setting updated.');
+      showToast('SUCCESS — Setting updated.', 'success');
     } catch {
-      showToast('Update failed');
+      showToast('Update failed', 'error');
     }
   };
 
@@ -116,82 +125,106 @@ export default function AdminView() {
   const handleCreateUser = async () => {
     try {
       await adminApi.createUser(newUser);
-      showToast('Account created');
+      showToast('Account created', 'success');
       setShowCreateForm(false);
       setNewUser({ full_name: '', email: '', password: '', role: 'user' });
       fetchData();
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } };
-      showToast(error.response?.data?.detail || 'Creation failed');
+      showToast(error.response?.data?.detail || 'Creation failed', 'error');
     }
   };
 
   const handleApprove = async (id: string) => {
     try {
       await adminApi.approveUser(id);
-      showToast('User approved');
+      showToast('User approved', 'success');
       fetchData();
-    } catch { showToast('Approval failed'); }
+    } catch { showToast('Approval failed', 'error'); }
   };
 
   const handleReject = async (id: string) => {
-    if (!window.confirm('Reject this admin request?')) return;
-    try {
-      await adminApi.rejectUser(id);
-      showToast('User rejected');
-      fetchData();
-    } catch { showToast('Rejection failed'); }
+    setConfirmConfig({
+      show: true,
+      title: 'Authorize Rejection',
+      message: 'Are you sure you want to reject this admin request? This action will permanently remove the application.',
+      type: 'warning',
+      onConfirm: async () => {
+        try {
+          await adminApi.rejectUser(id);
+          showToast('User rejected', 'success');
+          fetchData();
+        } catch { showToast('Rejection failed', 'error'); }
+        setConfirmConfig(prev => ({ ...prev, show: false }));
+      }
+    });
   };
 
   const handleDeleteUser = async (id: string) => {
-    if (!window.confirm('Delete this user?')) return;
-    try {
-      await adminApi.deleteUser(id);
-      showToast('User deleted');
-      fetchData();
-    } catch { showToast('Delete failed'); }
+    setConfirmConfig({
+      show: true,
+      title: 'Purge Identity',
+      message: 'WARNING: This will permanently delete the user account and all associated metadata. Continue?',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await adminApi.deleteUser(id);
+          showToast('User deleted', 'success');
+          fetchData();
+        } catch { showToast('Delete failed', 'error'); }
+        setConfirmConfig(prev => ({ ...prev, show: false }));
+      }
+    });
   };
 
   const handleConfirmReset = async () => {
     if (!resetTarget || !resetPassword) return;
     try {
       await adminApi.updateUserPassword(resetTarget.id, resetPassword);
-      showToast('Password updated');
+      showToast('Password updated', 'success');
       setShowResetModal(false);
       setResetTarget(null);
       setResetPassword('');
-    } catch { showToast('Update failed'); }
+    } catch { showToast('Update failed', 'error'); }
   };
 
   const handleToggleStatus = async (id: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'disabled' : 'active';
     try {
       await adminApi.updateUserStatus(id, newStatus);
-      showToast(`USER_STATUS_UPDATED: ${newStatus.toUpperCase()}`);
+      showToast(`USER_STATUS_UPDATED: ${newStatus.toUpperCase()}`, 'info');
       fetchData();
-    } catch { showToast('Update failed'); }
+    } catch { showToast('Update failed', 'error'); }
   };
 
   const handleToggleRole = async (id: string, currentRole: string) => {
     const newRole = currentRole === 'admin' ? 'user' : 'admin';
     try {
       await adminApi.updateUserRole(id, newRole);
-      showToast(`USER_ROLE_UPDATED: ${newRole.toUpperCase()}`);
+      showToast(`USER_ROLE_UPDATED: ${newRole.toUpperCase()}`, 'info');
       fetchData();
-    } catch { showToast('Update failed'); }
+    } catch { showToast('Update failed', 'error'); }
   };
 
   const handleDeletePpt = async (id: string) => {
-    if (!window.confirm('Delete this presentation?')) return;
-    try {
-      await adminApi.deleteGeneration(id);
-      showToast('Presentation deleted');
-      fetchData();
-    } catch { showToast('Delete failed'); }
+    setConfirmConfig({
+      show: true,
+      title: 'Purge Artifact',
+      message: 'This will permanently delete the presentation from the system archive. Confirm?',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await adminApi.deleteGeneration(id);
+          showToast('Presentation deleted', 'success');
+          fetchData();
+        } catch { showToast('Delete failed', 'error'); }
+        setConfirmConfig(prev => ({ ...prev, show: false }));
+      }
+    });
   };
 
   const handleDownload = async (id: string, filename: string) => {
-    showToast('DOWNLOAD — Streaming PPTX...');
+    showToast('DOWNLOAD — Streaming PPTX...', 'info');
     try {
       const blob = await presentationApi.downloadPresentation(id);
       const url = window.URL.createObjectURL(blob);
@@ -201,7 +234,8 @@ export default function AdminView() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-    } catch { showToast('DOWNLOAD_FAILED'); }
+      showToast('Download complete', 'success');
+    } catch { showToast('DOWNLOAD_FAILED', 'error'); }
   };
 
   const navigateTab = (tab: string) => {
@@ -647,6 +681,48 @@ export default function AdminView() {
             <div style={{ display: 'flex', gap: '10px' }}>
               <button className="primary-btn" style={{ flex: 1, justifyContent: 'center', background: 'linear-gradient(135deg, var(--yellow), #d97706)', color: '#000' }} onClick={handleConfirmReset}>
                 Execute Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Confirmation Modal */}
+      {confirmConfig.show && (
+        <div className="progress-overlay show">
+          <div className="progress-modal" style={{ maxWidth: '400px', padding: '30px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+              <div style={{ 
+                width: '40px', height: '40px', borderRadius: '50%', 
+                background: confirmConfig.type === 'danger' ? 'rgba(239,68,68,0.1)' : 'rgba(245,197,66,0.1)', 
+                color: confirmConfig.type === 'danger' ? 'var(--red)' : 'var(--yellow)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: `1px solid ${confirmConfig.type === 'danger' ? 'rgba(239,68,68,0.2)' : 'rgba(245,197,66,0.2)'}`
+              }}>
+                <span className="material-symbols-outlined">{confirmConfig.type === 'danger' ? 'report' : 'warning'}</span>
+              </div>
+              <div>
+                <h2 className="progress-title" style={{ fontSize: '14px' }}>{confirmConfig.title}</h2>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>{confirmConfig.message}</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="primary-btn" 
+                style={{ 
+                  flex: 1, justifyContent: 'center', 
+                  background: confirmConfig.type === 'danger' ? 'var(--red)' : 'var(--yellow)',
+                  color: confirmConfig.type === 'danger' ? '#fff' : '#000'
+                }} 
+                onClick={confirmConfig.onConfirm}
+              >
+                Confirm Action
+              </button>
+              <button 
+                className="ghost-btn" 
+                style={{ flex: 1, justifyContent: 'center' }} 
+                onClick={() => setConfirmConfig(prev => ({ ...prev, show: false }))}
+              >
+                Cancel
               </button>
             </div>
           </div>
