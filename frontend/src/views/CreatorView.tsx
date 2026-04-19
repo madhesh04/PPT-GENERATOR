@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import apiClient from '../api/apiClient';
 import { usePresentationStore } from '../store/usePresentationStore';
+import { useAppStore } from '../store/useAppStore';
 import { useToast } from '../components/ui/ToastContainer';
 import { useDownload } from '../hooks/useDownload';
 import TagInput from '../components/ui/TagInput';
@@ -439,19 +440,19 @@ export default function CreatorView() {
               </div>
 
               {/* Image toggle */}
-              <div className="config-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: globalImageGenAllowed ? 1 : 0.6 }}>
+              <div className="config-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: globalImageGen ? 1 : 0.6 }}>
                 <div>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)' }}>Include Visuals</div>
                   <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    {globalImageGenAllowed ? 'AI-generated slide images' : 'Disabled by Admin'}
+                    {globalImageGen ? 'AI-generated slide images' : 'Disabled by Admin'}
                   </div>
                 </div>
                 <label className="toggle">
                   <input 
                     type="checkbox" 
                     checked={includeImages} 
-                    onChange={(e) => setIncludeImages(globalImageGenAllowed ? e.target.checked : false)} 
-                    disabled={!globalImageGenAllowed}
+                    onChange={(e) => setIncludeImages(globalImageGen ? e.target.checked : false)} 
+                    disabled={!globalImageGen}
                     id="ppt-images" 
                   />
                   <div className="toggle-track" />
