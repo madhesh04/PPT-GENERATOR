@@ -82,3 +82,13 @@ class RegenerateSlideRequest(BaseModel):
     context: str
     tone: str
     existing_titles: List[str] = Field(default_factory=list)
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+    login_as: str = "employee"
+
+
+class RegenerateImageRequest(BaseModel):
+    query: str

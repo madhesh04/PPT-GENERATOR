@@ -1,33 +1,35 @@
 # 🧬 SkyNet — Backend (FastAPI)
 
-The backend of **SkyNet PPT Generator** is a production-hardened API powered by **FastAPI** and **Motor** (Asynchronous MongoDB driver). It manages the sequential generation pipeline, shared authentication, and the administrative suite.
+The backend of **SkyNet PPT Generator** is a production-hardened API powered by **FastAPI** and **Motor** (Asynchronous MongoDB driver). It manages the high-fidelity generation pipeline, shared identity authentication, and the administrative dashboard.
 
 ## 🧠 Shared Authentication Architecture
-SkyNet uses a **dual-database architecture**:
-1.  **Shared Auth DB (`timesheet`)**: Centralized user store used by multiple applications. Authentication is performed via `employeeId` and `password` (bcrypt).
-2.  **App Data DB (`skynet_db`)**: Stores presentation blueprints, generation logs, and global system settings.
+SkyNet uses a **dual-database architecture** for maximum security and integration:
+1.  **Shared Auth DB (`timesheet`)**: Centralized user store used by multiple applications. Authentication is performed via `employeeId` and `password` (bcrypt-verified).
+2.  **App Data DB (`skynet_db`)**: Stores presentation blueprints, slide content, generation logs, and global system configurations.
 
 ## 🛡️ Administrative Suite
-- **Role-Based Access (RBAC)**: User roles (`admin`, `employee`, `teamlead`) are managed in the external Timesheet system.
-- **Unified Generations**: Admin portal allows full visibility and cross-user download/delete capability for presentations.
-- **Externally Managed Users**: User management (creation, role assignment, status) is consolidated in the primary Timesheet system to maintain data integrity.
+- **Role-Based Access (RBAC)**: User roles (`admin`, `employee`, `teamlead`) are synced from the external Timesheet system.
+- **Global Control**: Admin portal provides full visibility into all generated presentations across the organization.
+- **System Toggles**: Admins can globally enable/disable features like AI Image Generation to manage API costs and usage.
 
-## 🧠 Intelligence Engine
-SkyNet leverages a high-performance LLM pipeline:
-- **Primary**: NVIDIA NIM (`deepseek-ai/deepseek-v3` or `kimi-2.5`) for deep technical reasoning.
-- **Failover**: Groq (`llama-3.3-70b-versatile`) for instant recovery and uptime.
+## 🧠 Intelligence & Generation Engine
+SkyNet leverages a multi-provider LLM pipeline for 99.9% availability:
+- **Primary Model**: NVIDIA NIM (`deepseek-ai/deepseek-v3`) for deep technical reasoning and structured slide generation.
+- **Failover Engine**: Groq (`llama-3.3-70b-versatile`) for ultra-fast recovery and fallback.
+- **Visuals**: Integrated image search and processing for dynamic slide illustrations.
+- **Layout Engine**: Custom-built `generator.py` for precision PPTX layout and `pdf_generator.py` for high-fidelity exports.
 
 ## 📂 Project Structure
-- `core/`: Critical infrastructure (Security, Config, Themes).
-- `db/`: Dual-client persistence logic (Internal/External).
-- `routers/`: Modular API surface (Auth, Admin, Generate).
-- `services/`: Core logic (AI Orchestration, Storage, PDF/PPTX generation).
-- `generator.py`: The precision PPTX layout engine.
+- `core/`: Security protocols, global configuration, and PPTX themes.
+- `db/`: Dual-client persistence logic for internal and shared databases.
+- `routers/`: Modular API endpoints for Auth, Admin, and Content Generation.
+- `models/`: Pydantic schemas for request validation and internal data structures.
+- `services/`: AI Orchestration, GridFS Storage, and Document Generation logic.
 
-## 🚀 Setup
-1. Install dependencies: `pip install -r requirements.txt`
-2. Configure `.env` from `.env.example`.
-3. Start server: `uvicorn main:app --port 8000`
+## 🚀 Setup & Deployment
+1. **Dependencies**: `pip install -r requirements.txt`
+2. **Configuration**: Set up your credentials in `.env` (refer to `.env.example`).
+3. **Execution**: `uvicorn main:app --host 0.0.0.0 --port 8000`
 
 ---
 © 2026 iamneo | **SkyNet**
