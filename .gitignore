@@ -14,6 +14,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 .env
+.env.production
 .venv
 env/
 venv/
@@ -50,6 +51,15 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+Desktop.ini
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+pyrightconfig.json
+pyrefly.toml
 
 # Project Artifacts
 *.pptx
@@ -61,3 +71,4 @@ all_sources_output.txt
 
 # Gemini / Antigravity
 .gemini/
+.antigravity/
