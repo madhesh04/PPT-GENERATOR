@@ -726,10 +726,22 @@ export default function CreatorView() {
                   Export PPTX
                 </button>
                 <button
-                  style={{ background: 'rgba(255,255,255,0.05)', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ 
+                    background: 'rgba(255,255,255,0.05)', 
+                    border: '1px solid rgba(255,255,255,0.1)', 
+                    cursor: 'pointer', 
+                    color: 'var(--text-muted)', 
+                    width: '48px', 
+                    height: '48px', 
+                    borderRadius: '10px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    transition: '0.2s all'
+                  }}
                   onClick={() => setShowSlidesPreview(false)}
                 >
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} width={18} height={18}>
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} width={20} height={20}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -740,33 +752,6 @@ export default function CreatorView() {
             <div className="slides-presenter-view">
               {/* Main Slide Area */}
               <div className="slide-main-canvas">
-                {/* Navigation Overlay */}
-                <div className="slide-nav-overlay">
-                  <button 
-                    className="slide-nav-btn" 
-                    style={{ width: '32px', height: '32px' }}
-                    onClick={() => setCurrentSlideIdx(i => Math.max(0, i - 1))}
-                    disabled={currentSlideIdx === 0}
-                  >
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3} width={14} height={14}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                    </svg>
-                  </button>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'white', minWidth: '60px', textAlign: 'center' }}>
-                    {currentSlideIdx + 1} / {slides.length}
-                  </span>
-                  <button 
-                    className="slide-nav-btn" 
-                    style={{ width: '32px', height: '32px' }}
-                    onClick={() => setCurrentSlideIdx(i => Math.min(slides.length - 1, i + 1))}
-                    disabled={currentSlideIdx === slides.length - 1}
-                  >
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3} width={14} height={14}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                    </svg>
-                  </button>
-                </div>
-
                 <div className="slide-stage">
                   {/* Slide Content */}
                   <div className={`slide-p-content ${theme}`}>
@@ -810,6 +795,33 @@ export default function CreatorView() {
                     <div className="slide-p-brand">SKYNET_CORE // {theme.toUpperCase()}</div>
                     <div className="slide-p-num">PG.{currentSlideIdx + 1}</div>
                   </div>
+                </div>
+
+                {/* Navigation Overlay - Moved Below Slide */}
+                <div className="slide-nav-overlay">
+                  <button 
+                    className="slide-nav-btn" 
+                    style={{ width: '32px', height: '32px' }}
+                    onClick={() => setCurrentSlideIdx(i => Math.max(0, i - 1))}
+                    disabled={currentSlideIdx === 0}
+                  >
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3} width={14} height={14}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                    </svg>
+                  </button>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'white', minWidth: '60px', textAlign: 'center' }}>
+                    {currentSlideIdx + 1} / {slides.length}
+                  </span>
+                  <button 
+                    className="slide-nav-btn" 
+                    style={{ width: '32px', height: '32px' }}
+                    onClick={() => setCurrentSlideIdx(i => Math.min(slides.length - 1, i + 1))}
+                    disabled={currentSlideIdx === slides.length - 1}
+                  >
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3} width={14} height={14}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </button>
                 </div>
               </div>
 
