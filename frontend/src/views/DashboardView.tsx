@@ -146,6 +146,7 @@ export default function DashboardView() {
   const [toDate, setToDate] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [activeChip, setActiveChip] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
 
   const fetchData = async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -157,8 +158,9 @@ export default function DashboardView() {
         type: p.type || 'ppt',
       }));
       setPresentations(standardized);
+      setTotalCount(r.data?.total ?? list.length);
     } catch (err) {
-      console.error('Failed to load dashboard data:', err);
+      console.error('Failed to fetch dashboard data:', err);
     } finally {
       if (showLoading) setLoading(false);
     }
@@ -166,6 +168,11 @@ export default function DashboardView() {
 
   useEffect(() => {
     fetchData();
+
+    // Re-fetch when user returns to tab
+    const onFocus = () => fetchData(false);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, []);
 
   /* Quick date chips */
@@ -291,7 +298,7 @@ export default function DashboardView() {
       {/* KPI Cards */}
       <div className="kpi-grid">
         {([
-          { icon: <Layout size={18} />, iconClass: 'blue', label: 'Total Generated', value: total, delta: null },
+          { icon: <Layout size={18} />, iconClass: 'blue', label: 'Total Generated', value: (!fromDate && !toDate && typeFilter === 'all') ? totalCount : total, delta: null },
           { icon: <Calendar size={18} />, iconClass: 'green', label: 'This Week', value: weekCount, delta: null },
           { icon: <FileText size={18} />, iconClass: 'purple', label: 'Lecture Notes', value: notesCount, delta: null },
           { icon: <Users size={18} />, iconClass: 'yellow', label: 'Presentations', value: pptsCount, delta: null },

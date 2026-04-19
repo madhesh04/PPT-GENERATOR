@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import apiClient from '../api/apiClient';
 import { usePresentationStore } from '../store/usePresentationStore';
 import { useToast } from '../components/ui/ToastContainer';
+import { useDownload } from '../hooks/useDownload';
 import TagInput from '../components/ui/TagInput';
 import SearchableDropdown from '../components/ui/SearchableDropdown';
 
@@ -162,6 +163,7 @@ export default function CreatorView() {
     regenerateSlide,
     result, slides,
   } = usePresentationStore();
+  const { globalImageGen, settingsLoaded } = useAppStore();
 
   const [activeTab, setActiveTab] = useState<'ppt' | 'notes'>('ppt');
 
@@ -179,17 +181,13 @@ export default function CreatorView() {
   const [showSlidesPreview, setShowSlidesPreview] = useState(false);
   const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
 
-  // Global settings
-  const [globalImageGenAllowed, setGlobalImageGenAllowed] = useState(true);
 
+  // Ensure includeImages is sync'd with global policy if policy changes
   useEffect(() => {
-    apiClient.get('/admin/public/settings').then(res => {
-      setGlobalImageGenAllowed(res.data.image_generation_enabled);
-      if (res.data.image_generation_enabled === false) {
-        setIncludeImages(false);
-      }
-    }).catch(console.error);
-  }, []);
+    if (settingsLoaded && globalImageGen === false) {
+      setIncludeImages(false);
+    }
+  }, [settingsLoaded, globalImageGen, setIncludeImages]);
 
   /* Slider background */
   const sliderPct = ((numSlides - 3) / (15 - 3)) * 100;

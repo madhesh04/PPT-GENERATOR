@@ -8,6 +8,7 @@ interface AppState {
   globalSpeakerNotes: boolean;
   globalDefaultModel: string;
   isDarkMode: boolean;
+  settingsLoaded: boolean;
 
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleTheme: () => void;
@@ -22,6 +23,7 @@ export const useAppStore = create<AppState>((set) => ({
   globalSpeakerNotes: true,
   globalDefaultModel: 'groq',
   isDarkMode: localStorage.getItem('theme') !== 'light',
+  settingsLoaded: false,
 
   setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
   toggleTheme: () => set((state) => {
@@ -37,5 +39,5 @@ export const useAppStore = create<AppState>((set) => ({
   }),
 
   setTimeStr: (timeStr) => set({ timeStr }),
-  setGlobalSettings: (settings) => set((state) => ({ ...state, ...settings })),
+  setGlobalSettings: (settings) => set((state) => ({ ...state, ...settings, settingsLoaded: true })),
 }));

@@ -657,69 +657,74 @@ export default function AdminView() {
             </button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(245,197,66,0.1)', color: 'var(--yellow)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(245,197,66,0.3)' }}>
-                <span className="material-symbols-outlined">key</span>
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%',
+                background: 'rgba(3,37,189,0.1)', color: 'var(--accent-text)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '1px solid rgba(3,37,189,0.2)'
+              }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>lock_reset</span>
               </div>
-              <div style={{ textAlign: 'left' }}>
-                <h2 className="progress-title">Override Protocol</h2>
-                <div className="mono-cell" style={{ color: 'var(--yellow)' }}>Target: {resetTarget?.email}</div>
+              <div>
+                <h2 className="progress-title" style={{ fontSize: '14px' }}>
+                  Reset Password — {resetTarget?.full_name}
+                </h2>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  {resetTarget?.email}
+                </div>
               </div>
             </div>
 
-            <div style={{ marginBottom: '24px' }}>
-              <input 
-                className="text-input" 
-                type="password" 
-                placeholder="Enter new credentials..." 
-                value={resetPassword} 
-                onChange={e => setResetPassword(e.target.value)} 
-                autoFocus
-                onKeyDown={e => { if (e.key === 'Enter') handleConfirmReset(); }}
+            <div style={{ marginBottom: '20px' }}>
+              <label className="field-label">New Password</label>
+              <input
+                className="text-input"
+                type="password"
+                placeholder="Enter new password…"
+                value={resetPassword}
+                onChange={(e) => setResetPassword(e.target.value)}
               />
             </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button className="primary-btn" style={{ flex: 1, justifyContent: 'center', background: 'linear-gradient(135deg, var(--yellow), #d97706)', color: '#000' }} onClick={handleConfirmReset}>
-                Execute Reset
+              <button
+                className="primary-btn"
+                style={{ flex: 1, justifyContent: 'center' }}
+                onClick={handleConfirmReset}
+              >
+                Update Password
+              </button>
+              <button
+                className="ghost-btn"
+                style={{ flex: 1, justifyContent: 'center' }}
+                onClick={() => { setShowResetModal(false); setResetPassword(''); }}
+              >
+                Cancel
               </button>
             </div>
           </div>
         </div>
       )}
-      {/* Confirmation Modal */}
+      {/* Confirmation Dialog */}
       {confirmConfig.show && (
         <div className="progress-overlay show">
-          <div className="progress-modal" style={{ maxWidth: '400px', padding: '30px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-              <div style={{ 
-                width: '40px', height: '40px', borderRadius: '50%', 
-                background: confirmConfig.type === 'danger' ? 'rgba(239,68,68,0.1)' : 'rgba(245,197,66,0.1)', 
-                color: confirmConfig.type === 'danger' ? 'var(--red)' : 'var(--yellow)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: `1px solid ${confirmConfig.type === 'danger' ? 'rgba(239,68,68,0.2)' : 'rgba(245,197,66,0.2)'}`
-              }}>
-                <span className="material-symbols-outlined">{confirmConfig.type === 'danger' ? 'report' : 'warning'}</span>
-              </div>
-              <div>
-                <h2 className="progress-title" style={{ fontSize: '14px' }}>{confirmConfig.title}</h2>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>{confirmConfig.message}</div>
-              </div>
+          <div className="progress-modal" style={{ maxWidth: '380px', borderColor: confirmConfig.type === 'danger' ? 'var(--red)' : 'var(--yellow)', boxShadow: '0 0 60px rgba(0,0,0,0.5)', padding: '30px' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <h2 className="progress-title" style={{ fontSize: '14px', color: confirmConfig.type === 'danger' ? 'var(--red)' : 'var(--yellow)', marginBottom: '10px' }}>
+                {confirmConfig.title}
+              </h2>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>{confirmConfig.message}</p>
             </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button 
-                className="primary-btn" 
-                style={{ 
-                  flex: 1, justifyContent: 'center', 
-                  background: confirmConfig.type === 'danger' ? 'var(--red)' : 'var(--yellow)',
-                  color: confirmConfig.type === 'danger' ? '#fff' : '#000'
-                }} 
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                className="primary-btn"
+                style={{ flex: 1, justifyContent: 'center', background: confirmConfig.type === 'danger' ? 'var(--red)' : 'var(--yellow)', color: '#fff' }}
                 onClick={confirmConfig.onConfirm}
               >
-                Confirm Action
+                Confirm
               </button>
-              <button 
-                className="ghost-btn" 
-                style={{ flex: 1, justifyContent: 'center' }} 
+              <button
+                className="ghost-btn"
+                style={{ flex: 1, justifyContent: 'center' }}
                 onClick={() => setConfirmConfig(prev => ({ ...prev, show: false }))}
               >
                 Cancel

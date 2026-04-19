@@ -80,6 +80,10 @@ export default function HistoryView() {
 
   useEffect(() => {
     fetchHistory();
+
+    const onFocus = () => fetchHistory(false);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, []);
 
   /* Filtered + paginated */
