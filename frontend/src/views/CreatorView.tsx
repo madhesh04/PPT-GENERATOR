@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import apiClient from '../api/apiClient';
 import { usePresentationStore } from '../store/usePresentationStore';
 import { useAppStore } from '../store/useAppStore';
 import { useToast } from '../components/ui/ToastContainer';

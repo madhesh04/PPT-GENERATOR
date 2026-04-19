@@ -1376,40 +1376,40 @@ td { padding: 10px 16px; font-size: 12px; color: var(--text-primary); vertical-a
 }
 
 .slide-stage {
-  width: 960px;
-  height: 540px;
-  max-width: 100%;
-  max-height: 100%;
+  width: 100%;
+  max-width: 960px;
+  aspect-ratio: 16 / 9;
   background: var(--bg-primary);
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.15);
   border-radius: 12px;
-  box-shadow: 0 50px 120px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255,255,255,0.05);
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255,255,255,0.05);
   position: relative;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: slideFadeIn 0.5s ease-out;
+  animation: slideFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0;
 }
 
 .slide-p-content {
   flex: 1;
-  padding: 40px 60px;
+  padding: 48px 64px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  overflow-y: auto;
+  gap: 24px;
+  overflow: hidden;
   min-height: 0;
 }
 
 .slide-p-title {
-  font-size: 38px;
+  font-size: 32px;
   font-weight: 800;
   color: white;
-  line-height: 1.2;
+  line-height: 1.1;
   margin: 0;
+  margin-bottom: 8px;
   outline: none;
-  min-height: 48px;
+  word-wrap: break-word;
 }
 
 .slide-p-bullets {
@@ -1424,10 +1424,10 @@ td { padding: 10px 16px; font-size: 12px; color: var(--text-primary); vertical-a
 .slide-p-bullet {
   display: flex;
   gap: 16px;
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1.5;
   color: rgba(255,255,255,0.8);
-  min-height: 28px;
+  min-height: 24px;
 }
 
 .bullet-icon {

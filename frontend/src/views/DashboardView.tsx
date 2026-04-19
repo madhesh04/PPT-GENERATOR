@@ -405,12 +405,6 @@ export default function DashboardView() {
             ))}
           </tbody>
         </table>
-        <div className="table-footer">
-          <span className="records-label">SHOWING {recent.length} OF {filtered.length} RECORDS</span>
-          <button className="ghost-btn" style={{ padding: '5px 12px', fontSize: '10px' }} onClick={() => navigate('/history')}>
-            View all in History
-          </button>
-        </div>
       </div>
     </div>
   );

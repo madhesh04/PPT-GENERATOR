@@ -81,15 +81,4 @@ class RegenerateSlideRequest(BaseModel):
     title: str
     context: str
     tone: str
-    existing_titles: List[str]
-
-
-class RegenerateImageRequest(BaseModel):
-    query: str
-
-
-class UserLogin(BaseModel):
-    email: str  # Actually employeeId — kept as 'email' for frontend backward compat
-    password: str
-    login_as: str = "employee"
-
+    existing_titles: List[str] = Field(default_factory=list)

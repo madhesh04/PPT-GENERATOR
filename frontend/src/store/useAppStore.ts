@@ -39,5 +39,10 @@ export const useAppStore = create<AppState>((set) => ({
   }),
 
   setTimeStr: (timeStr) => set({ timeStr }),
-  setGlobalSettings: (settings) => set((state) => ({ ...state, ...settings, settingsLoaded: true })),
+  setGlobalSettings: (settings) => set({
+    globalImageGen: settings.image_gen ?? true,
+    globalSpeakerNotes: settings.speaker_notes ?? true,
+    globalDefaultModel: settings.model ?? 'groq',
+    settingsLoaded: true,
+  }),
 }));
