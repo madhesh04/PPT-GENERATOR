@@ -51,6 +51,11 @@ async def handle_cache_hit(cached: dict, content_hash: str, current_user: dict, 
         "slides": cached["slides"],
         "created_at": datetime.utcnow(),
         "theme": cached.get("theme", "neon"),
+        "type": cached.get("type", "ppt"),
+        "track": cached.get("track", None),
+        "client": cached.get("client", None),
+        "module": cached.get("module", None),
+        "course": cached.get("course", None),
     }
     res = await presentations_collection.insert_one(new_doc)
 
@@ -99,7 +104,7 @@ async def run_generation_pipeline(body, current_user, start_time: float, content
                 include_notes=notes_enabled,
                 include_images=images_enabled
             ),
-            timeout=90.0
+            timeout=180.0
         )
     except asyncio.TimeoutError:
         logger.error("LLM synthesis timed out")
@@ -140,7 +145,12 @@ async def run_generation_pipeline(body, current_user, start_time: float, content
         "content_hash": content_hash,
         "slides": presentation_data,
         "created_at": datetime.utcnow(),
-        "theme": body.theme
+        "theme": body.theme,
+        "type": body.type,
+        "track": body.track,
+        "client": body.client,
+        "module": body.module,
+        "course": body.course,
     }
     res = await presentations_collection.insert_one(new_doc)
     

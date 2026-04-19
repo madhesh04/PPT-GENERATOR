@@ -5,6 +5,38 @@ interface LoginProps {
   onLoginSuccess?: (mode: 'employee' | 'admin') => void;
 }
 
+const IconBadge = () => (
+  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} width="16" height="16">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
+  </svg>
+);
+
+const IconAdmin = () => (
+  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} width="16" height="16">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+  </svg>
+);
+
+const IconLock = () => (
+  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} width="18" height="18">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+  </svg>
+);
+
+const IconEyeOff = () => (
+  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} width="18" height="18">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+  </svg>
+);
+
+const IconUser = () => (
+  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} width="18" height="18">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+  </svg>
+);
+
+
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const { login } = useAuthStore();
   const [email, setEmail] = useState('');
@@ -44,141 +76,94 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="w-full max-w-[420px] relative animate-fade-in">
-      <div className="bg-[#0F1118] border border-white/[0.06] p-8 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)] flex flex-col gap-6">
-
-        {/* HEADER */}
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <div className={`w-5 h-[2px] ${loginMode === 'admin' ? 'bg-red-500' : 'bg-primary'}`}></div>
-            <span className={`text-[10px] tracking-widest font-bold uppercase ${loginMode === 'admin' ? 'text-red-500' : 'text-primary'}`}>
-              {loginMode === 'admin' ? 'ADMIN_OVERRIDE' : 'SESSION_INIT'}
-            </span>
-          </div>
-          <h2 className="text-[24px] font-extrabold text-white mb-1.5 tracking-[-0.5px]">Skynet Application</h2>
-          <div className="text-[11px] tracking-widest font-mono flex items-center">
-            {loginMode === 'admin' ? (
-              <span className="text-red-500 font-bold uppercase flex items-center gap-1">
-                <span className="material-symbols-outlined text-[12px]">chevron_right</span>
-                ADMIN_OVERRIDE · CLEARANCE_REQUIRED
-              </span>
-            ) : (
-              <>
-                <span className="text-primary mr-2 font-bold">{'>_'}</span> 
-                <span className="text-outline-variant">AWAITING_CREDENTIALS</span>
-              </>
-            )}
-          </div>
+    <div className="login-card">
+      <div className="login-header">
+        <div className={`login-hdr-small ${loginMode === 'admin' ? 'adm' : 'emp'}`}>
+          {loginMode === 'admin' ? 'ADMIN_OVERRIDE' : 'SESSION_INIT'}
         </div>
-
-        {/* TABS (Segmented Control) */}
-        <div className="flex bg-[#05060A] p-1.5 rounded-xl border border-white/5 relative z-10 w-full mb-2">
-          <button 
-            type="button"
-            onClick={() => { setLoginMode('employee'); setError(''); }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition-all ${
-              loginMode === 'employee' 
-                ? 'bg-[#1E293B]/80 text-white shadow-sm' 
-                : 'text-outline-variant hover:text-white'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">badge</span>
-            Employee
-          </button>
-          <button 
-            type="button"
-            onClick={() => { setLoginMode('admin'); setError(''); }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition-all ${
-              loginMode === 'admin' 
-                ? 'bg-red-900/80 text-white shadow-[0_0_15px_rgba(220,38,38,0.2)]' 
-                : 'text-outline-variant hover:text-white'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
-            Admin
-          </button>
+        <div className="login-title">Skynet Application</div>
+        <div className={`login-subtitle ${loginMode === 'admin' ? 'adm' : ''}`}>
+          {loginMode === 'admin' ? (
+            <><span>&gt;</span> ADMIN_OVERRIDE_CL</>
+          ) : (
+            <><span>&gt;_</span> AWAITING_CREDENTIALS</>
+          )}
         </div>
-
-        {error && (
-            <div className="flex items-center gap-2 bg-error/10 border border-error/20 rounded-lg p-3 text-[11px] text-error">
-              <span className="material-symbols-outlined text-[14px]">error</span>
-              {error}
-            </div>
-        )}
-
-        {/* FORM */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="relative group">
-            <label className="text-[10px] text-[#475569] font-extrabold uppercase tracking-widest block mb-2">
-              {loginMode === 'admin' ? 'MANAGER_ID' : 'EMPLOYEE_ID'}
-            </label>
-            <div className="relative text-black">
-              <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-[18px]">badge</span>
-              <input 
-                name="email"
-                type="text" 
-                value={email}
-                autoComplete="username"
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-[#13161F] text-white border border-white/[0.06] rounded-xl pl-10 pr-4 py-3 text-[16px] font-medium outline-none placeholder:text-gray-600 focus:border-blue-500/50 transition-all shadow-inner" 
-                placeholder="User Identifier"
-              />
-            </div>
-          </div>
-          
-          <div className="relative group">
-            <label className="text-[10px] text-[#475569] font-extrabold uppercase tracking-widest block mb-2">
-              PASSWORD
-            </label>
-            <div className="relative text-white">
-              <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-[18px]">lock</span>
-              <input 
-                name="password"
-                type="password"
-                value={password}
-                autoComplete="current-password"
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-[#13161F] text-white border border-white/[0.06] rounded-xl pl-10 pr-10 py-3 text-[16px] font-bold tracking-widest outline-none placeholder:text-gray-600 focus:border-blue-500/50 transition-all shadow-inner" 
-                placeholder="••••••••"
-              />
-              <span className="material-symbols-outlined absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer text-[18px]">visibility_off</span>
-            </div>
-          </div>
-          
-          <div className="pt-2">
-            <button 
-              type="submit"
-              disabled={loading}
-              className={`w-full py-3.5 text-white font-extrabold rounded-xl transition-all tracking-widest text-[11px] uppercase ${
-                loginMode === 'admin' 
-                  ? 'bg-[#990000] hover:bg-red-700 shadow-[0_0_20px_rgba(153,0,0,0.3)] border border-red-500/20' 
-                  : 'bg-[#173BE8] hover:bg-[#1A3EE0]/90 shadow-[0_0_15px_rgba(26,62,224,0.3)]'
-              }`}
-            >
-              {loading ? 'AUTHENTICATING...' : 'AUTHENTICATE'}
-            </button>
-          </div>
-
-          <div className="text-center pt-2">
-            <span className="text-[11px] text-outline-variant font-medium">
-              Are you an {loginMode === 'admin' ? 'employee' : 'admin'}? 
-              <a href="#" onClick={(e) => { e.preventDefault(); setLoginMode(loginMode === 'admin' ? 'employee' : 'admin'); }} 
-                 className={`transition-colors ml-1 font-bold ${loginMode === 'admin' ? 'text-red-400 hover:text-red-300' : 'text-white hover:text-primary'}`}>
-                {loginMode === 'admin' ? 'Employee Login' : 'Admin Login'} &rarr;
-              </a>
-            </span>
-          </div>
-
-          <div className="text-center border-t border-white/5 pt-5 mt-2">
-            <div className="text-[10px] text-outline-variant font-medium">
-              Powered by <span className="text-white">Neo Q Labs &mdash; Swift Ops Training Team</span>
-            </div>
-            <div className="text-[9px] text-outline-variant/60 mt-1.5">
-              &copy; 2026 Iamneo Edutech Private Limited. All rights reserved.
-            </div>
-          </div>
-        </form>
       </div>
+
+      <div className="login-tabs">
+        <button 
+          className={`login-tab ${loginMode === 'employee' ? 'active emp' : ''}`}
+          onClick={() => { setLoginMode('employee'); setError(''); }}
+        >
+          <IconBadge /> Employee
+        </button>
+        <button 
+          className={`login-tab ${loginMode === 'admin' ? 'active adm' : ''}`}
+          onClick={() => { setLoginMode('admin'); setError(''); }}
+        >
+          <IconAdmin /> Admin
+        </button>
+      </div>
+
+      {error && (
+        <div style={{ color: '#f87171', fontSize: '12px', background: 'rgba(239,68,68,0.1)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.2)' }}>
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div className="login-field">
+          <label className="login-label">
+            {loginMode === 'admin' ? 'MANAGER_ID' : 'EMPLOYEE_ID'}
+          </label>
+          <div className="login-input-wrapper">
+            <span className="login-input-icon"><IconUser /></span>
+            <input 
+              name="email"
+              type="text" 
+              value={email}
+              autoComplete="username"
+              onChange={(e) => setEmail(e.target.value)}
+              className="login-input" 
+              placeholder="User Identifier"
+            />
+          </div>
+        </div>
+        
+        <div className="login-field">
+          <label className="login-label">PASSWORD</label>
+          <div className="login-input-wrapper">
+            <span className="login-input-icon"><IconLock /></span>
+            <input 
+              name="password"
+              type="password"
+              value={password}
+              autoComplete="current-password"
+              onChange={(e) => setPassword(e.target.value)}
+              className="login-input" 
+              placeholder="••••••••"
+            />
+            <span className="login-pwd-icon"><IconEyeOff /></span>
+          </div>
+        </div>
+        
+        <button 
+          type="submit"
+          disabled={loading}
+          className={`login-btn ${loginMode === 'admin' ? 'adm' : 'emp'}`}
+        >
+          {loading ? 'AUTHENTICATING...' : 'AUTHENTICATE'}
+        </button>
+
+        <div className="login-footer-link">
+          Are you an {loginMode === 'admin' ? 'employee' : 'admin'}? 
+          <a href="#" onClick={(e) => { e.preventDefault(); setLoginMode(loginMode === 'admin' ? 'employee' : 'admin'); }} 
+             className={loginMode === 'admin' ? 'adm' : ''}>
+            {loginMode === 'admin' ? 'Employee Login' : 'Admin Login'} &rarr;
+          </a>
+        </div>
+      </form>
     </div>
   );
 };

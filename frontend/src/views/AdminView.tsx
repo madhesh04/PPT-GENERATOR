@@ -5,6 +5,7 @@ import { useAppStore } from '../store/useAppStore';
 import { adminApi } from '../api/admin';
 import { presentationApi } from '../api/presentation';
 import apiClient from '../api/apiClient';
+import SearchableDropdown from '../components/ui/SearchableDropdown';
 
 interface AdminStats {
   total_users: number;
@@ -19,6 +20,7 @@ interface AdminUser {
   email: string;
   role: string;
   status: string;
+  ppt_count: number;
   created_at?: string;
 }
 
@@ -44,6 +46,10 @@ export default function AdminView() {
   const [generations, setGenerations] = useState<AdminGeneration[]>([]);
   const [globalSettings, setGlobalSettings] = useState({ image_gen: true, speaker_notes: true, model: 'groq' });
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Filters
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   
   // Resolve active tab from ?tab= query param
   const queryParams = new URLSearchParams(location.search);
@@ -203,185 +209,193 @@ export default function AdminView() {
   };
 
   const filterData = <T extends Record<string, any>>(data: T[], searchFields: (keyof T)[]) => {
-    if (!searchTerm) return data;
-    const lowerSearch = searchTerm.toLowerCase();
-    return data.filter(item => 
-      searchFields.some(field => String(item[field] || '').toLowerCase().includes(lowerSearch))
-    );
+    let result = data;
+    
+    // 1. Text Search
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      result = result.filter(item => 
+        searchFields.some(field => String(item[field] || '').toLowerCase().includes(lowerSearch))
+      );
+    }
+    
+    // 2. Role Filter (for users/pending tabs)
+    if (roleFilter !== 'all' && (activeTab === 'users' || activeTab === 'pending')) {
+      result = result.filter(item => (item.role || '').toLowerCase() === roleFilter.toLowerCase());
+    }
+    
+    // 3. Status Filter (for users tab)
+    if (statusFilter !== 'all' && activeTab === 'users') {
+      result = result.filter(item => (item.status || 'active').toLowerCase() === statusFilter.toLowerCase());
+    }
+    
+    return result;
   };
 
   return (
-    <div className="max-w-7xl mx-auto w-full flex flex-col animate-fade-in relative h-full">
+    <div style={{ animation: 'fadeUp 0.3s ease both' }}>
 
-      {/* Header Section */}
-      <section className="mb-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-[#DC2626] text-3xl">admin_panel_settings</span>
-            <div>
-              <h1 className="text-[18px] font-extrabold tracking-[-0.5px] text-white mb-1">System Management</h1>
-              <div className="text-[10px] text-[#475569] font-extrabold uppercase tracking-widest bg-white/[0.04] px-2.5 py-1 rounded-md inline-block">
-                {isMaster ? 'LEVEL_5_MASTER' : 'LEVEL_4_ADMIN'}
-              </div>
-            </div>
+      {/* Page header */}
+      <div className="page-header" style={{ marginBottom: '16px' }}>
+        <div className="page-header-left">
+          <div className="page-header-icon" style={{ borderColor: 'rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.1)' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--red)' }}>admin_panel_settings</span>
           </div>
-          <div className="flex gap-4">
-            <div className="relative group">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 material-symbols-outlined text-[18px]">search</span>
-              <input 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-[#13161F] border border-white/[0.06] focus:border-[#DC2626]/50 text-gray-200 text-[16px] pl-12 pr-4 py-2.5 rounded-xl w-64 outline-none transition-all shadow-inner placeholder:text-gray-600" 
-                placeholder="Search records..." 
-                type="text"
-              />
+          <div>
+            <div className="page-title">System Management</div>
+            <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-secondary)', letterSpacing: '0.1em', marginTop: '2px' }}>
+              {isMaster ? 'MASTER' : 'ADMIN'}
             </div>
-            {activeTab === 'users' && (
-              <button 
-                onClick={() => setShowCreateForm(true)}
-                className="bg-[#DC2626] hover:bg-[#B91C1C] text-white px-5 py-2.5 rounded-xl font-bold text-[11px] tracking-widest uppercase flex items-center gap-2 transition-all shadow-sm"
-              >
-                <span className="material-symbols-outlined text-[18px]">person_add</span>
-                Add User
-              </button>
-            )}
           </div>
         </div>
-
-        {/* Tabs */}
-        <div className="flex gap-2 overflow-x-auto bg-[#0F1118] border border-white/[0.06] p-1.5 rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
-          <button 
-            onClick={() => navigateTab('users')}
-            className={`px-5 py-2.5 font-bold text-[11px] tracking-widest uppercase rounded-xl transition-all whitespace-nowrap ${activeTab === 'users' ? 'bg-[#DC2626]/20 text-[#EF4444]' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-          >
-            User Management
-          </button>
-          <button 
-            onClick={() => navigateTab('generations')}
-            className={`px-5 py-2.5 font-bold text-[11px] tracking-widest uppercase rounded-xl transition-all whitespace-nowrap ${activeTab === 'generations' ? 'bg-blue-500/20 text-[#60A5FA]' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-          >
-            Generation Logs
-          </button>
-          <button 
-            onClick={() => navigateTab('overview')}
-            className={`px-5 py-2.5 font-bold text-[11px] tracking-widest uppercase rounded-xl transition-all whitespace-nowrap ${activeTab === 'overview' ? 'bg-emerald-500/20 text-emerald-400' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-          >
-            System Config
-          </button>
-          {isMaster && (
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div style={{ position: 'relative' }}>
+            <span className="material-symbols-outlined" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '16px', color: 'var(--text-muted)' }}>search</span>
+            <input 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="text-input"
+              style={{ width: '220px', paddingLeft: '32px', borderRadius: 'var(--r-pill)' }}
+              placeholder="Search records..." 
+              type="text"
+            />
+          </div>
+          {activeTab === 'users' && (
             <button 
-              onClick={() => navigateTab('pending')}
-              className={`px-5 py-2.5 font-bold text-[11px] tracking-widest uppercase rounded-xl transition-all whitespace-nowrap ${activeTab === 'pending' ? 'bg-amber-500/20 text-amber-400' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
+              onClick={() => setShowCreateForm(true)}
+              className="primary-btn"
+              style={{ background: 'linear-gradient(135deg, var(--red), #b91c1c)' }}
             >
-              Pending Approvals
+              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>person_add</span>
+              Add User
             </button>
           )}
         </div>
-      </section>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="create-tabs">
+        <button 
+          onClick={() => navigateTab('users')}
+          className={`create-tab ${activeTab === 'users' ? 'active' : ''}`}
+          style={activeTab === 'users' ? { background: 'rgba(239,68,68,0.15)', color: 'var(--red)', boxShadow: 'inset 0 0 0 1px rgba(239,68,68,0.2)' } : undefined}
+        >
+          User Management
+        </button>
+        <button 
+          onClick={() => navigateTab('generations')}
+          className={`create-tab ${activeTab === 'generations' ? 'active' : ''}`}
+        >
+          Generation Logs
+        </button>
+        <button 
+          onClick={() => navigateTab('overview')}
+          className={`create-tab ${activeTab === 'overview' ? 'active' : ''}`}
+          style={activeTab === 'overview' ? { background: 'rgba(34,211,165,0.15)', color: 'var(--green)', boxShadow: 'inset 0 0 0 1px rgba(34,211,165,0.2)' } : undefined}
+        >
+          System Config
+        </button>
+        {isMaster && (
+          <button 
+            onClick={() => navigateTab('pending')}
+            className={`create-tab ${activeTab === 'pending' ? 'active' : ''}`}
+            style={activeTab === 'pending' ? { background: 'rgba(245,197,66,0.15)', color: 'var(--yellow)', boxShadow: 'inset 0 0 0 1px rgba(245,197,66,0.2)' } : undefined}
+          >
+            Pending Approvals
+          </button>
+        )}
+      </div>
 
       {/* Main Content Area */}
-      <section className="flex-1 pb-12 overflow-y-auto">
+      <div style={{ paddingBottom: '40px' }}>
         
         {/* Create User Form Popup */}
         {showCreateForm && (
-          <div className="bg-[#0F1118] border border-white/[0.06] p-6 md:p-8 rounded-xl mb-6 shadow-[0_4px_24px_rgba(0,0,0,0.4)] relative">
-            <div className="flex items-center gap-2 mb-6 border-b border-white/5 pb-4">
-              <span className="material-symbols-outlined text-purple-400 text-[18px]">person_add</span>
-              <h2 className="text-sm font-bold text-white tracking-wide uppercase">Provision New Account</h2>
+          <div className="card" style={{ marginBottom: '20px', borderColor: 'rgba(168, 85, 247, 0.3)', borderWidth: '1px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', borderBottom: '1px solid var(--border-faint)', paddingBottom: '16px' }}>
+              <span className="material-symbols-outlined" style={{ color: 'var(--purple)', fontSize: '18px' }}>person_add</span>
+              <h2 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Provision New Account</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-              <input className="w-full bg-[#13161F] border border-white/5 text-gray-200 text-[16px] p-3.5 rounded-xl outline-none focus:border-purple-500/50 shadow-inner" placeholder="Full Name" value={newUser.full_name} onChange={e => setNewUser({ ...newUser, full_name: e.target.value })} />
-              <input className="w-full bg-[#13161F] border border-white/5 text-gray-200 text-[16px] p-3.5 rounded-xl outline-none focus:border-purple-500/50 shadow-inner" type="email" placeholder="Email Address" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
-              <input className="w-full bg-[#13161F] border border-white/5 text-gray-200 text-[16px] p-3.5 rounded-xl outline-none focus:border-purple-500/50 shadow-inner" type="password" placeholder="Passcode" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
-              <div className="relative">
-                <select className="w-full bg-[#13161F] border border-white/5 text-gray-300 text-[16px] p-3.5 pl-4 rounded-xl focus:border-purple-500/50 outline-none appearance-none cursor-pointer shadow-inner" value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+              <input className="text-input" placeholder="Full Name" value={newUser.full_name} onChange={e => setNewUser({ ...newUser, full_name: e.target.value })} />
+              <input className="text-input" type="email" placeholder="Email Address" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
+              <input className="text-input" type="password" placeholder="Passcode" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
+              <div style={{ position: 'relative' }}>
+                <select className="select-input" value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })}>
                   <option value="user">Role: User</option>
                   <option value="admin">Role: Admin</option>
                 </select>
-                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">expand_more</span>
               </div>
             </div>
-            <div className="flex gap-4">
-              <button className="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2.5 rounded-xl font-bold text-[11px] tracking-widest uppercase transition-all shadow-sm" onClick={handleCreateUser}>Register User</button>
-              <button className="bg-white/5 hover:bg-white/10 text-white px-6 py-2.5 rounded-xl font-bold text-[11px] tracking-widest uppercase transition-all" onClick={() => setShowCreateForm(false)}>Cancel</button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="primary-btn" style={{ background: 'linear-gradient(135deg, var(--purple), #9333ea)' }} onClick={handleCreateUser}>Register User</button>
+              <button className="ghost-btn" onClick={() => setShowCreateForm(false)}>Cancel</button>
             </div>
           </div>
         )}
 
         {/* SYSTEM CONFIG TAB */}
         {activeTab === 'overview' && (
-          <div className="animate-fade-in space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-[10px] font-extrabold text-[#475569] uppercase tracking-widest">Total Users</span>
-                  <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[16px] text-purple-400">group</span>
-                  </div>
+          <div style={{ animation: 'fadeUp 0.2s ease both' }}>
+            <div className="kpi-grid">
+              <div className="kpi-card">
+                <div className="kpi-top">
+                  <div className="kpi-icon purple"><span className="material-symbols-outlined" style={{ fontSize: '16px' }}>group</span></div>
                 </div>
-                <div className="text-[24px] font-extrabold text-white font-mono leading-none tracking-[-2px]">{stats?.total_users || 0}</div>
+                <div className="kpi-label">Total Users</div>
+                <div className="kpi-value num">{stats?.total_users || 0}</div>
               </div>
-              
-              <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-[10px] font-extrabold text-[#475569] uppercase tracking-widest">Total Generations</span>
-                  <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[16px] text-[#60A5FA]">bolt</span>
-                  </div>
+              <div className="kpi-card">
+                <div className="kpi-top">
+                  <div className="kpi-icon blue"><span className="material-symbols-outlined" style={{ fontSize: '16px' }}>bolt</span></div>
                 </div>
-                <div className="text-[24px] font-extrabold text-white font-mono leading-none tracking-[-2px]">{stats?.total_generations || 0}</div>
+                <div className="kpi-label">Generations</div>
+                <div className="kpi-value num">{stats?.total_generations || 0}</div>
               </div>
-              
-              <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-[10px] font-extrabold text-[#475569] uppercase tracking-widest">Pending Approvals</span>
-                  <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[16px] text-amber-400">pending_actions</span>
-                  </div>
+              <div className="kpi-card">
+                <div className="kpi-top">
+                  <div className="kpi-icon yellow"><span className="material-symbols-outlined" style={{ fontSize: '16px' }}>pending_actions</span></div>
                 </div>
-                <div className="text-[24px] font-extrabold text-white font-mono leading-none tracking-[-2px]">{stats?.pending_approvals || 0}</div>
+                <div className="kpi-label">Pending Approvals</div>
+                <div className="kpi-value num">{stats?.pending_approvals || 0}</div>
               </div>
-              
-              <div className="bg-[#0F1118] border border-white/[0.06] p-6 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-[10px] font-extrabold text-[#475569] uppercase tracking-widest">Active Today</span>
-                  <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[16px] text-emerald-400">trending_up</span>
-                  </div>
+              <div className="kpi-card">
+                <div className="kpi-top">
+                  <div className="kpi-icon green"><span className="material-symbols-outlined" style={{ fontSize: '16px' }}>trending_up</span></div>
                 </div>
-                <div className="text-[24px] font-extrabold text-white font-mono leading-none tracking-[-2px]">{stats?.active_today || 0}</div>
+                <div className="kpi-label">Active Today</div>
+                <div className="kpi-value num">{stats?.active_today || 0}</div>
               </div>
             </div>
 
-            <div className="bg-[#0F1118] border border-white/[0.06] p-6 md:p-8 rounded-xl relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
-              <div className="flex items-center gap-2 mb-6 border-b border-white/5 pb-4">
-                <span className="material-symbols-outlined text-emerald-400 text-[18px]">tune</span>
-                <h2 className="text-sm font-bold text-white tracking-wide uppercase">Global Configuration</h2>
+            <div className="card" style={{ marginTop: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', borderBottom: '1px solid var(--border-faint)', paddingBottom: '16px' }}>
+                <span className="material-symbols-outlined" style={{ color: 'var(--green)', fontSize: '18px' }}>tune</span>
+                <h2 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Global Configuration</h2>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex justify-between items-center bg-white/[0.02] border border-white/5 p-5 rounded-xl hover:bg-white/[0.04] transition-colors">
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {/* Image Gen Toggle */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '16px 20px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
                   <div>
-                    <div className="font-bold text-sm text-gray-200 mb-1">Image Generation</div>
-                    <div className="text-[14px] text-gray-500 font-mono font-normal tracking-wider">Module Status: {globalSettings.image_gen ? 'ACTIVE' : 'DISABLED'}</div>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>Image Generation</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--mono)' }}>Module Status: <span style={{ color: globalSettings.image_gen ? 'var(--green)' : 'inherit' }}>{globalSettings.image_gen ? 'ACTIVE' : 'DISABLED'}</span></div>
                   </div>
-                  <button 
-                    onClick={() => handleToggleSetting('image_gen', globalSettings.image_gen)}
-                    className={`relative w-12 h-6 rounded-full transition-all duration-300 ${globalSettings.image_gen ? 'bg-emerald-500' : 'bg-gray-700'} outline-none`}
-                  >
-                    <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm ${globalSettings.image_gen ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                  </button>
+                  <label className="toggle">
+                    <input type="checkbox" checked={globalSettings.image_gen} onChange={() => handleToggleSetting('image_gen', globalSettings.image_gen)} />
+                    <span className="toggle-track" style={globalSettings.image_gen ? { background: 'rgba(34,211,165,0.2)', borderColor: 'rgba(34,211,165,0.4)' } : {}}></span>
+                  </label>
                 </div>
-                <div className="flex justify-between items-center bg-white/[0.02] border border-white/5 p-5 rounded-xl hover:bg-white/[0.04] transition-colors">
+                {/* Speaker Notes Toggle */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '16px 20px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
                   <div>
-                    <div className="font-bold text-sm text-gray-200 mb-1">Speaker Notes</div>
-                    <div className="text-[14px] text-gray-500 font-mono font-normal tracking-wider">Module Status: {globalSettings.speaker_notes ? 'ACTIVE' : 'DISABLED'}</div>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>Speaker Notes</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--mono)' }}>Module Status: <span style={{ color: globalSettings.speaker_notes ? 'var(--green)' : 'inherit' }}>{globalSettings.speaker_notes ? 'ACTIVE' : 'DISABLED'}</span></div>
                   </div>
-                  <button 
-                    onClick={() => handleToggleSetting('speaker_notes', globalSettings.speaker_notes)}
-                    className={`relative w-12 h-6 rounded-full transition-all duration-300 ${globalSettings.speaker_notes ? 'bg-emerald-500' : 'bg-gray-700'} outline-none`}
-                  >
-                    <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm ${globalSettings.speaker_notes ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                  </button>
+                  <label className="toggle">
+                    <input type="checkbox" checked={globalSettings.speaker_notes} onChange={() => handleToggleSetting('speaker_notes', globalSettings.speaker_notes)} />
+                    <span className="toggle-track" style={globalSettings.speaker_notes ? { background: 'rgba(34,211,165,0.2)', borderColor: 'rgba(34,211,165,0.4)' } : {}}></span>
+                  </label>
                 </div>
               </div>
             </div>
@@ -390,195 +404,237 @@ export default function AdminView() {
 
         {/* USERS TAB */}
         {activeTab === 'users' && (
-          <div className="bg-[#0F1118] border border-white/[0.06] rounded-xl shadow-[0_4px_24_rgba(0,0,0,0.4)] overflow-hidden">
-            <div className="overflow-x-auto w-full">
-              <table className="w-full text-left border-collapse min-w-[800px]">
-                <thead className="bg-white/[0.02] border-b border-white/5">
-                  <tr>
-                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Index</th>
-                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Username</th>
-                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Email Addr</th>
-                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Privilege</th>
-                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Status</th>
-                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight text-right">Operations</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {filterData(users, ['full_name', 'email']).length === 0 ? (
-                    <tr><td colSpan={6} className="py-12 text-center text-gray-500 text-xs font-bold tracking-widest uppercase">No Matching Records</td></tr>
-                  ) : filterData(users, ['full_name', 'email']).map((u: AdminUser, idx: number) => (
-                    <tr key={u.id} className="hover:bg-white/[0.02] transition-colors group/row">
-                      <td className="py-4 px-6 text-[11px] text-[#475569] font-bold font-mono">{String(idx + 1).padStart(3, '0')}</td>
-                      <td className="py-4 px-6 text-[14px] font-semibold text-white">{u.full_name}</td>
-                      <td className="py-4 px-6 text-[14px] text-gray-400 font-mono font-normal">{u.email}</td>
-                      <td className="py-4 px-6">
-                        <span 
-                          onClick={() => handleToggleRole(u.id, u.role)}
-                          className={`cursor-pointer px-2.5 py-1 rounded-md text-[9px] font-bold tracking-wider transition-colors border ${u.role === 'admin' || u.role === 'MASTER' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20' : 'bg-blue-500/10 text-[#60A5FA] border-[#2563EB]/20 hover:bg-[#1D4ED8]/20'}`}
-                        >
-                          {u.role?.toUpperCase()}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span 
-                          onClick={() => handleToggleStatus(u.id, u.status)}
-                          className={`flex items-center gap-1.5 cursor-pointer max-w-max hover:opacity-80 transition-opacity font-bold text-[10px] tracking-wider ${u.status === 'active' ? 'text-emerald-400' : 'text-red-400'}`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full ${u.status === 'active' ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`}></span>
-                          {u.status?.toUpperCase() || 'ACTIVE'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex justify-end gap-2 opacity-40 group-hover/row:opacity-100 transition-opacity">
-                          <button onClick={() => navigate(`/admin?tab=generations&userId=${u.id}`)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#1D4ED8]/20 hover:text-[#60A5FA] transition-colors bg-white/5 text-gray-400" title="View Generation Logs">
-                            <span className="material-symbols-outlined text-[16px]">history</span>
-                          </button>
-                          <button onClick={() => { setResetTarget(u); setShowResetModal(true); }} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-amber-500/20 hover:text-amber-400 transition-colors bg-white/5 text-gray-400" title="Force Password Reset">
-                            <span className="material-symbols-outlined text-[16px]">key</span>
-                          </button>
-                          <button onClick={() => handleDeleteUser(u.id)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-500/20 hover:text-red-400 transition-colors bg-white/5 text-gray-400" title="Terminate Account">
-                            <span className="material-symbols-outlined text-[16px]">delete</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="table-wrap" style={{ overflow: 'visible' }}>
+            <div className="table-header-bar" style={{ paddingBottom: '14px', alignItems: 'center' }}>
+               <span className="table-title">User Roster</span>
+               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                 <div style={{ minWidth: '170px' }}>
+                   <SearchableDropdown
+                     id="admin-role-filter"
+                     label="ROLE"
+                     value={roleFilter}
+                     options={[
+                       { label: 'All Roles', value: 'all' },
+                       { label: 'Admin', value: 'admin' },
+                       { label: 'User / Employee', value: 'user' },
+                       { label: 'Master', value: 'master' }
+                     ]}
+                     onChange={setRoleFilter}
+                     searchable={false}
+                   />
+                 </div>
+                 <div style={{ minWidth: '170px' }}>
+                   <SearchableDropdown
+                     id="admin-status-filter"
+                     label="STATUS"
+                     value={statusFilter}
+                     options={[
+                       { label: 'All Statuses', value: 'all' },
+                       { label: 'Active', value: 'active' },
+                       { label: 'Disabled', value: 'disabled' }
+                     ]}
+                     onChange={setStatusFilter}
+                     searchable={false}
+                   />
+                 </div>
+               </div>
             </div>
-            
-            <div className="bg-white/[0.01] border-t border-white/5 px-6 py-4 flex justify-between items-center">
-              <span className="text-[10px] font-bold text-gray-500 tracking-widest uppercase">Total Registered Identities: {totalUsers}</span>
+            <table>
+              <thead>
+                <tr>
+                  <th>Index</th>
+                  <th>Username</th>
+                  <th>Email Addr</th>
+                  <th>Privilege</th>
+                  <th>Status</th>
+                  <th>Generations</th>
+                  <th style={{ textAlign: 'right' }}>Operations</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filterData(users, ['full_name', 'email']).length === 0 ? (
+                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>No Matching Records</td></tr>
+                ) : filterData(users, ['full_name', 'email']).map((u: AdminUser, idx: number) => (
+                  <tr key={u.id}>
+                    <td className="mono-cell" style={{ fontWeight: 800 }}>{String(idx + 1).padStart(3, '0')}</td>
+                    <td style={{ fontWeight: 600 }}>{u.full_name}</td>
+                    <td className="mono-cell">{u.email}</td>
+                    <td>
+                      <span 
+                        onClick={() => handleToggleRole(u.id, u.role)}
+                        className={`badge ${u.role?.toLowerCase() === 'admin' || u.role?.toLowerCase() === 'master' ? 'badge-purple' : 'badge-blue'}`}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {u.role?.toUpperCase()}
+                      </span>
+                    </td>
+                    <td>
+                      <span 
+                        onClick={() => handleToggleStatus(u.id, u.status)}
+                        className={`badge ${u.status === 'active' ? 'badge-green' : 'badge-red'}`}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <span className="badge-dot" style={u.status === 'active' ? { animation: 'blink 2s infinite' } : {}}></span>
+                        {u.status?.toUpperCase() || 'ACTIVE'}
+                      </span>
+                    </td>
+                    <td className="mono-cell" style={{ color: 'var(--text-primary)', fontWeight: 800 }}>
+                      {u.ppt_count}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                        <button onClick={() => navigate(`/admin?tab=generations&userId=${u.id}`)} className="ghost-btn" style={{ padding: '5px 8px' }} title="View Logs">
+                          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>history</span>
+                        </button>
+                        <button onClick={() => { setResetTarget(u); setShowResetModal(true); }} className="ghost-btn" style={{ padding: '5px 8px', color: 'var(--yellow)', borderColor: 'rgba(245,197,66,0.3)' }} title="Reset Password">
+                          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>key</span>
+                        </button>
+                        <button onClick={() => handleDeleteUser(u.id)} className="ghost-btn" style={{ padding: '5px 8px', color: 'var(--red)', borderColor: 'rgba(239,68,68,0.3)' }} title="Delete">
+                          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>delete</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="table-footer">
+              <span className="records-label">TOTAL REGISTERED IDENTITIES: {totalUsers}</span>
             </div>
           </div>
         )}
 
         {/* PENDING APPROVALS TAB */}
         {activeTab === 'pending' && (
-          <div className="bg-[#0F1118] border border-white/[0.06] rounded-xl shadow-[0_4px_24_rgba(0,0,0,0.4)] overflow-hidden">
-            <div className="overflow-x-auto w-full">
-              <table className="w-full text-left border-collapse min-w-[800px]">
-                <thead className="bg-white/[0.02] border-b border-white/5">
-                  <tr>
-                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Index</th>
-                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Username</th>
-                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Email Addr</th>
-                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Requested Role</th>
-                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {filterData(pending, ['full_name', 'email']).length === 0 ? (
-                    <tr><td colSpan={5} className="py-12 text-center text-gray-500 text-xs font-bold tracking-widest uppercase">No Pending Approvals</td></tr>
-                  ) : filterData(pending, ['full_name', 'email']).map((u: AdminUser, idx: number) => (
-                    <tr key={u.id} className="hover:bg-white/[0.02] transition-colors group/row">
-                      <td className="py-4 px-6 text-[11px] text-[#475569] font-bold font-mono">{String(idx + 1).padStart(3, '0')}</td>
-                      <td className="py-4 px-6 text-[14px] font-semibold text-white">{u.full_name}</td>
-                      <td className="py-4 px-6 text-[14px] text-gray-400 font-mono font-normal">{u.email}</td>
-                      <td className="py-4 px-6">
-                        <span className="px-2.5 py-1 rounded-md text-[9px] font-bold tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">{u.role?.toUpperCase()}</span>
-                      </td>
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex justify-end gap-2 opacity-40 group-hover/row:opacity-100 transition-opacity">
-                          <button onClick={() => handleApprove(u.id)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors bg-white/5 text-gray-400" title="Authorize">
-                            <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                          </button>
-                          <button onClick={() => handleReject(u.id)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-500/20 hover:text-red-400 transition-colors bg-white/5 text-gray-400" title="Reject">
-                            <span className="material-symbols-outlined text-[16px]">cancel</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="table-wrap">
+            <div className="table-header-bar">
+               <span className="table-title">Pending Approvals</span>
             </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Index</th>
+                  <th>Username</th>
+                  <th>Email Addr</th>
+                  <th>Requested Role</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filterData(pending, ['full_name', 'email']).length === 0 ? (
+                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>No Pending Approvals</td></tr>
+                ) : filterData(pending, ['full_name', 'email']).map((u: AdminUser, idx: number) => (
+                  <tr key={u.id}>
+                    <td className="mono-cell" style={{ fontWeight: 800 }}>{String(idx + 1).padStart(3, '0')}</td>
+                    <td style={{ fontWeight: 600 }}>{u.full_name}</td>
+                    <td className="mono-cell">{u.email}</td>
+                    <td>
+                      <span className="badge badge-yellow">{u.role?.toUpperCase()}</span>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                        <button onClick={() => handleApprove(u.id)} className="ghost-btn" style={{ padding: '5px 8px', color: 'var(--green)', borderColor: 'rgba(34,211,165,0.3)' }} title="Authorize">
+                          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check_circle</span>
+                        </button>
+                        <button onClick={() => handleReject(u.id)} className="ghost-btn" style={{ padding: '5px 8px', color: 'var(--red)', borderColor: 'rgba(239,68,68,0.3)' }} title="Reject">
+                          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>cancel</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 
         {/* GENERATIONS LOGS TAB */}
         {activeTab === 'generations' && (
-          <div className="bg-[#0F1118] border border-white/[0.06] rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.4)] overflow-hidden">
-            {queryUserId && (
-              <div className="px-6 py-4 bg-blue-500/10 border-b border-[#2563EB]/20 flex justify-between items-center text-[#60A5FA] text-[11px] font-bold tracking-wider uppercase">
-                <span className="flex items-center gap-2"><span className="material-symbols-outlined text-[16px]">filter_alt</span> Filtering by User ID = {queryUserId}</span>
-                <button onClick={() => navigate('/admin?tab=generations')} className="hover:text-white transition-colors underline decoration-blue-500/50">Clear Filter</button>
-              </div>
-            )}
-            <div className="overflow-x-auto w-full">
-              <table className="w-full text-left border-collapse min-w-[800px]">
-                <thead className="bg-white/[0.02] border-b border-white/5">
-                  <tr>
-                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Log ID</th>
-                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Deck Title</th>
-                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Model</th>
-                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Operator</th>
-                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight">Timestamp</th>
-                    <th className="py-4 px-6 text-[11px] font-semibold font-sans text-[#475569] uppercase tracking-[0.8px] leading-tight text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {filterData(generations, ['title', 'generated_by']).length === 0 ? (
-                    <tr><td colSpan={6} className="py-12 text-center text-gray-500 text-xs font-bold tracking-widest uppercase">No Logs Found</td></tr>
-                  ) : filterData(generations, ['title', 'generated_by']).map((p: AdminGeneration) => (
-                    <tr key={p.id} className="hover:bg-white/[0.02] transition-colors group/row">
-                      <td className="py-4 px-6 text-[11px] text-[#475569] font-bold font-mono">#{p.id.substring(0, 6).toUpperCase()}</td>
-                      <td className="py-4 px-6 text-[14px] font-semibold text-white">{p.title}</td>
-                      <td className="py-4 px-6">
-                        <span className="text-[11px] text-gray-400 font-mono tracking-tighter bg-[#13161F] px-2 py-1 rounded max-w-max border border-white/5">
-                          {p.model_used || 'GROQ'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-[11px] font-medium text-amber-400">{p.generated_by || 'UNKNOWN'}</td>
-                      <td className="py-4 px-6 text-[14px] text-gray-500 font-mono font-normal">{p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A'}</td>
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex justify-end gap-2 opacity-40 group-hover/row:opacity-100 transition-opacity">
-                          <button onClick={() => handleDownload(p.id, p.title + '.pptx')} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors bg-white/5 text-gray-400" title="Export Artifact">
-                            <span className="material-symbols-outlined text-[16px]">download</span>
-                          </button>
-                          <button onClick={() => handleDeletePpt(p.id)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-500/20 hover:text-red-400 transition-colors bg-white/5 text-gray-400" title="Purge Log">
-                            <span className="material-symbols-outlined text-[16px]">delete</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="table-wrap">
+            <div className="table-header-bar" style={{ paddingBottom: queryUserId ? '14px' : '0' }}>
+               <span className="table-title">Generation Archive</span>
             </div>
             
-            <div className="bg-white/[0.01] border-t border-white/5 px-6 py-4 flex justify-between items-center">
-              <span className="text-[10px] font-bold text-gray-500 tracking-widest uppercase">Total Generations In View: {filterData(generations, ['title', 'generated_by']).length}</span>
+            {queryUserId && (
+              <div style={{ background: 'rgba(3,37,189,0.1)', borderTop: '1px solid rgba(3,37,189,0.2)', borderBottom: '1px solid rgba(3,37,189,0.2)', padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>filter_alt</span> Filtering by User ID = <span className="mono-cell">{queryUserId}</span>
+                </span>
+                <button onClick={() => navigate('/admin?tab=generations')} className="ghost-btn" style={{ padding: '4px 8px', fontSize: '9px' }}>Clear Filter</button>
+              </div>
+            )}
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Log ID</th>
+                  <th>Deck Title</th>
+                  <th>Model</th>
+                  <th>Operator</th>
+                  <th>Timestamp</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filterData(generations, ['title', 'generated_by']).length === 0 ? (
+                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>No Logs Found</td></tr>
+                ) : filterData(generations, ['title', 'generated_by']).map((p: AdminGeneration) => (
+                  <tr key={p.id}>
+                    <td className="mono-cell" style={{ fontWeight: 800 }}>#{p.id.substring(0, 6).toUpperCase()}</td>
+                    <td style={{ fontWeight: 600 }}>{p.title}</td>
+                    <td>
+                      <span className="badge badge-muted mono-cell" style={{ fontSize: '9px', padding: '2px 6px' }}>{p.model_used || 'GROQ'}</span>
+                    </td>
+                    <td className="mono-cell" style={{ color: 'var(--yellow)' }}>{p.generated_by || 'UNKNOWN'}</td>
+                    <td className="mono-cell">{p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A'}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                        <button onClick={() => handleDownload(p.id, p.title + '.pptx')} className="action-btn action-btn-dl" title="Export Artifact">
+                           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                           DL
+                        </button>
+                        <button onClick={() => handleDeletePpt(p.id)} className="action-btn action-btn-del" title="Purge Log">
+                           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                           DEL
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="table-footer">
+              <span className="records-label">TOTAL GENERATIONS IN VIEW: {filterData(generations, ['title', 'generated_by']).length}</span>
             </div>
           </div>
         )}
 
-      </section>
+      </div>
 
       {/* Password Reset Modal */}
       {showResetModal && (
-        <div className="fixed inset-0 bg-[#020812]/90 backdrop-blur-md z-[100] flex items-center justify-center animate-fade-in p-4">
-          <div className="bg-[#0F1118] border border-amber-500/30 max-w-md w-full p-8 rounded-xl shadow-[0_0_50px_rgba(251,191,36,0.15)] relative">
+        <div className="progress-overlay show">
+          <div className="progress-modal" style={{ maxWidth: '400px', borderColor: 'var(--border)', boxShadow: '0 0 60px rgba(0,0,0,0.5)', padding: '30px' }}>
             <button 
-              className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center bg-white/5 text-gray-400 hover:text-white transition-colors"
+              className="ghost-btn" style={{ position: 'absolute', top: '16px', right: '16px', padding: '6px' }}
               onClick={() => { setShowResetModal(false); setResetPassword(''); }}
             >
-              <span className="material-symbols-outlined text-[18px]">close</span>
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>close</span>
             </button>
 
-            <div className="flex items-center gap-4 mb-6 text-amber-500">
-              <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-3xl">key</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(245,197,66,0.1)', color: 'var(--yellow)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(245,197,66,0.3)' }}>
+                <span className="material-symbols-outlined">key</span>
               </div>
-              <div>
-                <h2 className="text-lg font-bold tracking-widest uppercase text-white">Override Protocol</h2>
-                <p className="text-[10px] font-bold uppercase text-amber-400/70 tracking-widest">Target: {resetTarget?.email}</p>
+              <div style={{ textAlign: 'left' }}>
+                <h2 className="progress-title">Override Protocol</h2>
+                <div className="mono-cell" style={{ color: 'var(--yellow)' }}>Target: {resetTarget?.email}</div>
               </div>
             </div>
 
-            <div className="space-y-4 mb-8">
+            <div style={{ marginBottom: '24px' }}>
               <input 
-                className="w-full bg-[#13161F] border border-amber-500/20 text-white text-sm p-4 rounded-xl focus:border-amber-500/50 outline-none shadow-inner" 
+                className="text-input" 
                 type="password" 
                 placeholder="Enter new credentials..." 
                 value={resetPassword} 
@@ -588,11 +644,8 @@ export default function AdminView() {
               />
             </div>
 
-            <div className="flex gap-4">
-              <button 
-                className="flex-1 bg-amber-500 text-[#020812] py-3.5 rounded-xl font-bold text-[11px] tracking-widest uppercase hover:bg-amber-400 transition-colors shadow-[0_4px_15px_-3px_rgba(251,191,36,0.3)]" 
-                onClick={handleConfirmReset}
-              >
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="primary-btn" style={{ flex: 1, justifyContent: 'center', background: 'linear-gradient(135deg, var(--yellow), #d97706)', color: '#000' }} onClick={handleConfirmReset}>
                 Execute Reset
               </button>
             </div>

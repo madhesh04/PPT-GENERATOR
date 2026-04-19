@@ -109,20 +109,28 @@ async def admin_get_users(
 
     users = await cursor.to_list(length=limit)
 
+    # Fetch PPT count for all users in one go
+    presentations_coll = get_presentations_collection()
+    counts_cursor = presentations_coll.aggregate([
+        {"$group": {"_id": "$user_id", "count": {"$sum": 1}}}
+    ])
+    ppt_counts = {str(doc["_id"]): doc["count"] for doc in await counts_cursor.to_list(None)}
+
     # Map Timesheet fields → Skynet's expected response format
     serialized = []
     for u in users:
         # Resolve name via multiple possible fields in shared DB
         full_name = u.get("name") or u.get("fullName") or u.get("username") or "Unknown User"
+        user_id = u.get("employeeId", str(u.get("_id", "")))
         
         mapped = {
-            "id": u.get("employeeId", str(u.get("_id", ""))),
+            "id": user_id,
             "email": u.get("employeeId", u.get("email", "")),
             "full_name": full_name,
             "role": u.get("role", "user").lower(),
             "status": "active",  # Timesheet has no status field — all users active
             "team_lead": u.get("teamLead", ""),
-            "ppt_count": 0,  
+            "ppt_count": ppt_counts.get(user_id, 0),  
         }
         if "createdAt" in u and u["createdAt"]:
             mapped["created_at"] = u["createdAt"].isoformat() if hasattr(u["createdAt"], "isoformat") else str(u["createdAt"])

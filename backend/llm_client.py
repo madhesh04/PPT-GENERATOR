@@ -22,6 +22,7 @@ if settings.nvidia_api_key and settings.nvidia_api_key.strip() != "your_nvidia_a
     nvidia_client = OpenAI(base_url=NVIDIA_BASE_URL, api_key=settings.nvidia_api_key)
 
 JSON_REPAIR_LIMIT = 20 # Max brackets to try adding
+_auto_route_counter = 0 # Simple round-robin counter for load balancing
 
 # Tone Configurations
 TONE_CONFIG = {
@@ -89,12 +90,23 @@ Notes should: expand on what's on the slide, add one more example or data point 
 
     context_block = (
         f"\nAdditional context about this presentation:\n{context.strip()}\n"
-        "Use this context — especially the audience type and domain — to sharpen every slide's content.\n"
+        "Use this context - especially the audience type and domain - to sharpen every slide's content.\n"
         if context.strip() else ""
     )
 
+    # Dynamic word counts to prevent total payload from exceeding model output limits (especially for 15 slides)
+    if num_slides <= 7:
+        word_range = "25-45 words"
+        bullet_instruction = "Contain DEEP academic/technical rigor, specific data, and extensive detail."
+    elif num_slides <= 12:
+        word_range = "20-35 words"
+        bullet_instruction = "Contain specific factual details and standalone insights."
+    else:
+        word_range = "15-30 words"
+        bullet_instruction = "Contain concise, standalone factual insights."
+
     system_prompt = f"""You are a world-class presentation writer and subject-matter expert hired to create professional client-ready slide decks.
-These presentations are used by a company to deliver polished decks to their clients — the quality must be genuinely impressive and immediately useful.
+These presentations are used by a company to deliver polished decks to their clients - the quality must be genuinely impressive and immediately useful.
 You must generate the ACTUAL FINAL CONTENT of the presentation. DO NOT generate placeholders or templates.
 
 TONE & AUDIENCE STYLE: {tone_instruction}
@@ -102,13 +114,13 @@ TONE & AUDIENCE STYLE: {tone_instruction}
 {notes_instruction}
 
 ═══════════════════════════════════════════
-CONTENT QUALITY STANDARD — NON-NEGOTIABLE
+CONTENT QUALITY STANDARD - NON-NEGOTIABLE
 ═══════════════════════════════════════════
 
 Every bullet point you write must do ALL of the following:
-  ✔ Contain ACTUAL FACTUAL KNOWLEDGE, specific details, and educational value
-  ✔ Be a complete, standalone sentence of 20–40 words
-  ✔ Deliver genuine insight — no filler, no structural meta-text
+  ✔ {bullet_instruction}
+  ✔ Be a complete, standalone sentence of {word_range}
+  ✔ Deliver genuine insight - no filler, no structural meta-text
   ✔ Where the concept warrants it: include a real-world example, analogy, case study, or data point
 
 NEVER WRITE PLACEHOLDERS. NEVER WRITE META-TEXT ABOUT THE SLIDE.
@@ -128,7 +140,7 @@ CODE BLOCKS
 ═══════════════════════════
 For technical, programming, or academic topics, some slides SHOULD include a code example.
 - Put code in the "code" field as a clean, runnable snippet.
-- CRITICAL: You must use literal `\n` characters to ensure every line of code prints on a NEW LINE. Under no circumstance should multiple code statements be concatenated on the same horizontal line.
+- CRITICAL: You must use literal `\\n` characters to ensure every line of code prints on a NEW LINE. Under no circumstance should multiple code statements be concatenated on the same horizontal line.
 - REQUIRED: If the tone is 'academic' or 'technical', any provided code snippet MUST be at least 10 lines long. You MUST explain the code block thoroughly line-by-line within the slide's content or notes.
 - For non-code slides, set both "code" and "language" to null.
 
@@ -137,11 +149,11 @@ IMAGE SELECTION
 ═══════════════════════════
 { "NOT every slide needs an image. Only assign an image_query to slides where a visual genuinely enhances understanding. Typically 2–3 slides per deck should have images." if include_images else "CRITICAL: Image generation is DISABLED for this session. You MUST set the 'image_query' field to null for ALL slides without exception." }
 
-OUTPUT FORMAT: Return ONLY a valid raw JSON array. No markdown, no code fences.
+OUTPUT FORMAT: Return ONLY a valid raw JSON array. Start immediately with '[' and end immediately with ']'. No markdown, no code fences.
 
 Each object MUST have exactly these fields:
 - "title": specific descriptive slide title
-- "content": list of exactly 5 bullets (20-45 words each)
+- "content": list of exactly 5 bullets ({word_range} each)
 - "code": a code snippet string or null
 - "language": programming language name or null
 - "notes": { "2-4 sentences for the presenter" if include_notes else "empty string" }
@@ -180,13 +192,14 @@ def _parse_and_validate(raw: str) -> list:
             # Handle truncation (missing closing bracket)
             raw = raw[start_idx:]
     
+    # Pre-cleaning: Remove common LLM artifacts that break JSON
+    raw = raw.replace('```json', '').replace('```', '')
+    raw = re.sub(r'^[^{}\[\]]*', '', raw) # Strip leading text
+    
     # 2. Pre-processing: Escape literal newlines within JSON strings
-    # This specifically fixes the "Expecting value" error caused by raw newlines in strings
     def _escape_interior_newlines(match):
         return match.group(0).replace('\n', '\\n').replace('\r', '')
     
-    # Robustly find double-quoted strings and escape their newlines
-    # Using a regex that handles escaped quotes: ((?:[^"\\]|\\.)*)
     raw = re.sub(r'"((?:[^"\\]|\\.)*)"', _escape_interior_newlines, raw, flags=re.DOTALL)
     
     raw = raw.strip()
@@ -199,6 +212,7 @@ def _parse_and_validate(raw: str) -> list:
     except Exception:
         # 3. Emergency Syntax Cleaning (Trailing commas)
         try:
+            # Remove trailing comma before closing array/object: [...,] -> [...] or {...,} -> {...}
             repaired = re.sub(r',\s*([\]}])', r'\1', raw)
             return json.loads(repaired)
         except Exception:
@@ -215,10 +229,17 @@ def _parse_and_validate(raw: str) -> list:
                 except:
                     pass
             
+            # Final Emergency Debugging: Dump to file for inspection
+            try:
+                with open("failed_response.txt", "w", encoding="utf-8") as f:
+                    f.write("=== RAW ===\n")
+                    f.write(raw)
+                    f.write("\n\n=== REPAIRED ===\n")
+                    f.write(repaired if 'repaired' in locals() else "N/A")
+            except:
+                pass
+
             logger.error(f"Failed to parse LLM JSON after all recovery attempts.")
-            # Final Debugging Payload: Log boundaries to terminal for inspection
-            logger.debug(f"START-CAP (First 500): {raw[:500]}")
-            logger.debug(f"END-CAP (Last 500): {raw[-500:]}")
             raise
 
 
@@ -260,8 +281,9 @@ def _call_groq(title: str, topics: list, num_slides: int = 5, context: str = "",
     completion = client.chat.completions.create(
         messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
         model=GROQ_MODEL,
-        temperature=tone_cfg["temperature"],
+        temperature=tone_cfg["temperature"] if num_slides <= 10 else min(0.2, tone_cfg["temperature"]),
         max_tokens=8192,
+        top_p=0.9,
     )
     data = _parse_and_validate(completion.choices[0].message.content.strip())
     return _validate_data(data)
@@ -281,8 +303,9 @@ def _call_nvidia(title: str, topics: list, num_slides: int = 5, context: str = "
     completion = nvidia_client.chat.completions.create(
         messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
         model=NVIDIA_MODEL,
-        temperature=min(tone_cfg["temperature"], 0.35),
+        temperature=min(tone_cfg["temperature"], 0.35) if num_slides <= 10 else 0.15,
         max_tokens=8192,
+        top_p=0.9,
     )
     data = _parse_and_validate(completion.choices[0].message.content.strip())
     return _validate_data(data)
@@ -298,32 +321,98 @@ async def generate_slide_content(
     include_notes: bool = True,
     include_images: bool = True,
 ) -> tuple[list, str, str]:
-    """Async entry point for slide generation with automatic provider routing."""
-    use_nvidia = False
+    """Async entry point for slide generation with automatic provider routing & Load Balancing."""
+    global _auto_route_counter
+    
+    # Determine the rotation order for this specific request
     if provider == "nvidia":
-        use_nvidia = True
+        order = [("nvidia", _call_nvidia, NVIDIA_MODEL), ("groq", _call_groq, GROQ_MODEL)]
     elif provider == "groq":
-        use_nvidia = False
+        order = [("groq", _call_groq, GROQ_MODEL), ("nvidia", _call_nvidia, NVIDIA_MODEL)]
     else:
-        use_nvidia = nvidia_client is not None and is_technical_topic(title, topics)
+        # Load balanced routing
+        if _auto_route_counter % 2 == 0:
+            order = [("nvidia", _call_nvidia, NVIDIA_MODEL), ("groq", _call_groq, GROQ_MODEL)]
+        else:
+            order = [("groq", _call_groq, GROQ_MODEL), ("nvidia", _call_nvidia, NVIDIA_MODEL)]
+        _auto_route_counter += 1
 
-    if use_nvidia:
+    last_error = None
+    for prov_id, func, model_name in order:
+        if prov_id == "nvidia" and not nvidia_client:
+            continue
+            
         try:
-            logger.info(f"Routing to NVIDIA NIM ({NVIDIA_MODEL})")
-            # Phase 2: Wrap primary provider in a sub-timeout to allow fallback time
+            logger.info(f"Attempting generation with {prov_id.upper()} ({model_name}) [Counter: {_auto_route_counter}]")
+            # Set shorter timeout for first attempt to allow fallback if slow
+            timeout = 160.0 if prov_id == "nvidia" else 100.0
+            
             slides = await asyncio.wait_for(
-                asyncio.to_thread(_call_nvidia, title, topics, num_slides, context, tone, include_notes=include_notes, include_images=include_images),
-                timeout=120.0
+                asyncio.to_thread(func, title, topics, num_slides, context, tone, include_notes=include_notes, include_images=include_images),
+                timeout=timeout
             )
-        except (asyncio.TimeoutError, Exception) as e:
-            logger.warning(f"NVIDIA NIM failed or timed out ({e}). Falling back to Groq.")
-            logger.info(f"Using Groq ({GROQ_MODEL})")
-            slides = await asyncio.wait_for(
-                asyncio.to_thread(_call_groq, title, topics, num_slides, context, tone, include_notes=include_notes, include_images=include_images),
-                timeout=70.0
-            )
-        return slides, NVIDIA_MODEL, "nvidia_nim"
+            return slides, model_name, prov_id
+        except Exception as e:
+            last_error = e
+            logger.warning(f"{prov_id.upper()} failed or timed out ({e}). Trying next provider...")
+            continue
 
-    logger.info(f"Using Groq ({GROQ_MODEL})")
-    slides = await asyncio.to_thread(_call_groq, title, topics, num_slides, context, tone, include_notes=include_notes, include_images=include_images)
-    return slides, GROQ_MODEL, "groq"
+    if last_error:
+        raise last_error
+    raise RuntimeError("No LLM providers available for generation.")
+
+
+def _build_notes_prompt(subject: str, unit: str, topics: list, context: str, pages: int, depth: str, format: str) -> tuple[str, str]:
+    depth_instructions = {
+        "summary": "Provide a high-level overview. Keep explanations concise and focus on key takeaways.",
+        "standard": "Provide a balanced, comprehensive review of the topics with definitions and examples.",
+        "deep": "Provide extreme detail. Include theoretical background, edge cases, formulas, code snippets (if technical), and historical context where applicable."
+    }
+    format_instructions = {
+        "prose": "Write in flowing paragraphs with clear headings and subheadings.",
+        "bullets": "Use heavily structured bullet points, nested lists, and bold terms for easy skimming.",
+        "qa": "Structure the entire document as a series of Socratic Questions and detailed Answers."
+    }
+
+    system_prompt = f"""You are a master academic writer and subject-matter expert.
+Your task is to write comprehensive, accurate, and highly structured Lecture Notes.
+Do NOT output JSON. Output beautifully formatted Markdown.
+
+DEPTH & RIGOR: {depth_instructions.get(depth.lower(), depth_instructions["standard"])}
+FORMATTING STYLE: {format_instructions.get(format.lower(), format_instructions["prose"])}
+
+The content must be roughly equivalent to what would be found in a {pages}-page academic handout.
+Use Markdown headers (#, ##, ###), bold text, tables (if useful), and code blocks (if the subject is technical).
+Start immediately with the title as an H1."""
+
+    user_prompt = f"""Write Lecture Notes for:
+Subject: {subject}
+Unit: {unit}
+Topics to cover: {', '.join(topics)}
+Additional Context / Specific instructions: {context}
+
+Generate the notes now in Markdown."""
+    
+    return system_prompt, user_prompt
+
+
+def _call_groq_notes(subject: str, unit: str, topics: list, context: str, pages: int, depth: str, format: str) -> str:
+    client = Groq(api_key=settings.groq_api_key)
+    system_prompt, user_prompt = _build_notes_prompt(subject, unit, topics, context, pages, depth, format)
+
+    completion = client.chat.completions.create(
+        messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+        model=GROQ_MODEL,
+        temperature=0.3,
+        max_tokens=8192,
+    )
+    return completion.choices[0].message.content.strip()
+
+
+async def generate_lecture_notes(subject: str, unit: str, topics: list, context: str, pages: int, depth: str, format: str, provider: str | None = None) -> tuple[str, str, str]:
+    """Generates markdown lecture notes."""
+    # For simplicity, currently only routing to Groq for notes
+    logger.info(f"Generating Lecture Notes with Groq ({GROQ_MODEL})")
+    content = await asyncio.to_thread(_call_groq_notes, subject, unit, topics, context, pages, depth, format)
+    return content, GROQ_MODEL, "groq"
+

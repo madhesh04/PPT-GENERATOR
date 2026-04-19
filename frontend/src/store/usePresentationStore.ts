@@ -37,7 +37,6 @@ const DEFAULT_GEN_STEPS: GenStep[] = [
 ];
 
 interface PresentationState {
-  // Config
   title: string;
   topics: string[];
   context: string;
@@ -46,6 +45,15 @@ interface PresentationState {
   numSlides: number;
   forceProvider: string | null;
   includeImages: boolean;
+
+  track: string;
+  client: string;
+  module: string;
+  course: string;
+  targetAudience: string;
+
+  // Notes
+  notesContent: string;
 
   // Pipeline
   loading: boolean;
@@ -63,6 +71,13 @@ interface PresentationState {
   setNumSlides: (num: number) => void;
   setForceProvider: (prov: string | null) => void;
   setIncludeImages: (include: boolean) => void;
+  
+  setTrack: (track: string) => void;
+  setClient: (client: string) => void;
+  setModule: (mod: string) => void;
+  setCourse: (course: string) => void;
+  setTargetAudience: (aud: string) => void;
+  setNotesContent: (content: string) => void;
   setResult: (res: GenerateResponse | null) => void;
   setSlides: (slides: SlideData[]) => void;
   setErrorMsg: (msg: string) => void;
@@ -70,8 +85,12 @@ interface PresentationState {
   setGenSteps: (steps: GenStep[]) => void;
   
   resetCreation: () => void;
-  // token parameter removed — apiClient interceptor handles Authorization header automatically
   generatePresentation: (onSuccess: () => void) => Promise<void>;
+  generateLectureNotes: (payload: any, onSuccess: () => void) => Promise<void>;
+  
+  // New actions for slide management
+  updateSlide: (index: number, updated: Partial<SlideData>) => void;
+  regenerateSlide: (index: number) => Promise<void>;
 }
 
 export const usePresentationStore = create<PresentationState>((set, get) => ({
@@ -83,6 +102,14 @@ export const usePresentationStore = create<PresentationState>((set, get) => ({
   numSlides: 5,
   forceProvider: null,
   includeImages: true,
+  
+  track: '',
+  client: '',
+  module: '',
+  course: '',
+  targetAudience: '',
+
+  notesContent: '',
   
   loading: false,
   errorMsg: '',
@@ -98,6 +125,12 @@ export const usePresentationStore = create<PresentationState>((set, get) => ({
   setNumSlides: (numSlides) => set({ numSlides }),
   setForceProvider: (forceProvider) => set({ forceProvider }),
   setIncludeImages: (includeImages) => set({ includeImages }),
+  setTrack: (track) => set({ track }),
+  setClient: (client) => set({ client }),
+  setModule: (module) => set({ module }),
+  setCourse: (course) => set({ course }),
+  setTargetAudience: (targetAudience) => set({ targetAudience }),
+  setNotesContent: (notesContent) => set({ notesContent }),
   setResult: (result) => set({ result }),
   setSlides: (slides) => set({ slides }),
   setErrorMsg: (errorMsg) => set({ errorMsg }),
@@ -113,6 +146,12 @@ export const usePresentationStore = create<PresentationState>((set, get) => ({
     numSlides: 5,
     forceProvider: null,
     includeImages: true,
+    track: '',
+    client: '',
+    module: '',
+    course: '',
+    targetAudience: '',
+    notesContent: '',
     result: null,
     slides: [],
     errorMsg: '',
@@ -121,7 +160,7 @@ export const usePresentationStore = create<PresentationState>((set, get) => ({
   }),
 
   generatePresentation: async (onSuccess) => {
-    const { title, topics, numSlides, context, tone, theme, forceProvider, includeImages } = get();
+    const { title, topics, numSlides, context, tone, theme, forceProvider, includeImages, track, client, module, course, targetAudience } = get();
     
     if (!title.trim()) { set({ errorMsg: 'ERROR_001 — Presentation title is required' }); return; }
     if (!topics.length) { set({ errorMsg: 'ERROR_002 — At least one topic is required' }); return; }
@@ -155,11 +194,17 @@ export const usePresentationStore = create<PresentationState>((set, get) => ({
         }
 
         if (i === 1) {
-          const params = { 
+          const params = {
             title, topics, num_slides: numSlides, 
-            context, tone, theme, 
+            context: context + (targetAudience ? `\\nTarget Audience: ${targetAudience}` : ''),
+            tone, theme, 
             force_provider: forceProvider,
-            include_images: includeImages
+            include_images: includeImages,
+            type: "ppt",
+            track: track || null,
+            client: client || null,
+            module: module || null,
+            course: course || null
           };
           // apiClient interceptor automatically attaches Authorization: Bearer <token>
           const response = await apiClient.post('/generate', params);
@@ -174,10 +219,88 @@ export const usePresentationStore = create<PresentationState>((set, get) => ({
         }));
       }
       
+      set({ loading: false });
       onSuccess();
     } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Generation failed';
+      let msg = 'Generation failed';
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (Array.isArray(detail)) {
+          msg = detail.map((d: any) => d.msg || JSON.stringify(d)).join(', ');
+        } else {
+          msg = typeof detail === 'string' ? detail : JSON.stringify(detail);
+        }
+      }
       set({ errorMsg: msg, loading: false });
+    }
+  },
+
+  generateLectureNotes: async (payload, onSuccess) => {
+    set({ errorMsg: '', loading: true, notesContent: '' });
+    
+    // Notes pipeline has only 2 steps: Analyzing & LLM Creation
+    const steps: GenStep[] = [
+      { id: 1, label: 'ANALYZING_SYLLABUS', status: 'active', desc: 'Understanding unit and topics...' },
+      { id: 2, label: 'DRAFTING_NOTES', status: 'pending', desc: '' }
+    ];
+    set({ genSteps: steps });
+    
+    try {
+      await new Promise(r => setTimeout(r, 600));
+      set({ genSteps: [
+        { id: 1, label: 'ANALYZING_SYLLABUS', status: 'done', desc: 'Syllabus mapped.' },
+        { id: 2, label: 'DRAFTING_NOTES', status: 'active', desc: 'Writing comprehensive markdown...' }
+      ]});
+
+      const response = await apiClient.post('/generate-notes', payload);
+      
+      set({ genSteps: [
+        { id: 1, label: 'ANALYZING_SYLLABUS', status: 'done', desc: 'Syllabus mapped.' },
+        { id: 2, label: 'DRAFTING_NOTES', status: 'done', desc: 'Document ready.' }
+      ]});
+      
+      await new Promise(r => setTimeout(r, 400));
+      set({ notesContent: response.data.content, loading: false });
+      onSuccess();
+    } catch (err: any) {
+      let msg = 'Failed to generate lecture notes';
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (Array.isArray(detail)) {
+          msg = detail.map((d: any) => d.msg || JSON.stringify(d)).join(', ');
+        } else {
+          msg = typeof detail === 'string' ? detail : JSON.stringify(detail);
+        }
+      }
+      set({ errorMsg: msg, loading: false });
+    }
+  },
+
+  updateSlide: (index, updated) => {
+    const { slides } = get();
+    const newSlides = [...slides];
+    newSlides[index] = { ...newSlides[index], ...updated };
+    set({ slides: newSlides });
+  },
+
+  regenerateSlide: async (index) => {
+    const { slides, title, context, tone } = get();
+    if (!slides[index]) return;
+
+    set({ loading: true, errorMsg: '' });
+    try {
+      const response = await apiClient.post('/regenerate-slide', {
+        title: slides[index].title,
+        context,
+        tone,
+        existing_titles: slides.map(s => s.title)
+      });
+      
+      const newSlides = [...slides];
+      newSlides[index] = response.data;
+      set({ slides: newSlides, loading: false });
+    } catch (err: any) {
+      set({ errorMsg: 'Failed to regenerate slide', loading: false });
     }
   }
 }));

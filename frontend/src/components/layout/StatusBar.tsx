@@ -1,25 +1,36 @@
-import { useAppStore } from '../../store/useAppStore';
+import { useEffect, useState } from 'react';
 
 export default function StatusBar() {
-  const { timeStr } = useAppStore();
-  
+  const [ist, setIst] = useState('');
+
+  useEffect(() => {
+    function tick() {
+      const n = new Date();
+      const p = (v: number) => String(v).padStart(2, '0');
+      // IST = UTC + 5:30
+      const utc = n.getTime() + n.getTimezoneOffset() * 60000;
+      const istDate = new Date(utc + 5.5 * 3600000);
+      setIst(`${p(istDate.getHours())}:${p(istDate.getMinutes())}:${p(istDate.getSeconds())} IST`);
+    }
+    tick();
+    const iv = setInterval(tick, 1000);
+    return () => clearInterval(iv);
+  }, []);
+
   return (
-    <footer className="fixed bottom-0 left-0 right-0 h-[28px] bg-[#0D0F17] border-t border-white/[0.06] flex items-center justify-between px-5 z-50">
-      <div className="flex items-center gap-5">
-        <span className="flex items-center gap-1.5 font-mono font-medium text-[9px] text-[#475569] tracking-wider">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#4ADE80] animate-pulse"></span>
-          SERVER: ONLINE
-        </span>
-        <span className="font-mono font-medium text-[9px] text-[#475569] tracking-wider hidden sm:block">
-          TLS 1.3 · ENCRYPTED
-        </span>
+    <div className="statusbar">
+      <div className="status-item">
+        <div className="s-dot green" />
+        AI Model Online
       </div>
-      <div className="flex items-center gap-5">
-        <span className="font-mono font-medium text-[9px] text-[#475569] tracking-wider">{timeStr}</span>
-        <span className="font-mono font-medium text-[9px] text-[#475569] tracking-wider border-l border-white/[0.06] pl-4">
-          v2.4.1 · SWIFT OPS
-        </span>
+      <div className="status-item">
+        <div className="s-dot blue" />
+        Timesheet Linked
       </div>
-    </footer>
+      <div className="status-item" style={{ marginLeft: 'auto' }}>
+        {ist}
+      </div>
+      <div className="status-item">v3.0.0 · Swift Ops</div>
+    </div>
   );
 }
