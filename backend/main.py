@@ -25,7 +25,8 @@ from core.config import settings
 from db.client import (
     connect_db, close_db,
     connect_timesheet_db, close_timesheet_db,
-    get_presentations_collection, get_settings_collection
+    get_presentations_collection, get_settings_collection,
+    get_db
 )
 from routers import auth, generate, admin
 
@@ -37,7 +38,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ── Rate limiter ───────────────────────────────────────────────────────────────
-limiter = Limiter(key_func=get_remote_address, default_limits=["10/minute"])
+def get_real_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return get_remote_address(request)
+
+limiter = Limiter(key_func=get_real_ip, default_limits=["10/minute"])
 
 
 @asynccontextmanager
@@ -100,8 +107,14 @@ app.include_router(admin.router)
 
 @app.get("/health")
 async def health():
+    try:
+        await get_db().command("ping")
+        db_status = "ok"
+    except Exception:
+        db_status = "error"
     return {
-        "status": "ok",
+        "status": "ok" if db_status == "ok" else "degraded",
+        "db": db_status,
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 

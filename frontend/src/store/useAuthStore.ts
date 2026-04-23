@@ -20,7 +20,6 @@ interface User {
 
 interface AuthState {
   user: User | null;
-  token: string | null;
   isAuthenticated: boolean;
   loading: boolean;
   login: (token: string, user: User) => void;
@@ -30,20 +29,22 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  token: null,
   isAuthenticated: false,
   loading: true,
 
   initialize: () => {
     const savedToken = localStorage.getItem('auth_token');
-    const savedUser = localStorage.getItem('auth_user');
-    if (savedToken && savedUser) {
+    if (savedToken) {
       try {
-        set({ 
-          token: savedToken, 
-          user: JSON.parse(savedUser), 
-          isAuthenticated: true 
-        });
+        const payload = JSON.parse(atob(savedToken.split('.')[1]));
+        const isExpired = payload.exp && payload.exp * 1000 < Date.now();
+        if (!isExpired) {
+          const savedUser = localStorage.getItem('auth_user');
+          set({ user: JSON.parse(savedUser!), isAuthenticated: true });
+        } else {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('auth_user');
+        }
       } catch (err) {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
@@ -55,12 +56,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: (token, user) => {
     localStorage.setItem('auth_token', token);
     localStorage.setItem('auth_user', JSON.stringify(user));
-    set({ token, user, isAuthenticated: true });
+    set({ user, isAuthenticated: true });
   },
 
   logout: () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
-    set({ token: null, user: null, isAuthenticated: false });
+    set({ user: null, isAuthenticated: false });
   },
 }));

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Annotated, Optional
+from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -114,7 +115,7 @@ async def admin_get_users(
     counts_cursor = presentations_coll.aggregate([
         {"$group": {"_id": "$user_id", "count": {"$sum": 1}}}
     ])
-    ppt_counts = {str(doc["_id"]): doc["count"] for doc in await counts_cursor.to_list(None)}
+    ppt_counts = {str(doc["_id"]): doc["count"] for doc in await counts_cursor.to_list(length=10000)}
 
     # Map Timesheet fields → Skynet's expected response format
     serialized = []
@@ -222,16 +223,21 @@ async def admin_get_settings(admin_user: Annotated[dict, Depends(require_admin)]
         "default_model": config.get("default_model", "groq")
     }
 
+class GlobalSettingsUpdate(BaseModel):
+    image_generation_enabled: Optional[bool] = None
+    speaker_notes_enabled: Optional[bool] = None
+    default_model: Optional[str] = None
+
 @router.patch("/settings")
-async def admin_update_settings(payload: dict, admin_user: Annotated[dict, Depends(require_admin)]):
+async def admin_update_settings(payload: GlobalSettingsUpdate, admin_user: Annotated[dict, Depends(require_admin)]):
     settings_coll = get_settings_collection()
     update_data: dict = {}
-    if "image_generation_enabled" in payload:
-        update_data["image_generation_enabled"] = bool(payload["image_generation_enabled"])
-    if "speaker_notes_enabled" in payload:
-        update_data["speaker_notes_enabled"] = bool(payload["speaker_notes_enabled"])
-    if "default_model" in payload:
-        update_data["default_model"] = str(payload["default_model"])
+    if payload.image_generation_enabled is not None:
+        update_data["image_generation_enabled"] = payload.image_generation_enabled
+    if payload.speaker_notes_enabled is not None:
+        update_data["speaker_notes_enabled"] = payload.speaker_notes_enabled
+    if payload.default_model is not None:
+        update_data["default_model"] = payload.default_model
 
     if not update_data:
         raise HTTPException(status_code=400, detail="No valid settings provided")

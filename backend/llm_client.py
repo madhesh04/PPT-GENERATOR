@@ -21,6 +21,9 @@ nvidia_client = None
 if settings.nvidia_api_key and settings.nvidia_api_key.strip() != "your_nvidia_api_key_here":
     nvidia_client = OpenAI(base_url=NVIDIA_BASE_URL, api_key=settings.nvidia_api_key)
 
+# Groq client setup
+groq_client = Groq(api_key=settings.groq_api_key)
+
 JSON_REPAIR_LIMIT = 20 # Max brackets to try adding
 _auto_route_counter = 0 # Simple round-robin counter for load balancing
 
@@ -216,15 +219,8 @@ def _parse_and_validate(raw: str) -> list:
                 except:
                     pass
             
-            # Final Emergency Debugging: Dump to file for inspection
-            try:
-                with open("failed_response.txt", "w", encoding="utf-8") as f:
-                    f.write("=== RAW ===\n")
-                    f.write(raw)
-                    f.write("\n\n=== REPAIRED ===\n")
-                    f.write(repaired)
-            except:
-                pass
+            # Final Emergency Debugging
+            logger.error("LLM JSON parse failure | raw_length=%d raw_preview=%s", len(raw), raw[:200])
 
             logger.error(f"Failed to parse LLM JSON after all recovery attempts.")
             raise
@@ -257,7 +253,6 @@ def _validate_data(data: list) -> list:
 
 def _call_groq(title: str, topics: list, num_slides: int = 5, context: str = "", tone: str = "professional", include_notes: bool = True, include_images: bool = True) -> list:
     """Synchronous Groq call with retry on JSON failure."""
-    client = Groq(api_key=settings.groq_api_key)
     
     tone_cfg = TONE_CONFIG.get(tone.lower(), TONE_CONFIG["professional"])
     system_prompt, user_prompt = _build_prompt(
@@ -265,7 +260,7 @@ def _call_groq(title: str, topics: list, num_slides: int = 5, context: str = "",
         include_notes=include_notes, include_images=include_images
     )
 
-    completion = client.chat.completions.create(
+    completion = groq_client.chat.completions.create(
         messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
         model=GROQ_MODEL,
         temperature=float(tone_cfg["temperature"] if num_slides <= 10 else min(0.2, tone_cfg["temperature"])),
@@ -386,10 +381,9 @@ Generate the notes now in Markdown."""
 
 
 def _call_groq_notes(subject: str, unit: str, topics: list, context: str, pages: int, depth: str, format: str) -> str:
-    client = Groq(api_key=settings.groq_api_key)
     system_prompt, user_prompt = _build_notes_prompt(subject, unit, topics, context, pages, depth, format)
 
-    completion = client.chat.completions.create(
+    completion = groq_client.chat.completions.create(
         messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
         model=GROQ_MODEL,
         temperature=0.3,

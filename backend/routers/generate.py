@@ -66,11 +66,18 @@ async def generate_notes(request: Request, body: NotesRequest, current_user: Ann
     # Simple hash for content
     content_hash = hashlib.sha256(f"notes-{body.subject}-{body.unit}-{body.format}-{body.depth}".encode()).hexdigest()
     
+    import asyncio
     # Attempt generation
     try:
-        content, model_used, provider = await generate_lecture_notes(
-            body.subject, body.unit, body.topics, body.context, body.pages, body.depth, body.format, body.force_provider
+        content, model_used, provider = await asyncio.wait_for(
+            generate_lecture_notes(
+                body.subject, body.unit, body.topics, body.context, body.pages, body.depth, body.format, body.force_provider
+            ),
+            timeout=180.0
         )
+    except asyncio.TimeoutError:
+        logger.error("Error generating notes: timeout")
+        raise HTTPException(status_code=504, detail="Failed to generate lecture notes: timeout.")
     except Exception as e:
         logger.error(f"Error generating notes: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate lecture notes.")
