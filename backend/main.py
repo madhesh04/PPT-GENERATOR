@@ -29,6 +29,7 @@ from db.client import (
     get_db, get_audit_logs_collection, get_bank_collection
 )
 from routers import auth, generate, admin, bank as bank_router
+from mcp_server import mcp_app
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -114,6 +115,9 @@ app.include_router(auth.router)
 app.include_router(generate.router)
 app.include_router(admin.router)
 app.include_router(bank_router.router)
+
+# ── MCP Server (streamable-http, no auth — internal use only) ──────────────────
+app.mount("/mcp", mcp_app.get_asgi_app())
 
 
 @app.get("/health")

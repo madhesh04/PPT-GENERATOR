@@ -19,8 +19,10 @@ class Settings(BaseSettings):
     # LLM
     groq_api_key: str
     nvidia_api_key: str = ""
+    anthropic_api_key: str = ""
     groq_model: str = "llama-3.3-70b-versatile"
     nvidia_model: str = "meta/llama-3.1-405b-instruct"
+    claude_model: str = "claude-sonnet-4-6"
     
     # Image APIs
     unsplash_access_key: str = ""

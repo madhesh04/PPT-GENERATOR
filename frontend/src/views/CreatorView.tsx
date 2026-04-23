@@ -38,6 +38,7 @@ const COURSES = ['Bootcamp', 'Workshop', 'Certification', 'Masterclass', 'Sprint
 
 const ENGINES = [
   { value: 'auto', label: 'AUTO_ROUTE', desc: 'Smart provider selection', iconClass: 'blue' },
+  { value: 'claude', label: 'CLAUDE_SONNET', desc: 'Anthropic claude-sonnet-4-6', iconClass: 'purple' },
   { value: 'nvidia', label: 'NVIDIA_NIM', desc: 'High-throughput inference', iconClass: 'green' },
   { value: 'groq', label: 'GROQ_INFER', desc: 'Ultra-fast generation', iconClass: 'yellow' },
 ];
@@ -604,9 +605,9 @@ export default function CreatorView() {
                   value={forceProvider ?? 'auto'}
                   onChange={(e) => setForceProvider(e.target.value === 'auto' ? null : e.target.value)}
                 >
-                  <option value="auto">AUTO_ROUTE</option>
-                  <option value="nvidia">NVIDIA_NIM</option>
-                  <option value="groq">GROQ_INFER</option>
+                  {ENGINES.map(eng => (
+                    <option key={eng.value} value={eng.value}>{eng.label}</option>
+                  ))}
                 </select>
               </div>
 

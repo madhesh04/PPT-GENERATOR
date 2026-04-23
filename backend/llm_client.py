@@ -6,6 +6,7 @@ import logging
 import base64
 from groq import Groq
 from openai import OpenAI
+import anthropic
 from typing import Optional
 from core.config import settings
 
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 GROQ_MODEL = "llama-3.3-70b-versatile"
 NVIDIA_MODEL = "moonshotai/kimi-k2-instruct" # Kimi K2.5 or similar high-quality NIM
 NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
+CLAUDE_MODEL = settings.claude_model
 
 # NVIDIA client setup
 nvidia_client = None
@@ -23,6 +25,11 @@ if settings.nvidia_api_key and settings.nvidia_api_key.strip() != "your_nvidia_a
 
 # Groq client setup
 groq_client = Groq(api_key=settings.groq_api_key)
+
+# Claude client setup
+claude_client = None
+if settings.anthropic_api_key and settings.anthropic_api_key.strip():
+    claude_client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
 JSON_REPAIR_LIMIT = 20 # Max brackets to try adding
 _auto_route_counter = 0 # Simple round-robin counter for load balancing
@@ -279,7 +286,7 @@ def _call_nvidia(title: str, topics: list, num_slides: int = 5, context: str = "
 
     tone_cfg = TONE_CONFIG.get(tone.lower(), TONE_CONFIG["technical"])
     system_prompt, user_prompt = _build_prompt(
-        title, topics, num_slides, context, str(tone_cfg["instruction"]), 
+        title, topics, num_slides, context, str(tone_cfg["instruction"]),
         include_notes=include_notes, include_images=include_images
     )
 
@@ -291,6 +298,30 @@ def _call_nvidia(title: str, topics: list, num_slides: int = 5, context: str = "
         top_p=0.9,
     )
     content = completion.choices[0].message.content
+    data = _parse_and_validate(content.strip() if content else "")
+    return _validate_data(data)
+
+
+def _call_claude(title: str, topics: list, num_slides: int = 5, context: str = "", tone: str = "professional", include_notes: bool = True, include_images: bool = True) -> list:
+    """Synchronous Anthropic Claude call."""
+    if not claude_client:
+        raise RuntimeError("Anthropic Claude client is not configured. Set ANTHROPIC_API_KEY.")
+
+    tone_cfg = TONE_CONFIG.get(tone.lower(), TONE_CONFIG["professional"])
+    system_prompt, user_prompt = _build_prompt(
+        title, topics, num_slides, context, str(tone_cfg["instruction"]),
+        include_notes=include_notes, include_images=include_images
+    )
+
+    # Claude uses a top-level system param, not a system message in the messages list
+    message = claude_client.messages.create(
+        model=CLAUDE_MODEL,
+        max_tokens=8192,
+        temperature=float(tone_cfg["temperature"] if num_slides <= 10 else min(0.2, tone_cfg["temperature"])),
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_prompt}],
+    )
+    content = message.content[0].text if message.content else ""
     data = _parse_and_validate(content.strip() if content else "")
     return _validate_data(data)
 
@@ -309,7 +340,9 @@ async def generate_slide_content(
     global _auto_route_counter
     
     # Determine the rotation order for this specific request
-    if provider == "nvidia":
+    if provider == "claude":
+        order = [("claude", _call_claude, CLAUDE_MODEL), ("groq", _call_groq, GROQ_MODEL)]
+    elif provider == "nvidia":
         order = [("nvidia", _call_nvidia, NVIDIA_MODEL), ("groq", _call_groq, GROQ_MODEL)]
     elif provider == "groq":
         order = [("groq", _call_groq, GROQ_MODEL), ("nvidia", _call_nvidia, NVIDIA_MODEL)]
@@ -324,6 +357,9 @@ async def generate_slide_content(
     last_error = None
     for prov_id, func, model_name in order:
         if prov_id == "nvidia" and not nvidia_client:
+            continue
+        if prov_id == "claude" and not claude_client:
+            logger.warning("Provider 'claude' requested but ANTHROPIC_API_KEY is not configured. Skipping to next provider.")
             continue
             
         try:
