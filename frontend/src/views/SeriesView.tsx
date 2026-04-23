@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { presentationApi, type Presentation } from '../api/presentation';
 import { useDownload } from '../hooks/useDownload';
-import { Layers, Download, Calendar, User, Search, Filter, RefreshCw, ChevronDown } from 'lucide-react';
+import { Layers, Download, Calendar, Search, Filter, RefreshCw, ChevronDown } from 'lucide-react';
 import Badge from '../components/ui/Badge';
 
 const TRACKS = ['GenAI', 'ML / AI', 'Cloud Computing', 'Full Stack Dev', 'Cybersecurity', 'Data Analytics', 'DSA / CP'];

@@ -14,6 +14,7 @@ export interface Presentation {
   tone?: string;
   track?: string;
   type?: string;
+  username?: string;
 }
 
 export const presentationApi = {
