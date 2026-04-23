@@ -8,6 +8,7 @@ The frontend of **SkyNet PPT Generator** is a high-performance React application
 - **Vanish Design Language**: High-contrast UI with mechanical animations, glassmorphism, and hardware-accelerated effects.
 - **Role-Aware Dashboards**: Tailored experiences for `USER` and `ADMIN` roles, including analytical KPI tiles for administrators.
 - **Integrated Editor**: On-the-fly slide editing, regeneration of specific slides, and dynamic image swapping.
+- **Global Content Bank**: A real-time system-wide gallery with advanced filtering (topics, track, date) and universal download capabilities.
 
 ## 🛡️ Authentication & RBAC
 - **Shared Identity**: Authentication is delegated to the external Timesheet database to maintain a single source of truth for user accounts.

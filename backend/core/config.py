@@ -31,7 +31,6 @@ class Settings(BaseSettings):
     # frontend_url supports comma-separated values for multi-origin CORS
     # e.g. "https://app.example.com,https://staging.example.com"
     frontend_url: str = "http://localhost:5173"
-    ppt_ttl_seconds: int = 300
     ppt_font: str = "Calibri"
 
     model_config = SettingsConfigDict(

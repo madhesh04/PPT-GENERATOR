@@ -40,11 +40,11 @@ THEME_DATA = {
     },
     "dark": {
         "name": "Dark",
-        "main": (245, 83, 61),      # #F5533D
-        "accent": (255, 107, 53),   # #FF6B35
-        "text": (248, 250, 252),    # #F8FAFC
+        "main": (20, 184, 166),     # #14B8A6 — teal, distinct from neon orange
+        "accent": (6, 182, 212),    # #06B6D4 — cyan
+        "text": (248, 250, 252),    # #F8FAFC — near-white for readability
         "slate": (148, 163, 184),   # #94A3B8
-        "white": (15, 23, 42),      # #0F172A
+        "white": (15, 23, 42),      # #0F172A — used as bg in dark layouts
         "surface": (30, 41, 59)     # #1E293B
     },
     "light": {

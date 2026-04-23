@@ -1,10 +1,12 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import apiClient from '../api/apiClient';
+import { presentationApi } from '../api/presentation';
 import Badge from '../components/ui/Badge';
 import SearchableDropdown from '../components/ui/SearchableDropdown';
 import { useToast } from '../components/ui/ToastContainer';
 import { useDownload } from '../hooks/useDownload';
-import { RefreshCw, Download, Trash2, Archive, Search, FileDown } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore';
+import { RefreshCw, Download, Trash2, Archive, Search, FileDown, Edit2, Check, X } from 'lucide-react';
 
 /* Types */
 interface Presentation {
@@ -14,13 +16,15 @@ interface Presentation {
   theme?: string;
   num_slides?: number;
   created_at: string;
+  updated_at?: string;
+  last_edited_by?: string | null;
+  generated_by?: string;
+  user_id?: string;
   model_used?: string;
   track?: string;
   status?: string;
   download_token?: string;
 }
-
-
 
 /* Helpers */
 function formatTs(ts: string): string {
@@ -49,6 +53,8 @@ const TYPE_OPTS = [
 export default function HistoryView() {
   const { handleDownload: downloadPpt } = useDownload();
   const { showToast } = useToast();
+  const { user } = useAuthStore();
+  const [scope, setScope] = useState<'mine' | 'all'>('mine');
   const [presentations, setPresentations] = useState<Presentation[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -56,15 +62,25 @@ export default function HistoryView() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
+
+  // Inline edit state
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editTrack, setEditTrack] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+
   const [confirmConfig, setConfirmConfig] = useState<{
     show: boolean;
     id: string | null;
   }>({ show: false, id: null });
 
-  const fetchHistory = async (showLoading = true) => {
+  const isAdmin = user?.role?.toUpperCase() === 'ADMIN' || user?.role?.toUpperCase() === 'MASTER';
+
+  const fetchHistory = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const r = await apiClient.get('/presentations/me?limit=500');
+      const endpoint = scope === 'mine' ? '/presentations/me?limit=500' : '/presentations/all?limit=500';
+      const r = await apiClient.get(endpoint);
       const list = r.data?.presentations ?? [];
       const standardized = list.map((p: any) => ({
         ...p,
@@ -76,15 +92,18 @@ export default function HistoryView() {
     } finally {
       if (showLoading) setLoading(false);
     }
-  };
+  }, [scope]);
 
   useEffect(() => {
     fetchHistory();
+    setPage(1);
+  }, [fetchHistory]);
 
+  useEffect(() => {
     const onFocus = () => fetchHistory(false);
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
-  }, []);
+  }, [fetchHistory]);
 
   /* Filtered + paginated */
   const filtered = useMemo(() => {
@@ -104,8 +123,45 @@ export default function HistoryView() {
   const pptsCount = presentations.filter((p) => p.type === 'ppt').length;
   const notesCount = presentations.filter((p) => p.type === 'notes').length;
 
-  /* Download */
+  /* Ownership check */
+  const canEdit = (p: Presentation) => {
+    if (isAdmin) return true;
+    return p.user_id === user?.email || scope === 'mine';
+  };
 
+  /* Inline edit */
+  const startEdit = (p: Presentation) => {
+    setEditId(p.id);
+    setEditTitle(p.title);
+    setEditTrack(p.track || '');
+  };
+
+  const cancelEdit = () => {
+    setEditId(null);
+    setEditTitle('');
+    setEditTrack('');
+  };
+
+  const saveEdit = async (id: string) => {
+    setEditSaving(true);
+    try {
+      await presentationApi.updatePresentation(id, {
+        title: editTitle || undefined,
+        track: editTrack || undefined,
+      });
+      setPresentations(prev => prev.map(p =>
+        p.id === id
+          ? { ...p, title: editTitle || p.title, track: editTrack, updated_at: new Date().toISOString(), last_edited_by: user?.username || '' }
+          : p
+      ));
+      showToast('Record updated', 'success');
+      cancelEdit();
+    } catch {
+      showToast('Update failed', 'error');
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   /* Delete */
   async function handleDelete(id: string) {
@@ -128,8 +184,12 @@ export default function HistoryView() {
   /* Export CSV */
   function exportCsv() {
     const rows = [
-      ['#', 'Title', 'Type', 'Track', 'Theme', 'Status', 'Generated At'],
-      ...filtered.map((p, i) => [String(i + 1), p.title, p.type, p.track || '', p.theme || '', 'Completed', p.created_at]),
+      ['#', 'Title', 'Type', 'Track', 'Theme', 'Creator', 'Status', 'Generated At', 'Updated At'],
+      ...filtered.map((p, i) => [
+        String(i + 1), p.title, p.type, p.track || '', p.theme || '',
+        p.generated_by || '', 'Completed', p.created_at,
+        p.updated_at && p.updated_at !== p.created_at ? p.updated_at : ''
+      ]),
     ];
     const csv = rows.map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -150,9 +210,9 @@ export default function HistoryView() {
           <div className="page-title">Generation Archive</div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button 
-            className="ghost-btn" 
-            onClick={() => fetchHistory(true)} 
+          <button
+            className="ghost-btn"
+            onClick={() => fetchHistory(true)}
             disabled={loading}
           >
             <RefreshCw size={16} className={loading ? 'spin' : ''} />
@@ -182,6 +242,24 @@ export default function HistoryView() {
 
       {/* Filters */}
       <div className="history-filters">
+        {/* Scope Toggle */}
+        <div style={{ display: 'flex', gap: '4px', marginRight: '4px' }}>
+          <button
+            className={`ghost-btn${scope === 'mine' ? ' active' : ''}`}
+            style={scope === 'mine' ? { background: 'rgba(3,37,189,0.1)', borderColor: 'rgba(3,37,189,0.3)', color: 'var(--accent-text)' } : {}}
+            onClick={() => { setScope('mine'); setPage(1); }}
+          >
+            My Content
+          </button>
+          <button
+            className={`ghost-btn${scope === 'all' ? ' active' : ''}`}
+            style={scope === 'all' ? { background: 'rgba(168,85,247,0.1)', borderColor: 'rgba(168,85,247,0.3)', color: 'var(--purple)' } : {}}
+            onClick={() => { setScope('all'); setPage(1); }}
+          >
+            All Content
+          </button>
+        </div>
+
         {/* Search */}
         <div className="search-wrap">
           <Search size={16} />
@@ -241,43 +319,110 @@ export default function HistoryView() {
               <th style={{ width: '40px' }}>#</th>
               <th>Title</th>
               <th>Type</th>
+              {scope === 'all' && <th>Creator</th>}
               <th>Track</th>
               <th>Theme</th>
               <th>Status</th>
               <th>Generated At</th>
-              <th style={{ width: '90px' }}>Actions</th>
+              <th style={{ width: '110px' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '12px' }}>Loading records…</td></tr>
+              <tr><td colSpan={scope === 'all' ? 9 : 8} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '12px' }}>Loading records…</td></tr>
             ) : paginated.length === 0 ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '12px' }}>
+              <tr><td colSpan={scope === 'all' ? 9 : 8} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '12px' }}>
                 {search || typeFilter !== 'all' || fromDate || toDate ? 'No records match the current filters.' : 'No records yet.'}
               </td></tr>
             ) : paginated.map((p, idx) => (
               <tr key={p.id}>
                 <td className="tbl-entry-id">{String((page - 1) * PAGE_SIZE + idx + 1).padStart(3, '0')}</td>
-                <td style={{ fontWeight: 600, maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</td>
+                <td style={{ maxWidth: '220px' }}>
+                  {editId === p.id ? (
+                    <input
+                      className="text-input"
+                      style={{ fontSize: '11px', padding: '4px 8px', width: '100%' }}
+                      value={editTitle}
+                      onChange={e => setEditTitle(e.target.value)}
+                      autoFocus
+                    />
+                  ) : (
+                    <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {p.title}
+                    </div>
+                  )}
+                </td>
                 <td>
                   <Badge variant={p.type === 'ppt' ? 'blue' : 'purple'} dot>
                     {p.type === 'ppt' ? 'PPT' : 'Notes'}
                   </Badge>
                 </td>
-                <td className="mono-cell">{p.track || '—'}</td>
+                {scope === 'all' && (
+                  <td className="mono-cell" style={{ fontSize: '11px', color: 'var(--yellow)' }}>
+                    {p.generated_by || '—'}
+                  </td>
+                )}
+                <td className="mono-cell">
+                  {editId === p.id ? (
+                    <input
+                      className="text-input"
+                      style={{ fontSize: '11px', padding: '4px 8px', width: '90px' }}
+                      value={editTrack}
+                      onChange={e => setEditTrack(e.target.value)}
+                      placeholder="Track…"
+                    />
+                  ) : (
+                    p.track || '—'
+                  )}
+                </td>
                 <td className="mono-cell">{p.theme || '—'}</td>
                 <td><Badge variant="green" dot>Completed</Badge></td>
-                <td className="mono-cell">{formatTs(p.created_at)}</td>
+                <td className="mono-cell">
+                  {formatTs(p.updated_at && p.updated_at !== p.created_at ? p.updated_at : p.created_at)}
+                  {p.last_edited_by && (
+                    <span style={{ fontSize: '9px', color: 'var(--text-muted)', marginLeft: '4px' }}>(edited)</span>
+                  )}
+                </td>
                 <td>
                   <div style={{ display: 'flex', gap: '4px' }}>
-                    {p.type !== 'notes' && (
-                      <button className="action-btn action-btn-dl" onClick={() => downloadPpt(p.id, `${p.title}.pptx`)} title="Download">
-                        <Download size={14} /> DL
-                      </button>
+                    {editId === p.id ? (
+                      <>
+                        <button
+                          className="action-btn"
+                          style={{ color: 'var(--green)', borderColor: 'rgba(34,211,165,0.3)' }}
+                          onClick={() => saveEdit(p.id)}
+                          disabled={editSaving}
+                          title="Save"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button
+                          className="action-btn"
+                          onClick={cancelEdit}
+                          title="Cancel"
+                        >
+                          <X size={14} />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {p.type !== 'notes' && (
+                          <button className="action-btn action-btn-dl" onClick={() => downloadPpt(p.id, `${p.title}.pptx`)} title="Download">
+                            <Download size={14} /> DL
+                          </button>
+                        )}
+                        {canEdit(p) && (
+                          <>
+                            <button className="action-btn" onClick={() => startEdit(p)} title="Edit" style={{ color: 'var(--text-secondary)' }}>
+                              <Edit2 size={14} />
+                            </button>
+                            <button className="action-btn action-btn-del" onClick={() => handleDelete(p.id)} title="Delete">
+                              <Trash2 size={14} /> DEL
+                            </button>
+                          </>
+                        )}
+                      </>
                     )}
-                    <button className="action-btn action-btn-del" onClick={() => handleDelete(p.id)} title="Delete">
-                      <Trash2 size={14} /> DEL
-                    </button>
                   </div>
                 </td>
               </tr>
@@ -287,6 +432,7 @@ export default function HistoryView() {
         <div className="table-footer">
           <span className="records-label">
             SHOWING {paginated.length} OF {filtered.length} RECORDS
+            {scope === 'all' && <span style={{ color: 'var(--purple)', marginLeft: '8px' }}>· ALL USERS</span>}
           </span>
           <div className="pagination">
             <button className="page-btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>‹</button>
@@ -304,13 +450,14 @@ export default function HistoryView() {
           </div>
         </div>
       </div>
+
       {/* Confirmation Modal */}
       {confirmConfig.show && (
         <div className="progress-overlay show">
           <div className="progress-modal" style={{ maxWidth: '400px', padding: '30px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-              <div style={{ 
-                width: '40px', height: '40px', borderRadius: '50%', 
+              <div style={{
+                width: '40px', height: '40px', borderRadius: '50%',
                 background: 'rgba(239,68,68,0.1)', color: 'var(--red)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 border: '1px solid rgba(239,68,68,0.2)'
@@ -323,16 +470,16 @@ export default function HistoryView() {
               </div>
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button 
-                className="primary-btn" 
-                style={{ flex: 1, justifyContent: 'center', background: 'var(--red)' }} 
+              <button
+                className="primary-btn"
+                style={{ flex: 1, justifyContent: 'center', background: 'var(--red)' }}
                 onClick={executeDelete}
               >
                 Confirm Delete
               </button>
-              <button 
-                className="ghost-btn" 
-                style={{ flex: 1, justifyContent: 'center' }} 
+              <button
+                className="ghost-btn"
+                style={{ flex: 1, justifyContent: 'center' }}
                 onClick={() => setConfirmConfig({ show: false, id: null })}
               >
                 Cancel

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Annotated, Optional
+from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -8,7 +9,8 @@ from core.dependencies import require_admin, get_current_user
 from db.client import (
     get_timesheet_users_collection,
     get_presentations_collection,
-    get_settings_collection
+    get_settings_collection,
+    get_audit_logs_collection,
 )
 from models.requests import UserLogin
 from core.security import get_password_hash
@@ -114,7 +116,7 @@ async def admin_get_users(
     counts_cursor = presentations_coll.aggregate([
         {"$group": {"_id": "$user_id", "count": {"$sum": 1}}}
     ])
-    ppt_counts = {str(doc["_id"]): doc["count"] for doc in await counts_cursor.to_list(None)}
+    ppt_counts = {str(doc["_id"]): doc["count"] for doc in await counts_cursor.to_list(length=10000)}
 
     # Map Timesheet fields → Skynet's expected response format
     serialized = []
@@ -222,16 +224,21 @@ async def admin_get_settings(admin_user: Annotated[dict, Depends(require_admin)]
         "default_model": config.get("default_model", "groq")
     }
 
+class GlobalSettingsUpdate(BaseModel):
+    image_generation_enabled: Optional[bool] = None
+    speaker_notes_enabled: Optional[bool] = None
+    default_model: Optional[str] = None
+
 @router.patch("/settings")
-async def admin_update_settings(payload: dict, admin_user: Annotated[dict, Depends(require_admin)]):
+async def admin_update_settings(payload: GlobalSettingsUpdate, admin_user: Annotated[dict, Depends(require_admin)]):
     settings_coll = get_settings_collection()
     update_data: dict = {}
-    if "image_generation_enabled" in payload:
-        update_data["image_generation_enabled"] = bool(payload["image_generation_enabled"])
-    if "speaker_notes_enabled" in payload:
-        update_data["speaker_notes_enabled"] = bool(payload["speaker_notes_enabled"])
-    if "default_model" in payload:
-        update_data["default_model"] = str(payload["default_model"])
+    if payload.image_generation_enabled is not None:
+        update_data["image_generation_enabled"] = payload.image_generation_enabled
+    if payload.speaker_notes_enabled is not None:
+        update_data["speaker_notes_enabled"] = payload.speaker_notes_enabled
+    if payload.default_model is not None:
+        update_data["default_model"] = payload.default_model
 
     if not update_data:
         raise HTTPException(status_code=400, detail="No valid settings provided")
@@ -242,6 +249,32 @@ async def admin_update_settings(payload: dict, admin_user: Annotated[dict, Depen
         upsert=True
     )
     return {"status": "success", "updated": update_data}
+
+@router.get("/audit-logs")
+async def admin_get_audit_logs(
+    admin_user: Annotated[dict, Depends(require_admin)],
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    action: Optional[str] = Query(None),
+    user_id: Optional[str] = Query(None)
+):
+    from core.converters import serialize_mongo_doc
+    coll = get_audit_logs_collection()
+    query: dict = {}
+    if action:
+        query["action"] = action.upper()
+    if user_id:
+        query["user_id"] = user_id
+
+    total = await coll.count_documents(query)
+    cursor = coll.find(query).sort("timestamp", -1).skip(skip).limit(limit)
+    logs = await cursor.to_list(length=limit)
+    return {
+        "logs": serialize_mongo_doc(logs),
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
 @router.get("/public/settings")
 async def public_get_settings(current_user: Annotated[dict, Depends(get_current_user)]):

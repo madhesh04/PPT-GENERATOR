@@ -11,6 +11,7 @@ SkyNet uses a **dual-database architecture** for maximum security and integratio
 - **Role-Based Access (RBAC)**: User roles (`admin`, `employee`, `teamlead`) are synced from the external Timesheet system.
 - **Global Control**: Admin portal provides full visibility into all generated presentations across the organization.
 - **System Toggles**: Admins can globally enable/disable features like AI Image Generation to manage API costs and usage.
+- **Global Content Bank**: Rebranded from 'Series', the Bank provides a real-time, system-wide gallery of all generated presentations with universal download access.
 
 ## 🧠 Intelligence & Generation Engine
 SkyNet leverages a multi-provider LLM pipeline for 99.9% availability:

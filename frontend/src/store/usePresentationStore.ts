@@ -196,7 +196,7 @@ export const usePresentationStore = create<PresentationState>((set, get) => ({
         if (i === 1) {
           const params = {
             title, topics, num_slides: numSlides, 
-            context: context + (targetAudience ? `\\nTarget Audience: ${targetAudience}` : ''),
+            context: context + (targetAudience ? `\nTarget Audience: ${targetAudience}` : ''),
             tone, theme, 
             force_provider: forceProvider,
             include_images: includeImages,

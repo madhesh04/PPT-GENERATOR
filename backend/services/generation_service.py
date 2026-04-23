@@ -7,10 +7,11 @@ from datetime import datetime, timezone
 from bson import ObjectId
 from fastapi import HTTPException
 from core.config import settings # type: ignore
-from db.client import get_presentations_collection, get_generation_logs_collection, get_settings_collection # type: ignore
-from llm_client import generate_slide_content # type: ignore
-from image_client import fetch_slide_image # type: ignore
-from core.utils import sanitize_filename # type: ignore
+from db.client import get_presentations_collection, get_generation_logs_collection, get_settings_collection  # type: ignore
+from llm_client import generate_slide_content  # type: ignore
+from image_client import fetch_slide_image  # type: ignore
+from core.utils import sanitize_filename  # type: ignore
+from services.audit_service import log_action  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -50,8 +51,12 @@ async def handle_cache_hit(cached: dict, content_hash: str, current_user: dict, 
         "content_hash": content_hash,
         "slides": cached["slides"],
         "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+        "last_edited_by": None,
         "theme": cached.get("theme", "neon"),
         "type": cached.get("type", "ppt"),
+        "tone": cached.get("tone", "professional"),
+        "num_slides_requested": len(cached.get("slides", [])),
         "track": cached.get("track", None),
         "client": cached.get("client", None),
         "module": cached.get("module", None),
@@ -67,6 +72,8 @@ async def handle_cache_hit(cached: dict, content_hash: str, current_user: dict, 
         "execution_time_ms": int((time.time() - start_time) * 1000),
         "timestamp": datetime.now(timezone.utc),
     })
+
+    await log_action("CREATE", current_user, str(res.inserted_id), new_doc["title"])
 
     return {
         "title": new_doc["title"],
@@ -136,6 +143,24 @@ async def run_generation_pipeline(body, current_user, start_time: float, content
         else:
             slide["image_base64"] = None
 
+    # ── QC Structural Validation ─────────────────────────────────────────────────
+    def validate_presentation_structure(slides: list, num_slides_requested: int) -> dict:
+        issues = []
+        if len(slides) < num_slides_requested:
+            issues.append(f"Expected {num_slides_requested} slides, got {len(slides)}")
+        for i, slide in enumerate(slides):
+            if not slide.get("title") or not slide["title"].strip():
+                issues.append(f"Slide {i+1}: missing title")
+            bullets = slide.get("content", [])
+            if len(bullets) < 3:
+                issues.append(f"Slide {i+1}: only {len(bullets)} bullets (minimum 3)")
+            if any(len(b.strip()) < 10 for b in bullets if b.strip()):
+                issues.append(f"Slide {i+1}: contains suspiciously short bullet points")
+        score = max(0, 100 - (len(issues) * 10))
+        return {"score": score, "issues": issues, "passed": score >= 70}
+
+    qc_result = validate_presentation_structure(presentation_data, body.num_slides)
+
     new_doc = {
         "user_id": user_id,
         "generated_by": current_user.get("username", "Unknown"),
@@ -145,12 +170,17 @@ async def run_generation_pipeline(body, current_user, start_time: float, content
         "content_hash": content_hash,
         "slides": presentation_data,
         "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+        "last_edited_by": None,
         "theme": body.theme,
         "type": body.type,
+        "tone": body.tone,
+        "num_slides_requested": body.num_slides,
         "track": body.track,
         "client": body.client,
         "module": body.module,
         "course": body.course,
+        "qc": qc_result,
     }
     res = await presentations_collection.insert_one(new_doc)
     
@@ -163,6 +193,8 @@ async def run_generation_pipeline(body, current_user, start_time: float, content
         "timestamp": datetime.now(timezone.utc)
     })
 
+    await log_action("CREATE", current_user, str(res.inserted_id), body.title)
+
     return {
         "title": body.title,
         "slides": presentation_data,
@@ -170,5 +202,6 @@ async def run_generation_pipeline(body, current_user, start_time: float, content
         "token": str(res.inserted_id),
         "filename": f"{sanitize_filename(body.title)}.pptx",
         "model_used": model_used,
-        "provider": provider
+        "provider": provider,
+        "qc": qc_result,
     }

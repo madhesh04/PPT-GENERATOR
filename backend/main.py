@@ -25,9 +25,10 @@ from core.config import settings
 from db.client import (
     connect_db, close_db,
     connect_timesheet_db, close_timesheet_db,
-    get_presentations_collection, get_settings_collection
+    get_presentations_collection, get_settings_collection,
+    get_db, get_audit_logs_collection, get_bank_collection
 )
-from routers import auth, generate, admin
+from routers import auth, generate, admin, bank as bank_router
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -37,7 +38,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ── Rate limiter ───────────────────────────────────────────────────────────────
-limiter = Limiter(key_func=get_remote_address, default_limits=["10/minute"])
+def get_real_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return get_remote_address(request)
+
+limiter = Limiter(key_func=get_real_ip, default_limits=["10/minute"])
 
 
 @asynccontextmanager
@@ -54,6 +61,16 @@ async def lifespan(app: FastAPI):
         # Indexes for Skynet app data only (do NOT touch external Timesheet DB)
         await presentations_coll.create_index("content_hash")
         await presentations_coll.create_index("user_id")
+        await presentations_coll.create_index([("title", "text")])  # full-text search
+
+        # Audit logs indexes
+        audit_coll = get_audit_logs_collection()
+        await audit_coll.create_index([("user_id", 1), ("timestamp", -1)])
+        await audit_coll.create_index("content_id")
+
+        # Bank indexes
+        bank_coll = get_bank_collection()
+        await bank_coll.create_index("created_by")
 
         # Seed default global config
         global_settings = await settings_coll.find_one({"id": "global_config"})
@@ -96,12 +113,19 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(generate.router)
 app.include_router(admin.router)
+app.include_router(bank_router.router)
 
 
 @app.get("/health")
 async def health():
+    try:
+        await get_db().command("ping")
+        db_status = "ok"
+    except Exception:
+        db_status = "error"
     return {
-        "status": "ok",
+        "status": "ok" if db_status == "ok" else "degraded",
+        "db": db_status,
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 

@@ -16,6 +16,7 @@ import HistoryView from './views/HistoryView';
 import SettingsView from './views/SettingsView';
 import AdminView from './views/AdminView';
 import AuthView from './views/AuthView';
+import SeriesView from './views/SeriesView';
 
 export default function App() {
   const { initialize, loading, isAuthenticated } = useAuthStore();
@@ -67,6 +68,7 @@ export default function App() {
           <Route path="/create" element={<CreatorView />} />
           <Route path="/history" element={<HistoryView />} />
           <Route path="/settings" element={<SettingsView />} />
+          <Route path="/bank" element={<SeriesView />} />
 
           {/* Admin Routes — guarded by role */}
           <Route element={<AdminRoute />}>

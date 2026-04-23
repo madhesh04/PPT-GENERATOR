@@ -46,57 +46,6 @@ const CLIENTS = ['Internal', 'NASSCOM', 'TCS', 'Wipro', 'Infosys', 'HCL', 'IBM',
 const MODULES = ['Module 1', 'Module 2', 'Module 3', 'Module 4', 'Module 5', 'Module 6', 'Custom'];
 const COURSES = ['Bootcamp', 'Workshop', 'Certification', 'Masterclass', 'Sprint', 'Custom'];
 
-const THEMES = [
-  {
-    value: 'neon',
-    label: 'Cyber Noir',
-    preview: {
-      bg: '#0d0f14', accent: '#0325BD', accent2: '#22d3a5',
-      title: '#d1d1f1', line: 'rgba(3,37,189,0.4)', line2: 'rgba(34,211,165,0.3)',
-    },
-  },
-  {
-    value: 'ocean',
-    label: 'Oceanic',
-    preview: {
-      bg: '#0a1628', accent: '#0ea5e9', accent2: '#22d3a5',
-      title: '#bae6fd', line: 'rgba(14,165,233,0.4)', line2: 'rgba(34,211,165,0.3)',
-    },
-  },
-  {
-    value: 'emerald',
-    label: 'Emerald',
-    preview: {
-      bg: '#062e1a', accent: '#22c55e', accent2: '#86efac',
-      title: '#86efac', line: 'rgba(34,197,94,0.4)', line2: 'rgba(134,239,172,0.3)',
-    },
-  },
-  {
-    value: 'royal',
-    label: 'Royal Sys',
-    preview: {
-      bg: '#1a0a3d', accent: '#7c3aed', accent2: '#a78bfa',
-      title: '#c4b5fd', line: 'rgba(124,58,237,0.4)', line2: 'rgba(167,139,250,0.3)',
-    },
-  },
-  {
-    value: 'light',
-    label: 'Neo Light',
-    preview: {
-      bg: '#f8fafc', accent: '#2563eb', accent2: '#0ea5e9',
-      title: '#1e40af', line: 'rgba(37,99,235,0.3)', line2: 'rgba(14,165,233,0.2)',
-    },
-  },
-  {
-    value: 'carbon',
-    label: 'Carbon',
-    preview: {
-      bg: '#111827', accent: '#6b7280', accent2: '#9ca3af',
-      title: '#d1d5db', line: 'rgba(107,114,128,0.4)', line2: 'rgba(156,163,175,0.3)',
-    },
-  },
-];
-
 const ENGINES = [
   { value: 'auto', label: 'AUTO_ROUTE', desc: 'Smart provider selection', iconClass: 'blue' },
   { value: 'nvidia', label: 'NVIDIA_NIM', desc: 'High-throughput inference', iconClass: 'green' },
@@ -107,36 +56,6 @@ const TRACK_OPTS = [{ value: '', label: 'Select Track' }, ...TRACKS.map((t) => (
 const CLIENT_OPTS = [{ value: '', label: 'Select Client' }, ...CLIENTS.map((c) => ({ value: c, label: c }))];
 const MODULE_OPTS = [{ value: '', label: 'Select Module' }, ...MODULES.map((m) => ({ value: m, label: m }))];
 const COURSE_OPTS = [{ value: '', label: 'Select Course' }, ...COURSES.map((c) => ({ value: c, label: c }))];
-
-/* ─── Theme Preview Mini Card ─── */
-function ThemePreviewCard({ theme, active, onClick }: { theme: typeof THEMES[0]; active: boolean; onClick: () => void }) {
-  const p = theme.preview;
-  return (
-    <div className={`theme-card${active ? ' active' : ''}`} onClick={onClick}>
-      <div className="theme-preview" style={{ background: p.bg }}>
-        <div className="tp-titlebar">
-          <div className="tp-dot" style={{ background: p.accent }} />
-          <div className="tp-dot" style={{ background: p.accent2, opacity: 0.7 }} />
-          <div className="tp-dot" style={{ background: p.title, opacity: 0.4 }} />
-        </div>
-        <div className="tp-title" style={{ background: p.title, opacity: 0.5, marginTop: '4px', width: '55%', height: '3px', borderRadius: '2px' }} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
-          <div className="tp-line" style={{ background: p.line, height: '2px', width: '90%', borderRadius: '1px' }} />
-          <div className="tp-line" style={{ background: p.line2, height: '2px', width: '70%', borderRadius: '1px' }} />
-          <div className="tp-line" style={{ background: p.line, height: '2px', width: '55%', borderRadius: '1px' }} />
-        </div>
-      </div>
-      <div className="theme-footer" style={{ background: p.bg, borderTop: `1px solid ${p.line}` }}>
-        <span className="theme-name-label" style={{ color: p.title }}>{theme.label}</span>
-        {active && (
-          <span className="theme-check-icon" style={{ display: 'block' }}>
-            <CheckIcon />
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
 
 /* ─── Engine Icon ─── */
 function EngineGlyph({ cls }: { cls: string }) {
@@ -163,7 +82,13 @@ export default function CreatorView() {
     regenerateSlide,
     result, slides,
   } = usePresentationStore();
-  const { globalImageGen, settingsLoaded } = useAppStore();
+  const { globalImageGen, settingsLoaded, preferredTheme, setPreferredTheme } = useAppStore();
+  const [contextTab, setContextTab] = useState<'text' | 'url'>('text');
+  const [urlInput, setUrlInput] = useState('');
+  const [urlLoading, setUrlLoading] = useState(false);
+  const [qcWarning, setQcWarning] = useState<string[] | null>(null);
+  const [qcDismissed, setQcDismissed] = useState(false);
+  const [genMeta, setGenMeta] = useState<{ tone: string; slides: number; provider: string; model: string } | null>(null);
 
   const [activeTab, setActiveTab] = useState<'ppt' | 'notes'>('ppt');
 
@@ -189,6 +114,24 @@ export default function CreatorView() {
     }
   }, [settingsLoaded, globalImageGen, setIncludeImages]);
 
+
+  // URL context extraction
+  const handleExtractUrl = async () => {
+    if (!urlInput.trim()) return;
+    setUrlLoading(true);
+    try {
+      const { presentationApi } = await import('../api/presentation');
+      const data = await presentationApi.extractFromUrl(urlInput);
+      setContext((data.text || '').slice(0, 2000));
+      setContextTab('text');
+      showToast('URL content extracted!', 'success');
+    } catch {
+      showToast('Failed to extract URL content', 'error');
+    } finally {
+      setUrlLoading(false);
+    }
+  };
+
   /* Slider background */
   const sliderPct = ((numSlides - 3) / (15 - 3)) * 100;
 
@@ -198,10 +141,24 @@ export default function CreatorView() {
     if (!title.trim()) { showToast('Presentation title is required', 'error'); return; }
     if (!topics.length) { showToast('At least one topic is required', 'error'); return; }
     setErrorMsg('');
-    generatePresentation(() => {
+    setQcWarning(null);
+    setQcDismissed(false);
+    setGenMeta(null);
+    generatePresentation((res?: any) => {
       showToast('Presentation generated successfully!', 'success');
       setCurrentSlideIdx(0);
       setShowSlidesPreview(true);
+      if (res?.qc?.issues?.length > 0) {
+        setQcWarning(res.qc.issues);
+      }
+      if (res) {
+        setGenMeta({
+          tone: tone,
+          slides: res.slides?.length || numSlides,
+          provider: res.provider || 'groq',
+          model: res.model_used || 'llama',
+        });
+      }
     });
   }
 
@@ -240,6 +197,26 @@ export default function CreatorView() {
           <div className="page-title">Generate Content</div>
         </div>
       </div>
+
+      {/* QC Warning Banner */}
+      {qcWarning && !qcDismissed && (
+        <div style={{ background: 'rgba(245,197,66,0.08)', border: '1px solid rgba(245,197,66,0.25)', borderRadius: '8px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+          <div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', fontWeight: 800, color: 'var(--yellow)', marginBottom: '6px', letterSpacing: '0.08em' }}>⚠ QC ISSUES DETECTED</div>
+            <ul style={{ margin: 0, padding: '0 0 0 16px', color: 'var(--text-secondary)', fontSize: '11px', lineHeight: 1.7 }}>
+              {qcWarning.map((issue, i) => <li key={i}>{issue}</li>)}
+            </ul>
+          </div>
+          <button onClick={() => setQcDismissed(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0 0 0 12px', flexShrink: 0 }}>×</button>
+        </div>
+      )}
+
+      {/* Gen Metadata Summary */}
+      {genMeta && (
+        <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px', letterSpacing: '0.06em' }}>
+          Generated with: <span style={{ color: 'var(--green)' }}>{genMeta.tone.charAt(0).toUpperCase() + genMeta.tone.slice(1)}</span> · <span style={{ color: 'var(--accent-text)' }}>{genMeta.slides} slides</span> · <span style={{ color: 'var(--yellow)' }}>{genMeta.provider} {genMeta.model}</span>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="create-tabs">
@@ -310,15 +287,51 @@ export default function CreatorView() {
                   <span className="field-num">02</span>
                   <span className="field-sep">/</span>
                   <span className="field-name">Content Brief</span>
+                  {/* Context source tabs */}
+                  <span style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+                    <button
+                      style={{ fontSize: '9px', fontFamily: 'var(--mono)', fontWeight: 700, padding: '2px 8px', border: '1px solid', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s', background: contextTab === 'text' ? 'rgba(3,37,189,0.12)' : 'transparent', color: contextTab === 'text' ? 'var(--accent-text)' : 'var(--text-muted)', borderColor: contextTab === 'text' ? 'rgba(3,37,189,0.3)' : 'var(--border)' }}
+                      onClick={() => setContextTab('text')}
+                    >TEXT</button>
+                    <button
+                      style={{ fontSize: '9px', fontFamily: 'var(--mono)', fontWeight: 700, padding: '2px 8px', border: '1px solid', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s', background: contextTab === 'url' ? 'rgba(3,37,189,0.12)' : 'transparent', color: contextTab === 'url' ? 'var(--accent-text)' : 'var(--text-muted)', borderColor: contextTab === 'url' ? 'rgba(3,37,189,0.3)' : 'var(--border)' }}
+                      onClick={() => setContextTab('url')}
+                    >URL</button>
+                  </span>
                 </div>
-                <textarea
-                  className="textarea-input"
-                  id="ppt-context"
-                  placeholder="Describe the focus, learning objectives, or any context for the presentation…"
-                  rows={3}
-                  value={context}
-                  onChange={(e) => setContext(e.target.value)}
-                />
+                {contextTab === 'text' ? (
+                  <>
+                    <textarea
+                      className="textarea-input"
+                      id="ppt-context"
+                      placeholder="Describe the focus, learning objectives, or any context for the presentation…"
+                      rows={3}
+                      value={context}
+                      onChange={(e) => setContext(e.target.value)}
+                    />
+                    <div style={{ fontSize: '9px', color: 'var(--text-muted)', textAlign: 'right', marginTop: '2px', fontFamily: 'var(--mono)' }}>{context.length} chars</div>
+                  </>
+                ) : (
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                    <input
+                      className="text-input"
+                      id="ppt-url"
+                      placeholder="https://example.com/article…"
+                      value={urlInput}
+                      onChange={e => setUrlInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleExtractUrl(); }}
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      className="ghost-btn"
+                      onClick={handleExtractUrl}
+                      disabled={urlLoading || !urlInput.trim()}
+                      style={{ flexShrink: 0, fontSize: '10px', padding: '0 12px' }}
+                    >
+                      {urlLoading ? '…' : 'Extract'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Field 03: Topics */}
@@ -395,24 +408,6 @@ export default function CreatorView() {
                 </div>
               </div>
 
-              {/* Theme */}
-              <div className="config-card">
-                <div className="config-hdr">
-                  <PaletteIcon />
-                  <span className="config-lbl">Visual Theme</span>
-                </div>
-                <div className="theme-grid">
-                  {THEMES.map((th) => (
-                    <ThemePreviewCard
-                      key={th.value}
-                      theme={th}
-                      active={theme === th.value}
-                      onClick={() => setTheme(th.value)}
-                    />
-                  ))}
-                </div>
-              </div>
-
               {/* Engine */}
               <div className="config-card">
                 <div className="config-hdr">
@@ -438,25 +433,6 @@ export default function CreatorView() {
                 ))}
               </div>
 
-              {/* Image toggle */}
-              <div className="config-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: globalImageGen ? 1 : 0.6 }}>
-                <div>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)' }}>Include Visuals</div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    {globalImageGen ? 'AI-generated slide images' : 'Disabled by Admin'}
-                  </div>
-                </div>
-                <label className="toggle">
-                  <input 
-                    type="checkbox" 
-                    checked={includeImages} 
-                    onChange={(e) => setIncludeImages(globalImageGen ? e.target.checked : false)} 
-                    disabled={!globalImageGen}
-                    id="ppt-images" 
-                  />
-                  <div className="toggle-track" />
-                </label>
-              </div>
 
               {/* Generate button */}
               <button

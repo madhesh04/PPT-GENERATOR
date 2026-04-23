@@ -72,9 +72,15 @@ class SlideData(BaseModel):
 
 
 class ExportRequest(BaseModel):
-    title: str
+    title: str = Field(..., min_length=1, max_length=200)
     slides: List[SlideData]
-    theme: str = "neon"
+    theme: str = Field(default="neon")
+
+    @field_validator("theme")
+    @classmethod
+    def validate_theme(cls, v: str) -> str:
+        allowed = {"neon", "ocean", "emerald", "royal", "dark", "light", "carbon"}
+        return v.lower() if v.lower() in allowed else "neon"
 
 
 class RegenerateSlideRequest(BaseModel):
