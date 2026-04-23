@@ -7,4 +7,4 @@ exclude = [
     "__pyrefly_virtual__/**",
     "**/inmemory/**",
 ]
-extraPaths = ["c:/Users/MadheshP/Desktop/PPT-GENERATOR/backend"]
+extraPaths = ["backend"]
