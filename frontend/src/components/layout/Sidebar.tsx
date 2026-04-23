@@ -58,7 +58,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/', label: 'Dashboard', icon: <DashIcon /> },
   { path: '/create', label: 'Generate', icon: <SparkIcon /> },
   { path: '/history', label: 'History', icon: <ClockIcon /> },
-  { path: '/series', label: 'Content Bank', icon: <SeriesIcon /> },
+  { path: '/bank', label: 'Content Bank', icon: <SeriesIcon /> },
   { path: '/settings', label: 'Settings', icon: <SettingsIcon /> },
   { path: '/admin', label: 'Admin', icon: <ShieldIcon />, adminOnly: true },
 ];

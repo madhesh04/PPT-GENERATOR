@@ -54,7 +54,7 @@ def get_audit_logs_collection():
     return get_db().get_collection("audit_logs")
 
 
-def get_series_collection():
+def get_bank_collection():
     return get_db().get_collection("series")
 
 

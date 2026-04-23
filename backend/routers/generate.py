@@ -413,11 +413,13 @@ async def download_ppt(request: Request, file_id: str, current_user: Annotated[d
         if not presentation:
             raise HTTPException(status_code=404, detail="FILE_OR_PRESENTATION_NOT_FOUND")
             
-        is_owner = presentation.get("user_id") == current_user["user_id"]
-        is_admin = current_user.get("role", "").upper() in ["ADMIN", "MASTER"]
+        # Global access allowed for any authenticated user in Content Bank
+        # is_owner = presentation.get("user_id") == current_user["user_id"]
+        # is_admin = current_user.get("role", "").upper() in ["ADMIN", "MASTER"]
         
-        if not (is_owner or is_admin):
-            raise HTTPException(status_code=403, detail="UNAUTHORIZED_ACCESS")
+        # We allow all authenticated users to download any presentation
+        # if not (is_owner or is_admin):
+        #     raise HTTPException(status_code=403, detail="UNAUTHORIZED_ACCESS")
             
         slides = presentation.get("slides", [])
         title = presentation.get("title", "Presentation")

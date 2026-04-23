@@ -46,57 +46,6 @@ const CLIENTS = ['Internal', 'NASSCOM', 'TCS', 'Wipro', 'Infosys', 'HCL', 'IBM',
 const MODULES = ['Module 1', 'Module 2', 'Module 3', 'Module 4', 'Module 5', 'Module 6', 'Custom'];
 const COURSES = ['Bootcamp', 'Workshop', 'Certification', 'Masterclass', 'Sprint', 'Custom'];
 
-const THEMES = [
-  {
-    value: 'neon',
-    label: 'Cyber Noir',
-    preview: {
-      bg: '#0d0f14', accent: '#0325BD', accent2: '#22d3a5',
-      title: '#d1d1f1', line: 'rgba(3,37,189,0.4)', line2: 'rgba(34,211,165,0.3)',
-    },
-  },
-  {
-    value: 'ocean',
-    label: 'Oceanic',
-    preview: {
-      bg: '#0a1628', accent: '#0ea5e9', accent2: '#22d3a5',
-      title: '#bae6fd', line: 'rgba(14,165,233,0.4)', line2: 'rgba(34,211,165,0.3)',
-    },
-  },
-  {
-    value: 'emerald',
-    label: 'Emerald',
-    preview: {
-      bg: '#062e1a', accent: '#22c55e', accent2: '#86efac',
-      title: '#86efac', line: 'rgba(34,197,94,0.4)', line2: 'rgba(134,239,172,0.3)',
-    },
-  },
-  {
-    value: 'royal',
-    label: 'Royal Sys',
-    preview: {
-      bg: '#1a0a3d', accent: '#7c3aed', accent2: '#a78bfa',
-      title: '#c4b5fd', line: 'rgba(124,58,237,0.4)', line2: 'rgba(167,139,250,0.3)',
-    },
-  },
-  {
-    value: 'light',
-    label: 'Neo Light',
-    preview: {
-      bg: '#f8fafc', accent: '#2563eb', accent2: '#0ea5e9',
-      title: '#1e40af', line: 'rgba(37,99,235,0.3)', line2: 'rgba(14,165,233,0.2)',
-    },
-  },
-  {
-    value: 'carbon',
-    label: 'Carbon',
-    preview: {
-      bg: '#111827', accent: '#6b7280', accent2: '#9ca3af',
-      title: '#d1d5db', line: 'rgba(107,114,128,0.4)', line2: 'rgba(156,163,175,0.3)',
-    },
-  },
-];
-
 const ENGINES = [
   { value: 'auto', label: 'AUTO_ROUTE', desc: 'Smart provider selection', iconClass: 'blue' },
   { value: 'nvidia', label: 'NVIDIA_NIM', desc: 'High-throughput inference', iconClass: 'green' },
@@ -107,36 +56,6 @@ const TRACK_OPTS = [{ value: '', label: 'Select Track' }, ...TRACKS.map((t) => (
 const CLIENT_OPTS = [{ value: '', label: 'Select Client' }, ...CLIENTS.map((c) => ({ value: c, label: c }))];
 const MODULE_OPTS = [{ value: '', label: 'Select Module' }, ...MODULES.map((m) => ({ value: m, label: m }))];
 const COURSE_OPTS = [{ value: '', label: 'Select Course' }, ...COURSES.map((c) => ({ value: c, label: c }))];
-
-/* ─── Theme Preview Mini Card ─── */
-function ThemePreviewCard({ theme, active, onClick }: { theme: typeof THEMES[0]; active: boolean; onClick: () => void }) {
-  const p = theme.preview;
-  return (
-    <div className={`theme-card${active ? ' active' : ''}`} onClick={onClick}>
-      <div className="theme-preview" style={{ background: p.bg }}>
-        <div className="tp-titlebar">
-          <div className="tp-dot" style={{ background: p.accent }} />
-          <div className="tp-dot" style={{ background: p.accent2, opacity: 0.7 }} />
-          <div className="tp-dot" style={{ background: p.title, opacity: 0.4 }} />
-        </div>
-        <div className="tp-title" style={{ background: p.title, opacity: 0.5, marginTop: '4px', width: '55%', height: '3px', borderRadius: '2px' }} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
-          <div className="tp-line" style={{ background: p.line, height: '2px', width: '90%', borderRadius: '1px' }} />
-          <div className="tp-line" style={{ background: p.line2, height: '2px', width: '70%', borderRadius: '1px' }} />
-          <div className="tp-line" style={{ background: p.line, height: '2px', width: '55%', borderRadius: '1px' }} />
-        </div>
-      </div>
-      <div className="theme-footer" style={{ background: p.bg, borderTop: `1px solid ${p.line}` }}>
-        <span className="theme-name-label" style={{ color: p.title }}>{theme.label}</span>
-        {active && (
-          <span className="theme-check-icon" style={{ display: 'block' }}>
-            <CheckIcon />
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
 
 /* ─── Engine Icon ─── */
 function EngineGlyph({ cls }: { cls: string }) {
@@ -195,13 +114,6 @@ export default function CreatorView() {
     }
   }, [settingsLoaded, globalImageGen, setIncludeImages]);
 
-  // Restore preferred theme from localStorage on mount
-  useEffect(() => {
-    if (preferredTheme && preferredTheme !== theme) {
-      setTheme(preferredTheme);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // URL context extraction
   const handleExtractUrl = async () => {
@@ -496,24 +408,6 @@ export default function CreatorView() {
                 </div>
               </div>
 
-              {/* Theme */}
-              <div className="config-card">
-                <div className="config-hdr">
-                  <PaletteIcon />
-                  <span className="config-lbl">Visual Theme</span>
-                </div>
-                <div className="theme-grid">
-                  {THEMES.map((th) => (
-                    <ThemePreviewCard
-                      key={th.value}
-                      theme={th}
-                      active={theme === th.value}
-                      onClick={() => { setTheme(th.value); setPreferredTheme(th.value); }}
-                    />
-                  ))}
-                </div>
-              </div>
-
               {/* Engine */}
               <div className="config-card">
                 <div className="config-hdr">
@@ -539,25 +433,6 @@ export default function CreatorView() {
                 ))}
               </div>
 
-              {/* Image toggle */}
-              <div className="config-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: globalImageGen ? 1 : 0.6 }}>
-                <div>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)' }}>Include Visuals</div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    {globalImageGen ? 'AI-generated slide images' : 'Disabled by Admin'}
-                  </div>
-                </div>
-                <label className="toggle">
-                  <input 
-                    type="checkbox" 
-                    checked={includeImages} 
-                    onChange={(e) => setIncludeImages(globalImageGen ? e.target.checked : false)} 
-                    disabled={!globalImageGen}
-                    id="ppt-images" 
-                  />
-                  <div className="toggle-track" />
-                </label>
-              </div>
 
               {/* Generate button */}
               <button

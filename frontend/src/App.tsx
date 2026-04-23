@@ -68,7 +68,7 @@ export default function App() {
           <Route path="/create" element={<CreatorView />} />
           <Route path="/history" element={<HistoryView />} />
           <Route path="/settings" element={<SettingsView />} />
-          <Route path="/series" element={<SeriesView />} />
+          <Route path="/bank" element={<SeriesView />} />
 
           {/* Admin Routes — guarded by role */}
           <Route element={<AdminRoute />}>
