@@ -46,6 +46,9 @@ export default function AdminView() {
   const [generations, setGenerations] = useState<AdminGeneration[]>([]);
   const [globalSettings, setGlobalSettings] = useState({ image_gen: true, speaker_notes: true, model: 'groq' });
   const [searchTerm, setSearchTerm] = useState('');
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditTotal, setAuditTotal] = useState(0);
+  const [auditActionFilter, setAuditActionFilter] = useState('all');
   
   // Filters
   const [roleFilter, setRoleFilter] = useState('all');
@@ -97,6 +100,12 @@ export default function AdminView() {
       } else if (activeTab === 'generations') {
         const data = await adminApi.getGenerations(queryUserId || undefined);
         setGenerations(data.presentations || []);
+      } else if (activeTab === 'auditlogs') {
+        const params: any = { limit: 50 };
+        if (auditActionFilter !== 'all') params.action = auditActionFilter;
+        const r = await apiClient.get('/admin/audit-logs', { params });
+        setAuditLogs(r.data.logs || []);
+        setAuditTotal(r.data.total || 0);
       }
     } catch (err: any) {
       console.error(err);
@@ -120,7 +129,7 @@ export default function AdminView() {
 
   useEffect(() => {
     fetchData();
-  }, [activeTab, queryUserId]);
+  }, [activeTab, queryUserId, auditActionFilter]);
 
   const handleCreateUser = async () => {
     try {
@@ -322,12 +331,19 @@ export default function AdminView() {
         >
           Generation Logs
         </button>
-        <button 
+        <button
           onClick={() => navigateTab('overview')}
           className={`create-tab ${activeTab === 'overview' ? 'active' : ''}`}
           style={activeTab === 'overview' ? { background: 'rgba(34,211,165,0.15)', color: 'var(--green)', boxShadow: 'inset 0 0 0 1px rgba(34,211,165,0.2)' } : undefined}
         >
           System Config
+        </button>
+        <button
+          onClick={() => navigateTab('auditlogs')}
+          className={`create-tab ${activeTab === 'auditlogs' ? 'active' : ''}`}
+          style={activeTab === 'auditlogs' ? { background: 'rgba(245,197,66,0.15)', color: 'var(--yellow)', boxShadow: 'inset 0 0 0 1px rgba(245,197,66,0.2)' } : undefined}
+        >
+          Audit Logs
         </button>
         {isMaster && (
           <button 
@@ -639,6 +655,68 @@ export default function AdminView() {
             </table>
             <div className="table-footer">
               <span className="records-label">TOTAL GENERATIONS IN VIEW: {filterData(generations, ['title', 'generated_by']).length}</span>
+            </div>
+          </div>
+        )}
+
+        {/* AUDIT LOGS TAB */}
+        {activeTab === 'auditlogs' && (
+          <div className="table-wrap">
+            <div className="table-header-bar" style={{ paddingBottom: '14px', alignItems: 'center' }}>
+              <span className="table-title">Audit Trail</span>
+              <div style={{ minWidth: '200px' }}>
+                <select
+                  id="audit-action-filter"
+                  value={auditActionFilter}
+                  onChange={(e) => setAuditActionFilter(e.target.value)}
+                  style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', padding: '6px 12px', borderRadius: '6px', fontFamily: 'var(--mono)', fontSize: '11px' }}
+                >
+                  {['all', 'CREATE', 'UPDATE', 'DELETE', 'DOWNLOAD', 'EXPORT'].map(a => (
+                    <option key={a} value={a}>{a === 'all' ? 'All Actions' : a}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Action</th>
+                  <th>User</th>
+                  <th>Content</th>
+                  <th>Changes</th>
+                  <th>Timestamp</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditLogs.length === 0 ? (
+                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>No audit logs found</td></tr>
+                ) : auditLogs.map((log: any, idx: number) => {
+                  const actionColors: Record<string, string> = {
+                    CREATE: '#22d3a5', UPDATE: '#3b82f6', DELETE: '#ef4444', DOWNLOAD: '#a855f7', EXPORT: '#f5c542'
+                  };
+                  const changesText = log.changes && Object.keys(log.changes).length > 0
+                    ? Object.entries(log.changes).map(([f, v]: any) => `${f}: "${v.before}" → "${v.after}"`).join('; ')
+                    : '—';
+                  return (
+                    <tr key={log.id || idx}>
+                      <td className="mono-cell" style={{ fontWeight: 800 }}>{String(idx + 1).padStart(3, '0')}</td>
+                      <td>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em', color: actionColors[log.action] || 'var(--text-muted)', padding: '2px 6px', borderRadius: '4px', background: `${actionColors[log.action]}22` }}>
+                          {log.action}
+                        </span>
+                      </td>
+                      <td className="mono-cell" style={{ color: 'var(--yellow)' }}>{log.username || log.user_id || '—'}</td>
+                      <td style={{ fontWeight: 600, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.content_title || '—'}</td>
+                      <td className="mono-cell" style={{ fontSize: '10px', color: 'var(--text-secondary)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{changesText}</td>
+                      <td className="mono-cell">{log.timestamp ? new Date(log.timestamp).toLocaleString() : '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <div className="table-footer">
+              <span className="records-label">TOTAL AUDIT EVENTS: {auditTotal}</span>
             </div>
           </div>
         )}

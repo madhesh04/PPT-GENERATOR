@@ -9,11 +9,13 @@ interface AppState {
   globalDefaultModel: string;
   isDarkMode: boolean;
   settingsLoaded: boolean;
+  preferredTheme: string;
 
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleTheme: () => void;
   setTimeStr: (time: string) => void;
   setGlobalSettings: (settings: any) => void;
+  setPreferredTheme: (theme: string) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -24,6 +26,7 @@ export const useAppStore = create<AppState>((set) => ({
   globalDefaultModel: 'groq',
   isDarkMode: localStorage.getItem('theme') !== 'light',
   settingsLoaded: false,
+  preferredTheme: localStorage.getItem('preferred_theme') || 'neon',
 
   setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
   toggleTheme: () => set((state) => {
@@ -45,4 +48,9 @@ export const useAppStore = create<AppState>((set) => ({
     globalDefaultModel: settings.model ?? 'groq',
     settingsLoaded: true,
   }),
+  setPreferredTheme: (theme: string) => {
+    localStorage.setItem('preferred_theme', theme);
+    set({ preferredTheme: theme });
+  },
 }));
+

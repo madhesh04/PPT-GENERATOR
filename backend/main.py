@@ -26,9 +26,9 @@ from db.client import (
     connect_db, close_db,
     connect_timesheet_db, close_timesheet_db,
     get_presentations_collection, get_settings_collection,
-    get_db
+    get_db, get_audit_logs_collection, get_series_collection
 )
-from routers import auth, generate, admin
+from routers import auth, generate, admin, series as series_router
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -61,6 +61,16 @@ async def lifespan(app: FastAPI):
         # Indexes for Skynet app data only (do NOT touch external Timesheet DB)
         await presentations_coll.create_index("content_hash")
         await presentations_coll.create_index("user_id")
+        await presentations_coll.create_index([("title", "text")])  # full-text search
+
+        # Audit logs indexes
+        audit_coll = get_audit_logs_collection()
+        await audit_coll.create_index([("user_id", 1), ("timestamp", -1)])
+        await audit_coll.create_index("content_id")
+
+        # Series indexes
+        series_coll = get_series_collection()
+        await series_coll.create_index("created_by")
 
         # Seed default global config
         global_settings = await settings_coll.find_one({"id": "global_config"})
@@ -103,6 +113,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(generate.router)
 app.include_router(admin.router)
+app.include_router(series_router.router)
 
 
 @app.get("/health")

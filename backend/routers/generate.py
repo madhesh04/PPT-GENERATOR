@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Request, UploadFile, File, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
-from typing import Annotated
+from typing import Annotated, Optional
 import time
 import base64
 import hashlib
@@ -21,15 +21,18 @@ from models.requests import (
 from db.client import (
     get_presentations_collection, 
     get_generation_logs_collection,
-    get_settings_collection
+    get_settings_collection,
+    get_audit_logs_collection,
 )
 from services.generation_service import get_presentation_cache, handle_cache_hit, run_generation_pipeline
 from services.storage_service import StorageService
 from services.file_extractor import extract_text_from_file
+from services.audit_service import log_action
 from pdf_generator import create_pdf_presentation
 from generator import create_presentation
 from llm_client import generate_slide_content, generate_lecture_notes
 from image_client import fetch_slide_image
+from pydantic import BaseModel, Field
 
 router = APIRouter(tags=["generate"])
 logger = logging.getLogger(__name__)
@@ -94,8 +97,12 @@ async def generate_notes(request: Request, body: NotesRequest, current_user: Ann
         "content": content, # Store raw markdown
         "slides": [], # Notes don't have slides, but schema might expect list
         "created_at": timestamp,
+        "updated_at": timestamp,
+        "last_edited_by": None,
         "theme": "notes",
         "type": "notes",
+        "depth": body.depth,
+        "format": body.format,
         "track": body.track,
         "client": body.client,
         "module": None,
@@ -112,6 +119,8 @@ async def generate_notes(request: Request, body: NotesRequest, current_user: Ann
         "execution_time_ms": int((time.time() - start_time) * 1000),
         "timestamp": timestamp
     })
+
+    await log_action("CREATE", current_user, str(res.inserted_id), new_doc["title"])
 
     return {
         "title": new_doc["title"],
@@ -173,7 +182,9 @@ async def get_my_presentations(
     total = await coll.count_documents({"user_id": user_oid})
     cursor = coll.find(
         {"user_id": user_oid},
-        {"_id": 1, "title": 1, "theme": 1, "created_at": 1, "type": 1, "track": 1}
+        {"_id": 1, "title": 1, "theme": 1, "created_at": 1, "updated_at": 1,
+         "type": 1, "track": 1, "generated_by": 1, "last_edited_by": 1,
+         "tone": 1, "num_slides_requested": 1}
     ).sort("created_at", -1).skip(skip).limit(limit)
     
     presentations = await cursor.to_list(length=limit)
@@ -185,11 +196,134 @@ async def get_my_presentations(
     }
 
 
+@router.get("/presentations/all")
+async def get_all_presentations(
+    current_user: Annotated[dict, Depends(get_current_user)],
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=500)
+):
+    """
+    Returns presentations from all users.
+    Accessible to any authenticated user (view-only listing).
+    """
+    coll = get_presentations_collection()
+    total = await coll.count_documents({})
+    cursor = coll.find(
+        {},
+        {"_id": 1, "title": 1, "theme": 1, "created_at": 1, "updated_at": 1,
+         "type": 1, "track": 1, "generated_by": 1, "username": 1,
+         "last_edited_by": 1, "user_id": 1}
+    ).sort("created_at", -1).skip(skip).limit(limit)
+    presentations = await cursor.to_list(length=limit)
+    return {
+        "presentations": serialize_mongo_doc(presentations),
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
+
+
+@router.get("/presentations/search")
+async def search_presentations(
+    current_user: Annotated[dict, Depends(get_current_user)],
+    q: str = Query(..., min_length=2, max_length=100),
+    scope: str = Query("mine"),  # "mine" or "all"
+):
+    coll = get_presentations_collection()
+    query: dict = {"title": {"$regex": q, "$options": "i"}}
+    if scope == "mine":
+        query["user_id"] = current_user["user_id"]
+    cursor = coll.find(
+        query,
+        {"_id": 1, "title": 1, "theme": 1, "created_at": 1, "type": 1,
+         "generated_by": 1, "user_id": 1}
+    ).sort("created_at", -1).limit(20)
+    results = await cursor.to_list(length=20)
+    return {"results": serialize_mongo_doc(results)}
+
+
+@router.get("/my/activity")
+async def get_my_activity(
+    current_user: Annotated[dict, Depends(get_current_user)],
+    limit: int = Query(5, ge=1, le=20)
+):
+    coll = get_audit_logs_collection()
+    cursor = coll.find(
+        {"user_id": current_user["user_id"]}
+    ).sort("timestamp", -1).limit(limit)
+    logs = await cursor.to_list(length=limit)
+    return {"activity": serialize_mongo_doc(logs)}
+
+
 @router.post("/upload-context")
 async def upload_context(current_user: Annotated[dict, Depends(get_current_user)], file: UploadFile = File(...)):
     content = await file.read()
     text = extract_text_from_file(content, file.filename)
     return {"text": text, "filename": file.filename}
+
+
+class UrlExtractRequest(BaseModel):
+    url: str = Field(..., min_length=5, max_length=500)
+
+
+@router.post("/extract-url")
+async def extract_from_url(
+    body: UrlExtractRequest,
+    current_user: Annotated[dict, Depends(get_current_user)]
+):
+    from services.file_extractor import extract_text_from_url  # type: ignore
+    try:
+        text = await extract_text_from_url(body.url)
+        return {"text": text, "source": body.url}
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
+class UpdatePresentationRequest(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    track: Optional[str] = None
+    client: Optional[str] = None
+
+
+@router.patch("/presentations/{presentation_id}")
+async def update_presentation(
+    presentation_id: str,
+    body: UpdatePresentationRequest,
+    current_user: Annotated[dict, Depends(get_current_user)]
+):
+    coll = get_presentations_collection()
+    try:
+        obj_id = ObjectId(presentation_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid presentation ID")
+
+    presentation = await coll.find_one({"_id": obj_id})
+    if not presentation:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    is_owner = presentation.get("user_id") == current_user["user_id"]
+    is_admin = current_user.get("role", "").upper() in ["ADMIN", "MASTER"]
+
+    if not (is_owner or is_admin):
+        raise HTTPException(status_code=403, detail="UNAUTHORIZED — Can only edit your own content")
+
+    # Build changes dict for audit log
+    changes = {}
+    update_fields: dict = {}
+    for field, val in body.model_dump().items():
+        if val is not None and presentation.get(field) != val:
+            changes[field] = {"before": presentation.get(field), "after": val}
+            update_fields[field] = val
+
+    if not update_fields:
+        return {"status": "no_changes"}
+
+    update_fields["updated_at"] = datetime.now(timezone.utc)
+    update_fields["last_edited_by"] = current_user.get("username", current_user["user_id"])
+
+    await coll.update_one({"_id": obj_id}, {"$set": update_fields})
+    await log_action("UPDATE", current_user, presentation_id, presentation.get("title", ""), changes=changes)
+    return {"status": "success"}
 
 
 @router.post("/export-pdf")
@@ -246,7 +380,8 @@ async def export_ppt(body: ExportRequest, current_user: Annotated[dict, Depends(
                 "title": body.title
             }
         )
-        
+
+        await log_action("EXPORT", current_user, file_id, body.title)
         return {"token": file_id, "filename": filename}
     except Exception as e:
         logger.exception("Export failed: %s", e)
@@ -288,7 +423,7 @@ async def download_ppt(request: Request, file_id: str, current_user: Annotated[d
         title = presentation.get("title", "Presentation")
         theme = presentation.get("theme", "standard")
         
-        from typing import Optional
+        from typing import Optional  # already imported at top
         image_bytes_list: list[Optional[bytes]] = []
         for s in slides:
             b64 = s.get("image_base64")
@@ -311,6 +446,7 @@ async def download_ppt(request: Request, file_id: str, current_user: Annotated[d
         )
     
     filename = getattr(stream, 'filename', 'presentation.pptx')
+    await log_action("DOWNLOAD", current_user, file_id, filename)
     return StreamingResponse(
         stream,
         media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
@@ -339,5 +475,7 @@ async def delete_presentation(request: Request, presentation_id: str, current_us
         raise HTTPException(status_code=403, detail="Unauthorized attempt to delete presentation")
         
     result = await presentations_collection.delete_one({"_id": obj_id})
+    if result.deleted_count > 0:
+        await log_action("DELETE", current_user, presentation_id, presentation.get("title", ""))
     
     return {"status": "success", "message": "Presentation deleted"}

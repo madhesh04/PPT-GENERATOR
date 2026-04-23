@@ -163,7 +163,13 @@ export default function CreatorView() {
     regenerateSlide,
     result, slides,
   } = usePresentationStore();
-  const { globalImageGen, settingsLoaded } = useAppStore();
+  const { globalImageGen, settingsLoaded, preferredTheme, setPreferredTheme } = useAppStore();
+  const [contextTab, setContextTab] = useState<'text' | 'url'>('text');
+  const [urlInput, setUrlInput] = useState('');
+  const [urlLoading, setUrlLoading] = useState(false);
+  const [qcWarning, setQcWarning] = useState<string[] | null>(null);
+  const [qcDismissed, setQcDismissed] = useState(false);
+  const [genMeta, setGenMeta] = useState<{ tone: string; slides: number; provider: string; model: string } | null>(null);
 
   const [activeTab, setActiveTab] = useState<'ppt' | 'notes'>('ppt');
 
@@ -189,6 +195,31 @@ export default function CreatorView() {
     }
   }, [settingsLoaded, globalImageGen, setIncludeImages]);
 
+  // Restore preferred theme from localStorage on mount
+  useEffect(() => {
+    if (preferredTheme && preferredTheme !== theme) {
+      setTheme(preferredTheme);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // URL context extraction
+  const handleExtractUrl = async () => {
+    if (!urlInput.trim()) return;
+    setUrlLoading(true);
+    try {
+      const { presentationApi } = await import('../api/presentation');
+      const data = await presentationApi.extractFromUrl(urlInput);
+      setContext((data.text || '').slice(0, 2000));
+      setContextTab('text');
+      showToast('URL content extracted!', 'success');
+    } catch {
+      showToast('Failed to extract URL content', 'error');
+    } finally {
+      setUrlLoading(false);
+    }
+  };
+
   /* Slider background */
   const sliderPct = ((numSlides - 3) / (15 - 3)) * 100;
 
@@ -198,10 +229,24 @@ export default function CreatorView() {
     if (!title.trim()) { showToast('Presentation title is required', 'error'); return; }
     if (!topics.length) { showToast('At least one topic is required', 'error'); return; }
     setErrorMsg('');
-    generatePresentation(() => {
+    setQcWarning(null);
+    setQcDismissed(false);
+    setGenMeta(null);
+    generatePresentation((res?: any) => {
       showToast('Presentation generated successfully!', 'success');
       setCurrentSlideIdx(0);
       setShowSlidesPreview(true);
+      if (res?.qc?.issues?.length > 0) {
+        setQcWarning(res.qc.issues);
+      }
+      if (res) {
+        setGenMeta({
+          tone: tone,
+          slides: res.slides?.length || numSlides,
+          provider: res.provider || 'groq',
+          model: res.model_used || 'llama',
+        });
+      }
     });
   }
 
@@ -240,6 +285,26 @@ export default function CreatorView() {
           <div className="page-title">Generate Content</div>
         </div>
       </div>
+
+      {/* QC Warning Banner */}
+      {qcWarning && !qcDismissed && (
+        <div style={{ background: 'rgba(245,197,66,0.08)', border: '1px solid rgba(245,197,66,0.25)', borderRadius: '8px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+          <div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', fontWeight: 800, color: 'var(--yellow)', marginBottom: '6px', letterSpacing: '0.08em' }}>⚠ QC ISSUES DETECTED</div>
+            <ul style={{ margin: 0, padding: '0 0 0 16px', color: 'var(--text-secondary)', fontSize: '11px', lineHeight: 1.7 }}>
+              {qcWarning.map((issue, i) => <li key={i}>{issue}</li>)}
+            </ul>
+          </div>
+          <button onClick={() => setQcDismissed(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0 0 0 12px', flexShrink: 0 }}>×</button>
+        </div>
+      )}
+
+      {/* Gen Metadata Summary */}
+      {genMeta && (
+        <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px', letterSpacing: '0.06em' }}>
+          Generated with: <span style={{ color: 'var(--green)' }}>{genMeta.tone.charAt(0).toUpperCase() + genMeta.tone.slice(1)}</span> · <span style={{ color: 'var(--accent-text)' }}>{genMeta.slides} slides</span> · <span style={{ color: 'var(--yellow)' }}>{genMeta.provider} {genMeta.model}</span>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="create-tabs">
@@ -310,15 +375,51 @@ export default function CreatorView() {
                   <span className="field-num">02</span>
                   <span className="field-sep">/</span>
                   <span className="field-name">Content Brief</span>
+                  {/* Context source tabs */}
+                  <span style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+                    <button
+                      style={{ fontSize: '9px', fontFamily: 'var(--mono)', fontWeight: 700, padding: '2px 8px', border: '1px solid', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s', background: contextTab === 'text' ? 'rgba(3,37,189,0.12)' : 'transparent', color: contextTab === 'text' ? 'var(--accent-text)' : 'var(--text-muted)', borderColor: contextTab === 'text' ? 'rgba(3,37,189,0.3)' : 'var(--border)' }}
+                      onClick={() => setContextTab('text')}
+                    >TEXT</button>
+                    <button
+                      style={{ fontSize: '9px', fontFamily: 'var(--mono)', fontWeight: 700, padding: '2px 8px', border: '1px solid', borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s', background: contextTab === 'url' ? 'rgba(3,37,189,0.12)' : 'transparent', color: contextTab === 'url' ? 'var(--accent-text)' : 'var(--text-muted)', borderColor: contextTab === 'url' ? 'rgba(3,37,189,0.3)' : 'var(--border)' }}
+                      onClick={() => setContextTab('url')}
+                    >URL</button>
+                  </span>
                 </div>
-                <textarea
-                  className="textarea-input"
-                  id="ppt-context"
-                  placeholder="Describe the focus, learning objectives, or any context for the presentation…"
-                  rows={3}
-                  value={context}
-                  onChange={(e) => setContext(e.target.value)}
-                />
+                {contextTab === 'text' ? (
+                  <>
+                    <textarea
+                      className="textarea-input"
+                      id="ppt-context"
+                      placeholder="Describe the focus, learning objectives, or any context for the presentation…"
+                      rows={3}
+                      value={context}
+                      onChange={(e) => setContext(e.target.value)}
+                    />
+                    <div style={{ fontSize: '9px', color: 'var(--text-muted)', textAlign: 'right', marginTop: '2px', fontFamily: 'var(--mono)' }}>{context.length} chars</div>
+                  </>
+                ) : (
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                    <input
+                      className="text-input"
+                      id="ppt-url"
+                      placeholder="https://example.com/article…"
+                      value={urlInput}
+                      onChange={e => setUrlInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleExtractUrl(); }}
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      className="ghost-btn"
+                      onClick={handleExtractUrl}
+                      disabled={urlLoading || !urlInput.trim()}
+                      style={{ flexShrink: 0, fontSize: '10px', padding: '0 12px' }}
+                    >
+                      {urlLoading ? '…' : 'Extract'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Field 03: Topics */}
@@ -407,7 +508,7 @@ export default function CreatorView() {
                       key={th.value}
                       theme={th}
                       active={theme === th.value}
-                      onClick={() => setTheme(th.value)}
+                      onClick={() => { setTheme(th.value); setPreferredTheme(th.value); }}
                     />
                   ))}
                 </div>

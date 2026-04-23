@@ -50,6 +50,14 @@ def get_settings_collection():
     return get_db().get_collection("settings")
 
 
+def get_audit_logs_collection():
+    return get_db().get_collection("audit_logs")
+
+
+def get_series_collection():
+    return get_db().get_collection("series")
+
+
 # ── Timesheet Auth Database (external — read-only for auth) ────────────────────
 class TimesheetDatabase:
     client: Optional[AsyncIOMotorClient] = None

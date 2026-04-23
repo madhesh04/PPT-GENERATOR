@@ -9,7 +9,8 @@ from core.dependencies import require_admin, get_current_user
 from db.client import (
     get_timesheet_users_collection,
     get_presentations_collection,
-    get_settings_collection
+    get_settings_collection,
+    get_audit_logs_collection,
 )
 from models.requests import UserLogin
 from core.security import get_password_hash
@@ -248,6 +249,32 @@ async def admin_update_settings(payload: GlobalSettingsUpdate, admin_user: Annot
         upsert=True
     )
     return {"status": "success", "updated": update_data}
+
+@router.get("/audit-logs")
+async def admin_get_audit_logs(
+    admin_user: Annotated[dict, Depends(require_admin)],
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    action: Optional[str] = Query(None),
+    user_id: Optional[str] = Query(None)
+):
+    from core.converters import serialize_mongo_doc
+    coll = get_audit_logs_collection()
+    query: dict = {}
+    if action:
+        query["action"] = action.upper()
+    if user_id:
+        query["user_id"] = user_id
+
+    total = await coll.count_documents(query)
+    cursor = coll.find(query).sort("timestamp", -1).skip(skip).limit(limit)
+    logs = await cursor.to_list(length=limit)
+    return {
+        "logs": serialize_mongo_doc(logs),
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
 @router.get("/public/settings")
 async def public_get_settings(current_user: Annotated[dict, Depends(get_current_user)]):
