@@ -17,11 +17,6 @@ const DocIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
   </svg>
 );
-const PaletteIcon = () => (
-  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402a3.75 3.75 0 10-5.304-5.304L4.098 14.6A3.75 3.75 0 004.098 19.902z" />
-  </svg>
-);
 const CpuIcon = () => (
   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25zm.75-12h9v9h-9v-9z" />
@@ -30,11 +25,6 @@ const CpuIcon = () => (
 const MicIcon = () => (
   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
-  </svg>
-);
-const CheckIcon = () => (
-  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
   </svg>
 );
 
@@ -72,9 +62,9 @@ function EngineGlyph({ cls }: { cls: string }) {
 export default function CreatorView() {
   const { showToast } = useToast();
   const {
-    title, topics, context, tone, theme, numSlides, forceProvider, includeImages,
+    title, topics, context, tone, theme, numSlides, forceProvider,
     track, client, module, course, targetAudience,
-    setTitle, setTopics, setContext, setTone, setTheme, setNumSlides, setForceProvider, setIncludeImages,
+    setTitle, setTopics, setContext, setTone, setNumSlides, setForceProvider, setIncludeImages,
     setTrack, setClient, setModule, setCourse, setTargetAudience,
     notesContent,
     generatePresentation, generateLectureNotes, loading, errorMsg, setErrorMsg,
@@ -82,7 +72,7 @@ export default function CreatorView() {
     regenerateSlide,
     result, slides,
   } = usePresentationStore();
-  const { globalImageGen, settingsLoaded, preferredTheme, setPreferredTheme } = useAppStore();
+  const { globalImageGen, settingsLoaded } = useAppStore();
   const [contextTab, setContextTab] = useState<'text' | 'url'>('text');
   const [urlInput, setUrlInput] = useState('');
   const [urlLoading, setUrlLoading] = useState(false);
