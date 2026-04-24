@@ -16,8 +16,21 @@ SkyNet is structured as a monorepo containing a high-performance backend and a p
 -   **High-Fidelity Preview**: An interactive, slide-by-slide stage for reviewing and editing content before export.
 -   **Shared Identity (RBAC)**: Secure integration with the Timesheet-Application database for centralized authentication and role management.
 -   **Admin Control Center**: Comprehensive monitoring of system activity, audit logs, and global feature toggles.
+-   **MCP Integration**: Native support for the Model Context Protocol (MCP), enabling AI agents like Claude to generate presentations directly via custom connectors.
 
-## 🛠️ Technology Stack
+## 🔌 MCP Integration (Claude)
+
+SkyNet implements a full **Model Context Protocol (MCP)** server with OAuth 2.0 authentication. This allows Claude to use SkyNet's PPT generation tools as part of its reasoning process.
+
+### Features:
+-   **Secure OAuth 2.0**: Authenticate using existing organizational credentials (Timesheet DB).
+-   **Persistent Sessions**: MCP access tokens are stored in MongoDB for long-term connectivity.
+-   **Tool Suite**: 7 specialized tools for generating, searching, and downloading presentations.
+
+### Connection Details:
+-   **Server URL**: `https://<your-backend-url>/mcp`
+-   **OAuth Client ID**: `skynet-mcp-client`
+-   **Scope**: `mcp`
 
 -   **Frontend**: React 18, TypeScript, Vite, Lucide Icons, Vanilla CSS.
 -   **Backend**: FastAPI, Motor (Async MongoDB), NVIDIA NIM, Groq, Pollinations AI.

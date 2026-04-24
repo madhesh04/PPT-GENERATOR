@@ -20,6 +20,7 @@ import hashlib
 import json
 import logging
 import time
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -40,12 +41,26 @@ from services.generation_service import (
 )
 from services.storage_service import StorageService
 
+from mcp.server.transport_security import TransportSecuritySettings
+
 logger = logging.getLogger(__name__)
 
-mcp_app = FastMCP("Skynet PPT Generator")
+mcp_app = FastMCP(
+    "Skynet PPT Generator",
+    transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False)
+)
 
-# Service account used for all MCP-initiated operations (no auth required)
-_MCP_USER = {"user_id": "mcp-service", "username": "MCP Service", "role": "user"}
+# Per-request authenticated user — set by MCPAuthMiddleware via a FastMCP hook.
+# Falls back to the anonymous service account when not set (e.g. in tests).
+_mcp_user_ctx: ContextVar[dict] = ContextVar(
+    "mcp_user",
+    default={"user_id": "mcp-service", "username": "MCP Service", "role": "USER"},
+)
+
+
+def _get_mcp_user() -> dict:
+    """Return the authenticated user for the current MCP tool invocation."""
+    return _mcp_user_ctx.get()
 
 
 # ── Tools ─────────────────────────────────────────────────────────────────────
@@ -96,9 +111,9 @@ async def generate_presentation(
     )
 
     if cached:
-        result = await handle_cache_hit(cached, content_hash, _MCP_USER, start_time)
+        result = await handle_cache_hit(cached, content_hash, _get_mcp_user(), start_time)
     else:
-        result = await run_generation_pipeline(body, _MCP_USER, start_time, content_hash)
+        result = await run_generation_pipeline(body, _get_mcp_user(), start_time, content_hash)
 
     slide_summaries = [
         {

@@ -31,7 +31,11 @@ class Settings(BaseSettings):
     # frontend_url supports comma-separated values for multi-origin CORS
     # e.g. "https://app.example.com,https://staging.example.com"
     frontend_url: str = "http://localhost:5173"
+    # Public URL of this backend — used in OAuth discovery metadata.
+    # For local dev use ngrok/tunnel URL; for production use your deployed URL.
+    backend_url: str = "http://localhost:8000"
     ppt_font: str = "Calibri"
+    mcp_token_expire_hours: int = 24
 
     model_config = SettingsConfigDict(
         env_file=".env", 

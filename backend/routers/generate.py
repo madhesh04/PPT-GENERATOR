@@ -23,6 +23,7 @@ from db.client import (
     get_generation_logs_collection,
     get_settings_collection,
     get_audit_logs_collection,
+    get_mcp_tokens_collection,
 )
 from services.generation_service import get_presentation_cache, handle_cache_hit, run_generation_pipeline
 from services.storage_service import StorageService
@@ -39,6 +40,53 @@ logger = logging.getLogger(__name__)
 
 # Rate limiter — keyed by IP address
 limiter = Limiter(key_func=get_remote_address)
+
+
+async def get_current_user_or_mcp(request: Request) -> dict:
+    """
+    Dual-auth dependency: accepts both JWT tokens (web UI) and MCP Bearer tokens
+    (Claude custom connector). Tries JWT first; falls back to MCP token lookup.
+    """
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Unauthorized: No token provided")
+
+    token = auth_header.split(" ")[1]
+
+    # 1. Try JWT decode
+    import jwt as _jwt
+    from core.config import settings as _settings
+    try:
+        payload = _jwt.decode(token, _settings.jwt_secret, algorithms=[_settings.algorithm])
+        if "sub" in payload and "role" in payload:
+            return payload
+    except (_jwt.ExpiredSignatureError, _jwt.InvalidTokenError):
+        pass
+
+    # 2. Try MCP token lookup
+    from datetime import datetime, timezone as _tz
+    try:
+        tokens_collection = get_mcp_tokens_collection()
+        doc = await tokens_collection.find_one({"token": token, "active": True})
+        if doc:
+            expires_at = doc.get("expires_at")
+            if expires_at:
+                if expires_at.tzinfo is None:
+                    expires_at = expires_at.replace(tzinfo=_tz.utc)
+                if datetime.now(_tz.utc) > expires_at:
+                    raise HTTPException(status_code=401, detail="MCP token expired")
+            return {
+                "sub": doc["user_id"],
+                "user_id": doc["user_id"],
+                "username": doc["username"],
+                "role": doc["role"],
+            }
+    except HTTPException:
+        raise
+    except Exception:
+        pass
+
+    raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
 @router.post("/generate")
@@ -391,7 +439,7 @@ async def export_ppt(body: ExportRequest, current_user: Annotated[dict, Depends(
 
 @router.get("/download/{file_id}")
 @limiter.limit("30/minute")
-async def download_ppt(request: Request, file_id: str, current_user: Annotated[dict, Depends(get_current_user)]):
+async def download_ppt(request: Request, file_id: str, current_user: Annotated[dict, Depends(get_current_user_or_mcp)]):
     """
     Download a presentation by its file_id (GridFS) or presentation_id (MongoDB).
     Requires authentication. Users can only download their own presentations.
