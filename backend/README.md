@@ -13,6 +13,13 @@ SkyNet uses a **dual-database architecture** for maximum security and integratio
 - **System Toggles**: Admins can globally enable/disable features like AI Image Generation to manage API costs and usage.
 - **Global Content Bank**: Rebranded from 'Series', the Bank provides a real-time, system-wide gallery of all generated presentations with universal download access.
 
+## 🔌 MCP Server (FastMCP)
+SkyNet is a native **Model Context Protocol (MCP)** server, allowing AI clients like Claude to generate presentations directly:
+- **Mount Path**: `/mcp`
+- **Auth**: Fully integrated with the OAuth 2.0 Authorization Code flow.
+- **Middleware**: Custom `MCPAuthMiddleware` and `ContextVar` wiring ensures every tool call is authenticated against the organizational database.
+- **Tools**: Exposes 7 tools for creating, listing, searching, and exporting presentations.
+
 ## 🧠 Intelligence & Generation Engine
 SkyNet leverages a multi-provider LLM pipeline for 99.9% availability:
 - **Primary Model**: NVIDIA NIM (`deepseek-ai/deepseek-v3`) for deep technical reasoning and structured slide generation.

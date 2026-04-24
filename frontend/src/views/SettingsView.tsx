@@ -294,7 +294,6 @@ export default function SettingsView() {
                       <option value="auto">AUTO_ROUTE</option>
                       <option value="nvidia">NVIDIA_NIM</option>
                       <option value="groq">GROQ_INFER</option>
-                      <option value="claude">CLAUDE_SONNET</option>
                     </select>
                   </div>
                 </div>
@@ -355,7 +354,6 @@ export default function SettingsView() {
                 <ApiKeyField id="groq-key" label="GROQ API Key" value="gsk_••••••••••••••••••" />
                 <ApiKeyField id="nvidia-key" label="NVIDIA NIM API Key" value="nvapi-••••••••••••••••••" />
                 <ApiKeyField id="openai-key" label="OpenAI API Key" value="sk-••••••••••••••••••" />
-                <ApiKeyField id="anthropic-key" label="Anthropic API Key" value="sk-ant-••••••••••••••••••" />
               </div>
             </div>
 

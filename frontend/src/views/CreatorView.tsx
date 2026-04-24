@@ -604,9 +604,9 @@ export default function CreatorView() {
                   value={forceProvider ?? 'auto'}
                   onChange={(e) => setForceProvider(e.target.value === 'auto' ? null : e.target.value)}
                 >
-                  <option value="auto">AUTO_ROUTE</option>
-                  <option value="nvidia">NVIDIA_NIM</option>
-                  <option value="groq">GROQ_INFER</option>
+                  {ENGINES.map(eng => (
+                    <option key={eng.value} value={eng.value}>{eng.label}</option>
+                  ))}
                 </select>
               </div>
 

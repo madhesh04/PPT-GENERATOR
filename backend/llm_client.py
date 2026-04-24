@@ -279,7 +279,7 @@ def _call_nvidia(title: str, topics: list, num_slides: int = 5, context: str = "
 
     tone_cfg = TONE_CONFIG.get(tone.lower(), TONE_CONFIG["technical"])
     system_prompt, user_prompt = _build_prompt(
-        title, topics, num_slides, context, str(tone_cfg["instruction"]), 
+        title, topics, num_slides, context, str(tone_cfg["instruction"]),
         include_notes=include_notes, include_images=include_images
     )
 
@@ -325,7 +325,7 @@ async def generate_slide_content(
     for prov_id, func, model_name in order:
         if prov_id == "nvidia" and not nvidia_client:
             continue
-            
+        
         try:
             logger.info(f"Attempting generation with {prov_id.upper()} ({model_name}) [Counter: {_auto_route_counter}]")
             # Set shorter timeout for first attempt to allow fallback if slow

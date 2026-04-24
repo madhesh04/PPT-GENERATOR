@@ -1,4 +1,4 @@
-from motor.motor_asyncio import AsyncIOMotorClient
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from core.config import settings
 import logging
 
@@ -30,7 +30,7 @@ async def close_db():
         logger.info("Database: Motor client connection closed.")
 
 
-def get_db():
+def get_db() -> AsyncIOMotorDatabase:
     if db_state.db is None:
         raise RuntimeError(
             "Database not initialized. Ensure connect_db() is called in the lifespan startup hook."
@@ -56,6 +56,16 @@ def get_audit_logs_collection():
 
 def get_bank_collection():
     return get_db().get_collection("series")
+
+
+def get_mcp_tokens_collection():
+    """Persistent MCP OAuth access tokens (replaces in-memory VALID_MCP_TOKENS)."""
+    return get_db().get_collection("mcp_tokens")
+
+
+def get_mcp_auth_codes_collection():
+    """Short-lived OAuth authorization codes exchanged for access tokens."""
+    return get_db().get_collection("mcp_auth_codes")
 
 
 # ── Timesheet Auth Database (external — read-only for auth) ────────────────────

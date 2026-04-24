@@ -16,3 +16,4 @@ passlib[bcrypt]
 openai>=1.0.0
 fpdf2
 pydantic-settings
+mcp>=1.0.0
