@@ -72,3 +72,6 @@ all_sources_output.txt
 # Gemini / Antigravity
 .gemini/
 .antigravity/
+
+# Claude Code
+.claude/worktrees/
