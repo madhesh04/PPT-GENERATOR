@@ -1,4 +1,4 @@
-from motor.motor_asyncio import AsyncIOMotorClient
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from core.config import settings
 import logging
 
@@ -30,7 +30,7 @@ async def close_db():
         logger.info("Database: Motor client connection closed.")
 
 
-def get_db():
+def get_db() -> AsyncIOMotorDatabase:
     if db_state.db is None:
         raise RuntimeError(
             "Database not initialized. Ensure connect_db() is called in the lifespan startup hook."

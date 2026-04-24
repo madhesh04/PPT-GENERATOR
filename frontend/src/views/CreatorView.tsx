@@ -38,7 +38,6 @@ const COURSES = ['Bootcamp', 'Workshop', 'Certification', 'Masterclass', 'Sprint
 
 const ENGINES = [
   { value: 'auto', label: 'AUTO_ROUTE', desc: 'Smart provider selection', iconClass: 'blue' },
-  { value: 'claude', label: 'CLAUDE_SONNET', desc: 'Anthropic claude-sonnet-4-6', iconClass: 'purple' },
   { value: 'nvidia', label: 'NVIDIA_NIM', desc: 'High-throughput inference', iconClass: 'green' },
   { value: 'groq', label: 'GROQ_INFER', desc: 'Ultra-fast generation', iconClass: 'yellow' },
 ];

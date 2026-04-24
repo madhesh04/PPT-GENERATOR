@@ -59,7 +59,7 @@ async def generate_presentation(
     tone: str = "professional",
     theme: str = "neon",
     include_images: bool = True,
-    force_provider: str = "claude",
+    force_provider: str = "auto",
 ) -> str:
     """
     Generate a full presentation using the Skynet pipeline.
@@ -77,7 +77,7 @@ async def generate_presentation(
         theme: Visual theme — neon | ocean | emerald | royal | dark | light | carbon.
                Default 'neon'.
         include_images: Whether to source images for slides. Default True.
-        force_provider: LLM provider — claude | groq | nvidia | auto. Default 'claude'.
+        force_provider: LLM provider — groq | nvidia | auto. Default 'auto'.
     """
     body = PresentationRequest(
         title=title,
@@ -194,7 +194,7 @@ async def regenerate_slide(
     topics: list[str],
     context: str = "",
     tone: str = "professional",
-    force_provider: str = "claude",
+    force_provider: str = "auto",
 ) -> str:
     """
     Generate a single replacement slide on the given topic.
@@ -206,7 +206,7 @@ async def regenerate_slide(
         topics: Sub-topics or keywords the slide should cover.
         context: Optional extra context or instructions.
         tone: Writing tone — professional | executive | technical | academic | etc.
-        force_provider: LLM provider — claude | groq | nvidia | auto. Default 'claude'.
+        force_provider: LLM provider — groq | nvidia | auto. Default 'auto'.
     """
     try:
         slides, model_used, provider = await generate_slide_content(
@@ -263,6 +263,103 @@ async def get_presentation(token: str) -> str:
             slide["image_base64"] = "<base64 omitted>"
 
     return json.dumps(serialized, indent=2, default=str)
+
+
+@mcp_app.tool()
+async def create_presentation_from_content(
+    title: str,
+    slides: list[dict],
+    theme: str = "neon",
+    tone: str = "professional",
+) -> str:
+    """
+    Build a PPTX from slide content authored by Claude (or any external agent).
+
+    This is the primary entry point for the Claude → MCP flow.
+    Claude generates slide JSON, calls this tool, and receives a file_id
+    for direct download — no separate export step required.
+
+    Expected input shape:
+      {
+        "title": "My Presentation",
+        "slides": [
+          { "title": "Slide 1", "bullets": ["Point A", "Point B", "Point C"] },
+          { "title": "Slide 2", "bullets": ["Point D", "Point E"], "notes": "Optional presenter note" }
+        ]
+      }
+
+    Args:
+        title:  Presentation title.
+        slides: List of slide objects. Each must have 'title' (string) and
+                'bullets' (list of strings). 'notes' is optional.
+        theme:  Visual theme — neon | ocean | emerald | royal | dark | light | carbon.
+        tone:   Tone label stored as metadata. Default 'professional'.
+    """
+    if not slides:
+        return json.dumps({"error": "slides list cannot be empty."})
+
+    # Validate and normalise — map 'bullets' → 'content'
+    normalised: list[dict] = []
+    for i, raw in enumerate(slides):
+        if not isinstance(raw, dict):
+            return json.dumps({"error": f"Slide {i}: expected a dict, got {type(raw).__name__}."})
+        if "title" not in raw or "bullets" not in raw:
+            return json.dumps({"error": f"Slide {i}: must have 'title' and 'bullets' fields."})
+        try:
+            sd = SlideData(
+                title=raw["title"],
+                content=raw["bullets"],
+                notes=raw.get("notes", ""),
+            )
+            normalised.append(sd.model_dump())
+        except Exception as exc:
+            return json.dumps({"error": f"Slide {i} validation failed: {exc}"})
+
+    # Build PPTX
+    image_bytes_list: list[Optional[bytes]] = [None] * len(normalised)
+    ppt_io, _ = create_presentation(title, normalised, image_bytes_list, theme_name=theme)
+    filename = f"{sanitize_filename(title)}.pptx"
+
+    file_id = await StorageService.save_file(
+        filename,
+        ppt_io.getvalue(),
+        metadata={"user_id": "mcp-service", "type": "pptx", "title": title, "source": "mcp_direct"},
+    )
+
+    # Persist to MongoDB
+    presentations_collection = get_presentations_collection()
+    now = datetime.now(timezone.utc)
+    content_hash = hashlib.sha256(
+        json.dumps([{"title": s["title"], "content": s["content"]} for s in normalised], sort_keys=True).encode()
+    ).hexdigest()
+    res = await presentations_collection.insert_one({
+        "user_id": "mcp-service",
+        "generated_by": "MCP Service",
+        "username": "MCP Service",
+        "title": title,
+        "topics": [s["title"] for s in normalised],
+        "content_hash": content_hash,
+        "slides": normalised,
+        "created_at": now,
+        "updated_at": now,
+        "last_edited_by": None,
+        "theme": theme,
+        "type": "ppt",
+        "tone": tone,
+        "num_slides_requested": len(normalised),
+        "track": None, "client": None, "module": None, "course": None,
+        "source": "mcp_direct",
+    })
+    token = str(res.inserted_id)
+
+    return json.dumps({
+        "file_id": file_id,
+        "filename": filename,
+        "download_path": f"/download/{file_id}",
+        "token": token,
+        "slide_count": len(normalised),
+        "message": "PPTX ready. Fetch via GET /download/{file_id}.",
+    }, indent=2)
 
 
 @mcp_app.tool()

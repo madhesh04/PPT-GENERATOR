@@ -1,3 +1,4 @@
+
 # pyrefly.toml - Pyrefly type checker configuration
 # Suppresses phantom parse errors from virtual in-memory f-string analysis
 
